@@ -1,0 +1,40 @@
+{
+  "name": "classroom-response-system",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm run build --workspace @classroom/shared && concurrently --names shared,server,web --kill-others-on-fail \"npm run dev --workspace @classroom/shared\" \"npm run dev --workspace @classroom/server\" \"npm run dev --workspace @classroom/web\"",
+    "build": "npm run build --workspace @classroom/shared && npm run build --workspace @classroom/server && npm run build --workspace @classroom/web",
+    "start": "npm run start --workspace @classroom/server",
+    "test": "npm run build --workspace @classroom/shared && npm test --workspaces --if-present",
+    "test:e2e": "npm run build && npm --prefix e2e test",
+    "typecheck": "npm run build --workspace @classroom/shared && npm run typecheck --workspaces --if-present && npm --prefix e2e run typecheck",
+    "lint": "eslint eslint.config.js shared server web e2e --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && bash scripts/check-diagrams.sh"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.56.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2"
+  }
+}

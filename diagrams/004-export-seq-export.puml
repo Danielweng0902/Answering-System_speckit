@@ -1,0 +1,38 @@
+@startuml
+title 004 時序圖：匯出 Guided Notes 與 CSV
+
+actor 老師
+participant "老師端畫面" as T
+participant "匯出入口" as G
+participant "Guided Notes 寫入" as W
+participant "題目庫（002）" as B
+participant "結果彙整（003）" as R
+participant "CSV 產生" as C
+
+== 匯出 Guided Notes ==
+老師 -> T : 按「匯出 Guided Notes」
+T -> G : 匯出學習單()
+G -> G : 檢查：老師身分、階段為已結束、有題目
+G -> W : 寫入
+W -> B : 取得原檔副本、每個空格的位置與前綴
+W -> R : 取得每一題的搶答成功答案
+loop 每一個空格
+  alt 該題有搶答成功答案
+    W -> W : 在空格位置寫入「前綴＋答案」（文字）
+  else 無人作答
+    W -> W : 不變更
+  end
+end
+W --> G : 已填答案的試算表檔
+G --> T : 下載
+
+== 匯出 CSV ==
+老師 -> T : 按「匯出 CSV」
+T -> G : 匯出CSV()
+G -> G : 檢查：老師身分、階段為已結束
+G -> C : 產生
+C -> R : 取得所有作答、順位、搶答成功標示
+C -> C : 每個空格一列；\n依題號、順位、空格序排序；\n處理逗號、引號與公式字元
+C --> G : CSV 檔
+G --> T : 下載
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+!pragma layout smetana
+title 002 Guided Notes 匯入：組件圖（概念層）
+
+actor 老師
+component "老師端畫面" as TeacherUI
+cloud "Google Sheets\n（知道連結者可檢視）" as GS
+
+package "搶答系統（伺服器）" {
+  component "匯入入口\n(Import Gateway)" as Gateway
+  component "試算表取得\n(Sheet Fetcher)" as Fetcher
+  component "學習單解析\n(Guided Notes Parser)" as Parser
+  component "匯入驗證\n(Import Validator)" as Validator
+  component "題目庫\n(Question Bank)" as Bank
+  component "活動階段管理\n（001）" as Phase
+  database "活動資料儲存" as Store
+}
+
+老師 --> TeacherUI
+TeacherUI --> Gateway : 連結或 xlsx 檔
+Gateway --> Phase : 檢查老師身分與「準備中」
+Gateway --> Fetcher : 以連結取得試算表
+Fetcher --> GS : 下載為試算表檔
+Gateway --> Parser : 試算表內容
+Parser --> Validator : 題目與空格
+Validator --> Gateway : 摘要或錯誤
+Gateway --> TeacherUI : 匯入摘要／錯誤說明
+TeacherUI --> Gateway : 確認匯入
+Gateway --> Bank : 取代題目
+Bank --> Store : 保存題目、空格位置、原檔
+
+note right of Parser
+  依表頭「題號／題目／作答」
+  與合併範圍定位，
+  不使用固定儲存格位置
+end note
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+title 003 時序圖：結束搶答與檢視結果
+
+actor 老師
+participant "老師端畫面" as T
+participant "活動階段管理\n（001）" as P
+participant "作答受理" as I
+participant "結果彙整" as RB
+participant "可見範圍過濾" as F
+participant "狀態同步" as B
+participant "學生端畫面" as U
+actor 學生
+
+老師 -> T : 按「結束搶答」
+T -> P : 結束搶答()
+P -> I : 階段已是「已結束」，停止受理
+P -> RB : 彙整結果
+RB -> RB : 每一題：第 1 順位的組別與答案；\n無人作答則為空
+RB -> F : 搶答結果、各組順位
+F -> B : 給老師：完整結果\n給每一組：各題結果＋本組答案與順位
+B --> T : 完整結果（每題標示搶答成功）
+B --> U : 各題搶答成功組別與答案、本組順位
+U --> 學生 : 顯示結果（2 秒內）
+
+== 結束後仍有答案送達 ==
+學生 -> U : 送出答案
+U -> I : 送出(...)
+I --> U : 拒絕：搶答已結束
+@enduml

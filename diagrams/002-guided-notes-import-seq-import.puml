@@ -1,0 +1,43 @@
+@startuml
+title 002 時序圖：匯入 Guided Notes 與確認
+
+actor 老師
+participant "老師端畫面" as T
+participant "匯入入口" as G
+participant "試算表取得" as F
+participant "學習單解析" as P
+participant "匯入驗證" as V
+participant "題目庫" as B
+
+老師 -> T : 貼上連結或選擇 xlsx 檔
+T -> G : 讀取(來源)
+G -> G : 檢查：老師身分、階段為準備中
+alt 來源是連結
+  G -> F : 取得試算表(連結)
+  alt 連結無效或未開放檢視
+    F --> G : 無法取得
+    G --> T : 錯誤說明與替代做法
+  else 取得成功
+    F --> G : 試算表內容
+  end
+else 來源是檔案
+  G -> G : 檢查格式與大小
+end
+G -> P : 解析(試算表內容)
+P -> P : 找出含「題號／題目／作答」的表頭列
+P -> P : 逐列讀題號；\n題號合併多列視為題組；\n記錄每個空格的位置與前綴
+P -> V : 題目與空格
+V -> V : 檢查：有表頭、有題目、題號不重複
+alt 驗證失敗
+  V --> G : 匯入錯誤（原因、位置、修正方式）
+  G --> T : 顯示錯誤，活動題目不變
+else 驗證通過
+  V --> G : 匯入摘要
+  G --> T : 顯示摘要（題數、空格數、每題類型、提醒）
+  老師 -> T : 核對後按「確認匯入」
+  T -> G : 確認
+  G -> B : 取代(學習單, 題目清單)
+  B --> G : 完成
+  G --> T : 顯示題號清單
+end
+@enduml

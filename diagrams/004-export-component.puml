@@ -1,0 +1,34 @@
+@startuml
+!pragma layout smetana
+title 004 匯出結果：組件圖（概念層）
+
+actor 老師
+component "老師端畫面" as TeacherUI
+
+package "搶答系統（伺服器）" {
+  component "匯出入口\n(Export Gateway)" as Gateway
+  component "Guided Notes 寫入\n(Guided Notes Writer)" as Writer
+  component "CSV 產生\n(CSV Builder)" as Csv
+  component "結果彙整（003）" as Result
+  component "題目庫（002）\n原檔與空格位置" as Bank
+  component "活動階段管理（001）" as Phase
+}
+
+老師 --> TeacherUI
+TeacherUI --> Gateway : 匯出 Guided Notes／匯出 CSV
+Gateway --> Phase : 檢查老師身分與「已結束」
+Gateway --> Writer
+Gateway --> Csv
+Writer --> Bank : 取得原檔副本與空格位置
+Writer --> Result : 取得各題搶答成功答案
+Csv --> Result : 取得所有作答與順位
+Writer --> Gateway : 已填答案的試算表檔
+Csv --> Gateway : CSV 檔
+Gateway --> TeacherUI : 下載檔案
+
+note right of Writer
+  只改填空格；
+  位置來自匯入時的紀錄，
+  不使用固定儲存格位置
+end note
+@enduml

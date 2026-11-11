@@ -1,0 +1,41 @@
+@startuml
+!pragma layout smetana
+title 005 公平順位與投影看板：組件圖（概念層）
+
+actor 老師
+component "老師端畫面" as TeacherUI
+component "投影看板畫面" as Projector
+
+package "搶答系統（伺服器）" {
+  component "活動設定\n(Activity Settings)" as Settings
+  component "順位判定（003）" as Rank
+  component "公平順位規則\n(Fair Ranking Rule)" as Fair
+  component "題目判定排程\n(Settlement Scheduler)" as Sched
+  component "投影內容產生\n(Projector View Builder)" as PV
+  component "揭曉進度\n(Reveal Progress)" as Reveal
+  component "結果彙整（003）" as Result
+  component "狀態同步（001）" as Sync
+  component "活動階段管理（001）" as Phase
+}
+
+老師 --> TeacherUI
+老師 --> Projector : 揭曉下一題／全部揭曉
+TeacherUI --> Settings : 啟用／不啟用公平順位（僅準備中）
+Settings --> Rank : 選擇判定規則
+Rank --> Fair : 啟用時使用
+Fair --> Sched : 某題第一個答案送達，3 秒後判定
+Sched --> Fair : 判定該題
+Phase --> Sched : 活動結束，立即判定未完成的題目
+Fair --> Result : 各題搶答成功
+Projector --> Reveal
+Reveal --> PV
+Result --> PV
+Phase --> PV : 階段與倒數
+PV --> Sync
+Sync --> Projector : 搶答中不含作答資訊；\n結束後只含已揭曉的題目
+
+note bottom of PV
+  搶答中：階段、倒數、各組是否在線
+  已結束：已揭曉題目的結果
+end note
+@enduml

@@ -1,0 +1,37 @@
+html {
+  box-sizing: border-box;
+  min-height: var(--page-min-height);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  min-height: var(--page-min-height);
+  margin: var(--space-0);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#root,
+.app-shell {
+  min-height: var(--page-min-height);
+}
+
+:focus-visible {
+  outline: var(--focus-outline-width) solid var(--color-focus);
+  outline-offset: var(--focus-outline-offset);
+}

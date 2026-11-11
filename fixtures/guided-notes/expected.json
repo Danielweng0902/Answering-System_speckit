@@ -1,0 +1,128 @@
+[
+  {
+    "file": "01-official-single.xlsx",
+    "valid": true,
+    "sheet": "學習單",
+    "header_row": 4,
+    "questions": [
+      {"number": 1, "blanks": [{"cell": "G5", "prefix": ""}]},
+      {"number": 2, "blanks": [{"cell": "G7", "prefix": ""}]},
+      {"number": 3, "blanks": [{"cell": "G9", "prefix": ""}]},
+      {"number": 4, "blanks": [{"cell": "G11", "prefix": ""}]},
+      {"number": 5, "blanks": [{"cell": "G13", "prefix": ""}]},
+      {"number": 6, "blanks": [{"cell": "G15", "prefix": ""}]}
+    ],
+    "question_count": 6,
+    "blank_count": 6
+  },
+  {
+    "file": "02-official-group.xlsx",
+    "valid": true,
+    "sheet": "學習單",
+    "header_row": 4,
+    "questions": [
+      {
+        "number": 1,
+        "blanks": [
+          {"cell": "G5", "prefix": "（1）"},
+          {"cell": "G6", "prefix": "（2）"}
+        ]
+      },
+      {
+        "number": 2,
+        "blanks": [
+          {"cell": "G8", "prefix": "（1）"},
+          {"cell": "G9", "prefix": "（2）"}
+        ]
+      },
+      {"number": 3, "blanks": [{"cell": "G11", "prefix": ""}]},
+      {"number": 4, "blanks": [{"cell": "G13", "prefix": ""}]}
+    ],
+    "question_count": 4,
+    "blank_count": 6
+  },
+  {
+    "file": "03-shifted-layout.xlsx",
+    "valid": true,
+    "sheet": "學習單",
+    "header_row": 6,
+    "questions": [
+      {"number": 1, "blanks": [{"cell": "I7", "prefix": ""}]},
+      {"number": 2, "blanks": [{"cell": "I10", "prefix": ""}]},
+      {"number": 3, "blanks": [{"cell": "I12", "prefix": ""}]},
+      {"number": 4, "blanks": [{"cell": "I16", "prefix": ""}]},
+      {"number": 5, "blanks": [{"cell": "I19", "prefix": ""}]},
+      {"number": 6, "blanks": [{"cell": "I21", "prefix": ""}]},
+      {"number": 7, "blanks": [{"cell": "I24", "prefix": ""}]},
+      {"number": 8, "blanks": [{"cell": "I26", "prefix": ""}]}
+    ],
+    "question_count": 8,
+    "blank_count": 8
+  },
+  {
+    "file": "04-mixed-groups.xlsx",
+    "valid": true,
+    "sheet": "學習單",
+    "header_row": 4,
+    "questions": [
+      {"number": 1, "blanks": [{"cell": "G5", "prefix": ""}]},
+      {
+        "number": 2,
+        "blanks": [
+          {"cell": "G7", "prefix": "（1）"},
+          {"cell": "G8", "prefix": "（2）"},
+          {"cell": "G9", "prefix": "（3）"}
+        ]
+      },
+      {"number": 3, "blanks": [{"cell": "G11", "prefix": ""}]},
+      {
+        "number": 4,
+        "blanks": [
+          {"cell": "G14", "prefix": "（1）"},
+          {"cell": "G15", "prefix": "（2）"}
+        ]
+      },
+      {"number": 5, "blanks": [{"cell": "G17", "prefix": ""}]},
+      {
+        "number": 6,
+        "blanks": [
+          {"cell": "G19", "prefix": "（1）"},
+          {"cell": "G20", "prefix": "（2）"}
+        ]
+      },
+      {"number": 7, "blanks": [{"cell": "G22", "prefix": ""}]}
+    ],
+    "question_count": 7,
+    "blank_count": 11
+  },
+  {
+    "file": "05-two-sheets.xlsx",
+    "valid": true,
+    "sheet": "學習單",
+    "header_row": 4,
+    "questions": [
+      {"number": 1, "blanks": [{"cell": "G5", "prefix": ""}]},
+      {"number": 2, "blanks": [{"cell": "G7", "prefix": ""}]},
+      {"number": 3, "blanks": [{"cell": "G9", "prefix": ""}]},
+      {"number": 4, "blanks": [{"cell": "G11", "prefix": ""}]},
+      {"number": 5, "blanks": [{"cell": "G13", "prefix": ""}]}
+    ],
+    "question_count": 5,
+    "blank_count": 5
+  },
+  {
+    "file": "90-invalid-no-header.xlsx",
+    "valid": false,
+    "error": "missing header row"
+  },
+  {
+    "file": "91-invalid-duplicate-number.xlsx",
+    "valid": false,
+    "error": "duplicate question number: 3"
+  },
+  {
+    "file": "92-invalid-empty.xlsx",
+    "valid": false,
+    "error": "no questions"
+  }
+]

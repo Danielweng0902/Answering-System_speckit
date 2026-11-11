@@ -1,0 +1,30 @@
+# 機敏資料（課程規定：repo 不得出現密碼、金鑰）
+.env
+.env.*
+!.env.example
+*.credentials.json
+*service-account*.json
+*.pem
+*.key
+
+# 課程教材與內部研究筆記（不公開）
+docs/*.pdf
+docs/*.xlsx
+_research/
+
+# 工具與產物
+tools/
+node_modules/
+data/
+dist/
+coverage/
+playwright-report/
+test-results/
+__pycache__/
+*.pyc
+
+# 系統檔
+.DS_Store
+
+# 設計參考截圖（別人的作品，不公開）
+design/references/screenshots/

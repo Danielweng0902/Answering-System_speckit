@@ -1,0 +1,37 @@
+/* 暫定，待 design/DESIGN.md 定案。 */
+:root {
+  color-scheme: light;
+
+  /* 色彩 */
+  --color-background: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-text: #2c3033;
+  --color-text-muted: #5f656b;
+  --color-border: #d7dade;
+  --color-focus: #69717a;
+
+  /* 字體 */
+  --font-family-base:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-small: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-large: 1.25rem;
+  --line-height-base: 1.5;
+
+  /* 間距 */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+
+  /* 結構 */
+  --page-min-height: 100vh;
+  --content-max-width: 72rem;
+  --radius-medium: 0.375rem;
+  --border-width-thin: 0.0625rem;
+  --focus-outline-width: 0.125rem;
+  --focus-outline-offset: 0.125rem;
+}

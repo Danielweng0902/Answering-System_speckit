@@ -1,0 +1,42 @@
+@startuml
+!pragma layout smetana
+title 001 活動與組別進場：組件圖（概念層）
+
+actor 老師
+actor 學生
+
+component "老師端畫面" as TeacherUI
+component "學生端畫面" as StudentUI
+
+package "搶答系統（伺服器）" {
+  component "身分驗證\n(Access Control)" as Auth
+  component "組別管理\n(Group Registry)" as Groups
+  component "活動階段管理\n(Activity Phase Manager)" as Phase
+  component "倒數計時\n(Countdown)" as Timer
+  component "狀態同步\n(State Broadcaster)" as Sync
+  database "活動資料儲存\n(Activity Store)" as Store
+}
+
+老師 --> TeacherUI
+學生 --> StudentUI
+
+TeacherUI --> Auth : 密碼登入
+StudentUI --> Auth : 選擇組別進場
+TeacherUI --> Groups : 新增／改名／刪除組別
+TeacherUI --> Phase : 開啟／結束／重設
+Auth --> Groups : 檢查組別是否存在
+Phase --> Groups : 開啟前檢查至少一組
+Phase --> Timer : 設定／取消倒數
+Timer --> Phase : 時間到，結束搶答
+Phase --> Store : 保存階段與時間
+Groups --> Store : 保存組別
+Phase --> Sync : 階段已改變
+Groups --> Sync : 組別已改變
+Sync --> TeacherUI : 推送目前狀態
+Sync --> StudentUI : 推送目前狀態
+
+note bottom of Phase
+  階段只能由伺服器改變：
+  準備中 → 搶答中 → 已結束
+end note
+@enduml

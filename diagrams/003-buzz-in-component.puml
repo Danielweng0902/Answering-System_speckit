@@ -1,0 +1,42 @@
+@startuml
+!pragma layout smetana
+title 003 搶答作答與結果：組件圖（概念層）
+
+actor 老師
+actor 學生
+component "老師端畫面\n（作答狀況看板）" as TeacherUI
+component "學生端畫面\n（作答區／結果區）" as StudentUI
+
+package "搶答系統（伺服器）" {
+  component "作答受理\n(Submission Intake)" as Intake
+  component "順位判定\n(Ranking)" as Rank
+  component "可見範圍過濾\n(Visibility Filter)" as Filter
+  component "作答狀況彙整\n(Board Builder)" as Board
+  component "結果彙整\n(Result Builder)" as Result
+  component "狀態同步（001）" as Sync
+  component "活動階段管理（001）" as Phase
+  component "題目庫（002）" as Bank
+  database "活動資料儲存" as Store
+}
+
+學生 --> StudentUI
+老師 --> TeacherUI
+StudentUI --> Intake : 送出答案（組別、題號、各空格答案）
+Intake --> Phase : 檢查階段為搶答中
+Intake --> Bank : 檢查題號與空格
+Intake --> Store : 依送達順序保存
+Intake --> Rank : 新的作答
+Rank --> Board : 各題順位
+Rank --> Result : 各題搶答成功
+Board --> Filter
+Result --> Filter
+Filter --> Sync : 依身分與階段決定可送出的內容
+Sync --> TeacherUI : 完整作答狀況
+Sync --> StudentUI : 只有本組資料；結束後才有結果
+
+note bottom of Filter
+  搶答中：學生只收到自己組的資料
+  已結束：學生收到結果與自己組的順位
+  老師：任何階段都收到完整資料
+end note
+@enduml
