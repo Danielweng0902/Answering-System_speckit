@@ -1,0 +1,50 @@
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.header,
+.phaseCard {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.title,
+.status,
+.phaseTitle,
+.description,
+.notice {
+  margin: var(--space-0);
+}
+
+.title,
+.phaseTitle {
+  font-size: var(--font-size-large);
+}
+
+.phaseCard {
+  justify-items: start;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+.notice {
+  padding: var(--space-3);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-small);
+}
+
+.button {
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text);
+  background: var(--color-background);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}

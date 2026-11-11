@@ -54,26 +54,26 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 **⚠️ CRITICAL**: 本 Phase 完成前不得開始任何 user story。
 
-- [ ] T009 [P] 在 `shared/src/protocol.ts` 定義 `Phase`、`Role`、三種 `Snapshot`、指令回覆 `Ack`、錯誤代碼列舉（依 contracts/socket-events.md）
-- [ ] T010 [P] 在 `shared/src/schemas.ts` 定義各指令與 HTTP 請求的 zod schema（依 contracts/）
-- [ ] T011 在 `server/src/config.ts` 讀取 `TEACHER_PASSWORD`、`PORT`、`DATA_DIR`；`TEACHER_PASSWORD` 不得寫入 log（原則 IV）
-- [ ] T012 在 `server/src/infra/db/database.ts` 以 `node:sqlite` 開啟資料庫並建立 `activity`、`groups`、`sessions` 資料表（依 data-model.md）；首次啟動建立 `activity` 單一列（phase = preparing）
-- [ ] T013 [P] 寫 `server/tests/unit/database.test.ts`：資料表建立、重複初始化不出錯、`activity` 只有一列（先失敗）
-- [ ] T014 [P] 在 `server/src/infra/db/activityRepo.ts`、`groupRepo.ts`、`sessionRepo.ts` 實作讀寫（只做存取，不含規則）
-- [ ] T015 在 `server/src/app/access.ts` 實作 token 產生、雜湊、由 token 解析身分（guest／student／teacher）
-- [ ] T016 [P] 寫 `server/tests/unit/access.test.ts`：無效 token 為 guest、token 不以原值保存（先失敗）
-- [ ] T017 在 `server/src/app/snapshot.ts` 實作依身分產生快照；訪客與學生的快照不得含 `presence`（原則 VI）
-- [ ] T018 [P] 寫 `server/tests/unit/snapshot.test.ts`：三種身分的快照欄位符合 contracts；學生與訪客沒有 `presence`（先失敗）
-- [ ] T019 在 `server/src/infra/socket/broadcaster.ts` 實作連線驗證、連線後立即送 `state`、狀態改變後對每個連線依身分送 `state`、在線人數統計
-- [ ] T020 在 `server/src/infra/socket/commandRouter.ts` 實作指令路由：zod 驗證 → 身分檢查 → 呼叫用例 → 回覆 `Ack`；失敗時不廣播
-- [ ] T021 在 `server/src/infra/http/app.ts` 建立 Express app（`GET /api/health`、JSON 錯誤格式、提供 `web/dist` 靜態檔與前端路由 fallback）
-- [ ] T022 在 `server/src/index.ts` 組合 config、資料庫、HTTP、Socket.IO 並啟動；匯出 `createServer()` 供測試使用
-- [ ] T023 [P] 寫 `server/tests/integration/helpers.ts`：以暫存資料庫啟動伺服器、建立 socket.io-client 連線、等待下一個 `state` 的工具函式
-- [ ] T024 寫 `server/tests/integration/connect.test.ts`：未帶 token 連線收到 guest 快照（phase = preparing、groups 為空）（先失敗，T019–T022 完成後通過）
-- [ ] T025 [P] 在 `web/src/lib/session.ts` 實作以 sessionStorage 保存與清除 token（research R4）
-- [ ] T026 [P] 在 `web/src/lib/socket.ts` 實作連線（帶 token）、自動重連、`sendCommand(event, payload)` 回傳 `Ack`
-- [ ] T027 在 `web/src/lib/useSnapshot.ts` 實作訂閱 `state`，只接受 `revision` 較新的快照；處理 `session:invalid`
-- [ ] T028 在 `web/src/app/App.tsx` 與 `web/src/app/routes.tsx` 建立路由：`/`（選擇老師或學生）、`/teacher`、`/student`；畫面只使用 `tokens.css` 的變數
+- [x] T009 [P] 在 `shared/src/protocol.ts` 定義 `Phase`、`Role`、三種 `Snapshot`、指令回覆 `Ack`、錯誤代碼列舉（依 contracts/socket-events.md）
+- [x] T010 [P] 在 `shared/src/schemas.ts` 定義各指令與 HTTP 請求的 zod schema（依 contracts/）
+- [x] T011 在 `server/src/config.ts` 讀取 `TEACHER_PASSWORD`、`PORT`、`DATA_DIR`；`TEACHER_PASSWORD` 不得寫入 log（原則 IV）
+- [x] T012 在 `server/src/infra/db/database.ts` 以 `node:sqlite` 開啟資料庫並建立 `activity`、`groups`、`sessions` 資料表（依 data-model.md）；首次啟動建立 `activity` 單一列（phase = preparing）
+- [x] T013 [P] 寫 `server/tests/unit/database.test.ts`：資料表建立、重複初始化不出錯、`activity` 只有一列（先失敗）
+- [x] T014 [P] 在 `server/src/infra/db/activityRepo.ts`、`groupRepo.ts`、`sessionRepo.ts` 實作讀寫（只做存取，不含規則）
+- [x] T015 在 `server/src/app/access.ts` 實作 token 產生、雜湊、由 token 解析身分（guest／student／teacher）
+- [x] T016 [P] 寫 `server/tests/unit/access.test.ts`：無效 token 為 guest、token 不以原值保存（先失敗）
+- [x] T017 在 `server/src/app/snapshot.ts` 實作依身分產生快照；訪客與學生的快照不得含 `presence`（原則 VI）
+- [x] T018 [P] 寫 `server/tests/unit/snapshot.test.ts`：三種身分的快照欄位符合 contracts；學生與訪客沒有 `presence`（先失敗）
+- [x] T019 在 `server/src/infra/socket/broadcaster.ts` 實作連線驗證、連線後立即送 `state`、狀態改變後對每個連線依身分送 `state`、在線人數統計
+- [x] T020 在 `server/src/infra/socket/commandRouter.ts` 實作指令路由：zod 驗證 → 身分檢查 → 呼叫用例 → 回覆 `Ack`；失敗時不廣播
+- [x] T021 在 `server/src/infra/http/app.ts` 建立 Express app（`GET /api/health`、JSON 錯誤格式、提供 `web/dist` 靜態檔與前端路由 fallback）
+- [x] T022 在 `server/src/index.ts` 組合 config、資料庫、HTTP、Socket.IO 並啟動；匯出 `createServer()` 供測試使用
+- [x] T023 [P] 寫 `server/tests/integration/helpers.ts`：以暫存資料庫啟動伺服器、建立 socket.io-client 連線、等待下一個 `state` 的工具函式
+- [x] T024 寫 `server/tests/integration/connect.test.ts`：未帶 token 連線收到 guest 快照（phase = preparing、groups 為空）（先失敗，T019–T022 完成後通過）
+- [x] T025 [P] 在 `web/src/lib/session.ts` 實作以 sessionStorage 保存與清除 token（research R4）
+- [x] T026 [P] 在 `web/src/lib/socket.ts` 實作連線（帶 token）、自動重連、`sendCommand(event, payload)` 回傳 `Ack`
+- [x] T027 在 `web/src/lib/useSnapshot.ts` 實作訂閱 `state`，只接受 `revision` 較新的快照；處理 `session:invalid`
+- [x] T028 在 `web/src/app/App.tsx` 與 `web/src/app/routes.tsx` 建立路由：`/`（選擇老師或學生）、`/teacher`、`/student`；畫面只使用 `tokens.css` 的變數
 
 **Checkpoint**: `npm test` 通過；`npm run build && npm start` 後開啟 `http://localhost:3000` 可看到首頁，並在瀏覽器收到 guest 快照。
 
@@ -87,19 +87,19 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 ### Tests for User Story 3 ⚠️ 先寫、先失敗
 
-- [ ] T029 [P] [US3] 寫 `server/tests/unit/groupRegistry.test.ts`：新增成功；空白、重複、31 字元、第 51 組被拒絕；去除前後空白；改名與刪除；非準備中一律拒絕（FR-007–010；AC-001-14、15、16）
-- [ ] T030 [P] [US3] 寫 `server/tests/integration/teacherLogin.test.ts`：正確密碼得到 token；錯誤密碼 401 `WRONG_PASSWORD`；未設定密碼 503 `TEACHER_PASSWORD_NOT_SET`；回應與 log 不含密碼（FR-002、003；AC-001-11、12、13）
-- [ ] T031 [P] [US3] 寫 `server/tests/integration/groupCommands.test.ts`：老師 `group:create` 後所有連線在 2 秒內收到含新組別的 `state`；guest 與 student 送 `group:create` 得到 `FORBIDDEN` 且沒有廣播（FR-006；AC-001-14、17）
+- [x] T029 [P] [US3] 寫 `server/tests/unit/groupRegistry.test.ts`：新增成功；空白、重複、31 字元、第 51 組被拒絕；去除前後空白；改名與刪除；非準備中一律拒絕（FR-007–010；AC-001-14、15、16）
+- [x] T030 [P] [US3] 寫 `server/tests/integration/teacherLogin.test.ts`：正確密碼得到 token；錯誤密碼 401 `WRONG_PASSWORD`；未設定密碼 503 `TEACHER_PASSWORD_NOT_SET`；回應與 log 不含密碼（FR-002、003；AC-001-11、12、13）
+- [x] T031 [P] [US3] 寫 `server/tests/integration/groupCommands.test.ts`：老師 `group:create` 後所有連線在 2 秒內收到含新組別的 `state`；guest 與 student 送 `group:create` 得到 `FORBIDDEN` 且沒有廣播（FR-006；AC-001-14、17）
 
 ### Implementation for User Story 3
 
-- [ ] T032 [P] [US3] 在 `server/src/domain/groupRegistry.ts` 實作組別規則（純函式，回傳新狀態或錯誤代碼）
-- [ ] T033 [US3] 在 `server/src/app/groupCommands.ts` 實作 `createGroup`、`renameGroup`、`deleteGroup`：檢查老師身分與階段 → 呼叫 domain → 保存 → 廣播
-- [ ] T034 [US3] 在 `server/src/infra/http/authRoutes.ts` 實作 `POST /api/teacher/login`（固定時間比較、每分鐘 10 次限制、未設定密碼的回應）
-- [ ] T035 [US3] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `group:create`、`group:rename`、`group:delete`
-- [ ] T036 [P] [US3] 在 `web/src/features/teacher/TeacherLogin.tsx` 實作登入表單與錯誤訊息顯示
-- [ ] T037 [US3] 在 `web/src/features/teacher/GroupManager.tsx` 實作組別清單、新增、改名、刪除與錯誤訊息；非準備中時停用
-- [ ] T038 [US3] 在 `web/src/features/teacher/TeacherPage.tsx` 組合登入狀態、目前階段、`GroupManager`、各組在線狀態（FR-028）
+- [x] T032 [P] [US3] 在 `server/src/domain/groupRegistry.ts` 實作組別規則（純函式，回傳新狀態或錯誤代碼）
+- [x] T033 [US3] 在 `server/src/app/groupCommands.ts` 實作 `createGroup`、`renameGroup`、`deleteGroup`：檢查老師身分與階段 → 呼叫 domain → 保存 → 廣播
+- [x] T034 [US3] 在 `server/src/infra/http/authRoutes.ts` 實作 `POST /api/teacher/login`（固定時間比較、每分鐘 10 次限制、未設定密碼的回應）
+- [x] T035 [US3] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `group:create`、`group:rename`、`group:delete`
+- [x] T036 [P] [US3] 在 `web/src/features/teacher/TeacherLogin.tsx` 實作登入表單與錯誤訊息顯示
+- [x] T037 [US3] 在 `web/src/features/teacher/GroupManager.tsx` 實作組別清單、新增、改名、刪除與錯誤訊息；非準備中時停用
+- [x] T038 [US3] 在 `web/src/features/teacher/TeacherPage.tsx` 組合登入狀態、目前階段、`GroupManager`、各組在線狀態（FR-028）
 
 **Checkpoint**: T029–T031 通過；人工依 quickstart 步驟 1–5 驗證。
 
@@ -113,17 +113,17 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 ### Tests for User Story 2 ⚠️ 先寫、先失敗
 
-- [ ] T039 [P] [US2] 寫 `server/tests/integration/studentJoin.test.ts`：`POST /api/student/join` 成功得到 token；不存在的組別 404 `GROUP_NOT_FOUND`；兩個連線加入同一組都成功；學生快照含 `myGroupId` 且不含 `presence`（FR-004、005、011；AC-001-07、08、10）
-- [ ] T040 [P] [US2] 寫 `server/tests/integration/studentLeave.test.ts`：準備中 `student:leave` 成功並變回 guest；搶答中 `INVALID_PHASE`；老師刪除組別後該組學生收到 `session:invalid`（FR-012；edge case）
-- [ ] T041 [P] [US2] 寫 `web/tests/StudentPage.test.tsx`：依快照的 phase 顯示等待、作答區入口、結果區入口，並顯示組名（FR-027）
+- [x] T039 [P] [US2] 寫 `server/tests/integration/studentJoin.test.ts`：`POST /api/student/join` 成功得到 token；不存在的組別 404 `GROUP_NOT_FOUND`；兩個連線加入同一組都成功；學生快照含 `myGroupId` 且不含 `presence`（FR-004、005、011；AC-001-07、08、10）
+- [x] T040 [P] [US2] 寫 `server/tests/integration/studentLeave.test.ts`：準備中 `student:leave` 成功並變回 guest；搶答中 `INVALID_PHASE`；老師刪除組別後該組學生收到 `session:invalid`（FR-012；edge case）
+- [x] T041 [P] [US2] 寫 `web/tests/StudentPage.test.tsx`：依快照的 phase 顯示等待、作答區入口、結果區入口，並顯示組名（FR-027）
 
 ### Implementation for User Story 2
 
-- [ ] T042 [US2] 在 `server/src/infra/http/authRoutes.ts` 實作 `POST /api/student/join`
-- [ ] T043 [US2] 在 `server/src/app/access.ts` 實作 `leaveGroup` 與組別刪除時讓相關 Session 失效並通知 `session:invalid`
-- [ ] T044 [US2] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `student:leave`
-- [ ] T045 [P] [US2] 在 `web/src/features/student/GroupPicker.tsx` 實作組別選擇；沒有組別時顯示「老師尚未建立組別」並隨快照更新（AC-001-06）
-- [ ] T046 [US2] 在 `web/src/features/student/StudentPage.tsx` 實作依階段顯示的三種畫面、組名、準備中的「更換組別」
+- [x] T042 [US2] 在 `server/src/infra/http/authRoutes.ts` 實作 `POST /api/student/join`
+- [x] T043 [US2] 在 `server/src/app/access.ts` 實作 `leaveGroup` 與組別刪除時讓相關 Session 失效並通知 `session:invalid`
+- [x] T044 [US2] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `student:leave`
+- [x] T045 [P] [US2] 在 `web/src/features/student/GroupPicker.tsx` 實作組別選擇；沒有組別時顯示「老師尚未建立組別」並隨快照更新（AC-001-06）
+- [x] T046 [US2] 在 `web/src/features/student/StudentPage.tsx` 實作依階段顯示的三種畫面、組名、準備中的「更換組別」
 
 **Checkpoint**: T039–T041 通過；人工依 quickstart 步驟 6 驗證。
 
@@ -137,17 +137,17 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 ### Tests for User Story 1 ⚠️ 先寫、先失敗
 
-- [ ] T047 [P] [US1] 寫 `server/tests/unit/activity.test.ts`：preparing→open→closed；沒有組別不能 open；closed 不能回 open；open 再 open、closed 再 close 不改變狀態（FR-013–017；AC-001-03、04、05）
-- [ ] T048 [P] [US1] 寫 `server/tests/integration/phaseSync.test.ts`：老師 `activity:open` 後，老師、兩個學生、一個 guest 連線都在 2 秒內收到 phase = open 的 `state`；`activity:close` 同理；學生送 `activity:open` 得到 `FORBIDDEN`（FR-006、019；AC-001-01、02、17）
-- [ ] T049 [P] [US1] 寫 `e2e/tests/001-activity-session.spec.ts`（第一部分）：三個 browser context（老師、第一組、第二組），老師開啟與結束，斷言三個頁面的階段文字（AC-001-01、02；SC-001）
+- [x] T047 [P] [US1] 寫 `server/tests/unit/activity.test.ts`：preparing→open→closed；沒有組別不能 open；closed 不能回 open；open 再 open、closed 再 close 不改變狀態（FR-013–017；AC-001-03、04、05）
+- [x] T048 [P] [US1] 寫 `server/tests/integration/phaseSync.test.ts`：老師 `activity:open` 後，老師、兩個學生、一個 guest 連線都在 2 秒內收到 phase = open 的 `state`；`activity:close` 同理；學生送 `activity:open` 得到 `FORBIDDEN`（FR-006、019；AC-001-01、02、17）
+- [x] T049 [P] [US1] 寫 `e2e/tests/001-activity-session.spec.ts`（第一部分）：三個 browser context（老師、第一組、第二組），老師開啟與結束，斷言三個頁面的階段文字（AC-001-01、02；SC-001）
 
 ### Implementation for User Story 1
 
-- [ ] T050 [P] [US1] 在 `server/src/domain/activity.ts` 實作狀態機 `open`、`close`（純函式，回傳新狀態或錯誤代碼，並標示是否有改變）
-- [ ] T051 [US1] 在 `server/src/app/activityCommands.ts` 實作 `openActivity`、`closeActivity`：檢查老師身分 → 呼叫 domain → 有改變才保存、`revision` 加 1、廣播
-- [ ] T052 [US1] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `activity:open`、`activity:close`
-- [ ] T053 [US1] 在 `web/src/features/teacher/PhaseControl.tsx` 實作目前階段顯示、「開啟搶答」「結束搶答」按鈕與錯誤訊息；按鈕依階段啟用
-- [ ] T054 [US1] 在 `web/src/features/teacher/TeacherPage.tsx` 加入 `PhaseControl`
+- [x] T050 [P] [US1] 在 `server/src/domain/activity.ts` 實作狀態機 `open`、`close`（純函式，回傳新狀態或錯誤代碼，並標示是否有改變）
+- [x] T051 [US1] 在 `server/src/app/activityCommands.ts` 實作 `openActivity`、`closeActivity`：檢查老師身分 → 呼叫 domain → 有改變才保存、`revision` 加 1、廣播
+- [x] T052 [US1] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `activity:open`、`activity:close`
+- [x] T053 [US1] 在 `web/src/features/teacher/PhaseControl.tsx` 實作目前階段顯示、「開啟搶答」「結束搶答」按鈕與錯誤訊息；按鈕依階段啟用
+- [x] T054 [US1] 在 `web/src/features/teacher/TeacherPage.tsx` 加入 `PhaseControl`
 
 **Checkpoint**: T047–T049 通過。此時已可示範：老師登入、建組、學生進場、開啟、結束、全班同步。
 

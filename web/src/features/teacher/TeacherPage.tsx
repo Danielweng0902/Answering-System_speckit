@@ -1,0 +1,51 @@
+import type { Snapshot } from '@classroom/shared';
+import { useState } from 'react';
+import { GroupManager } from './GroupManager';
+import { PhaseControl } from './PhaseControl';
+import { TeacherLogin } from './TeacherLogin';
+import styles from './TeacherPage.module.css';
+
+export type TeacherPageProps = {
+  snapshot: Snapshot | null;
+};
+
+export function TeacherPage({ snapshot }: TeacherPageProps) {
+  const [isAwaitingTeacherSnapshot, setIsAwaitingTeacherSnapshot] =
+    useState(false);
+
+  if (snapshot?.role !== 'teacher') {
+    return (
+      <section className={styles.page} aria-labelledby="teacher-page-title">
+        <header className={styles.header}>
+          <h1 id="teacher-page-title" className={styles.title}>
+            老師端
+          </h1>
+        </header>
+        <TeacherLogin
+          onLoginSuccess={() => {
+            setIsAwaitingTeacherSnapshot(true);
+          }}
+        />
+        {isAwaitingTeacherSnapshot && (
+          <p className={styles.notice} role="status">
+            已送出登入資訊，等待同步老師狀態。
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className={styles.page} aria-labelledby="teacher-page-title">
+      <header className={styles.header}>
+        <h1 id="teacher-page-title" className={styles.title}>
+          老師端
+        </h1>
+      </header>
+      <PhaseControl snapshot={snapshot} />
+      <GroupManager snapshot={snapshot} />
+    </section>
+  );
+}
+
+export default TeacherPage;

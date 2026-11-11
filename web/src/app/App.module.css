@@ -1,0 +1,60 @@
+.shell {
+  min-height: var(--page-min-height);
+}
+
+.main {
+  min-height: var(--page-min-height);
+  max-width: var(--content-max-width);
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.card {
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.title {
+  margin: var(--space-0);
+  font-size: var(--font-size-large);
+}
+
+.description,
+.status,
+.notice {
+  margin: var(--space-0);
+}
+
+.description {
+  color: var(--color-text-muted);
+}
+
+.roleLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.roleLink {
+  display: inline-block;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  text-decoration: none;
+}
+
+.notice {
+  padding: var(--space-3);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-small);
+}
