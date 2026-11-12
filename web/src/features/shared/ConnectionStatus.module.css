@@ -1,0 +1,9 @@
+.status {
+  margin: var(--space-0) var(--space-0) var(--space-4);
+  padding: var(--space-3);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-small);
+}

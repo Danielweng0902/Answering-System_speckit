@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from 'react';
 import { clearToken } from './session';
 import { connectSocket, getSocket } from './socket';
 
+export type ConnectionState = 'connecting' | 'connected' | 'reconnecting';
+
 export type UseSnapshotResult = {
   /** 目前接受過的最新快照；尚未收到快照時為 null。 */
   snapshot: Snapshot | null;
@@ -15,6 +17,11 @@ export type UseSnapshotResult = {
   sessionInvalid: boolean;
   /** session:invalid 的原始內容，供呼叫者顯示對應訊息。 */
   sessionInvalidPayload: SessionInvalidPayload | null;
+  /**
+   * 目前 Socket.IO 進程；hook 一律回傳。屬性保留為可選，避免既有
+   * 直接組合 snapshot 三個原欄位的畫面測試或 mock 被迫新增狀態。
+   */
+  connectionState?: ConnectionState;
 };
 
 let cachedSnapshot: Snapshot | null = null;
@@ -24,6 +31,9 @@ export function useSnapshot(): UseSnapshotResult {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(cachedSnapshot);
   const [sessionInvalidPayload, setSessionInvalidPayload] =
     useState<SessionInvalidPayload | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(
+    () => (getSocket().connected ? 'connected' : 'connecting'),
+  );
   const latestRevisionRef = useRef(cachedSnapshot?.revision ?? -1);
 
   useEffect(() => {
@@ -53,15 +63,22 @@ export function useSnapshot(): UseSnapshotResult {
     // 身分改變時 revision 可能不變，所以新連線要重設比較基準。
     const handleConnect = (): void => {
       latestRevisionRef.current = -1;
+      setConnectionState('connected');
+    };
+
+    const handleDisconnect = (): void => {
+      setConnectionState('reconnecting');
     };
 
     socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
     socket.on(STATE_EVENT, handleState);
     socket.on(SESSION_INVALID_EVENT, handleSessionInvalid);
     connectSocket();
 
     return () => {
       socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
       socket.off(STATE_EVENT, handleState);
       socket.off(SESSION_INVALID_EVENT, handleSessionInvalid);
     };
@@ -71,5 +88,6 @@ export function useSnapshot(): UseSnapshotResult {
     snapshot,
     sessionInvalid: sessionInvalidPayload !== null,
     sessionInvalidPayload,
+    connectionState,
   };
 }

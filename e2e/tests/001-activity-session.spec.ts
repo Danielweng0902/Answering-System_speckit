@@ -22,7 +22,8 @@ test('老師開啟後三個畫面顯示搶答中，結束後顯示已結束', as
     const studentOnePage = await studentOneContext.newPage();
     const studentTwoPage = await studentTwoContext.newPage();
 
-    // 老師登入並建立兩個組別。
+    // 老師登入並建立兩個立即使用的組別；第三組留在準備階段建立，
+    // 供下一個測試在共用資料庫已結束後登入一個獨立組別。
     await teacherPage.goto('/teacher');
     await teacherPage.getByLabel('老師密碼').fill(requireTeacherPassword());
     await teacherPage.getByRole('button', { name: '登入', exact: true }).click();
@@ -43,6 +44,14 @@ test('老師開啟後三個畫面顯示搶答中，結束後顯示已結束', as
     await expect(
       teacherPage.getByRole('list', { name: '組別清單' }),
     ).toContainText('第二組');
+
+    await teacherPage.getByLabel('新增組別名稱').fill('第三組');
+    await teacherPage
+      .getByRole('button', { name: '新增組別', exact: true })
+      .click();
+    await expect(
+      teacherPage.getByRole('list', { name: '組別清單' }),
+    ).toContainText('第三組');
 
     // 兩位學生各自選擇不同的組別進場。
     await studentOnePage.goto('/student');
@@ -75,5 +84,51 @@ test('老師開啟後三個畫面顯示搶答中，結束後顯示已結束', as
     await teacherContext.close();
     await studentOneContext.close();
     await studentTwoContext.close();
+  }
+});
+
+test('重新整理後學生保留組別與目前階段，老師保留登入身分', async ({
+  browser,
+}) => {
+  const teacherContext = await browser.newContext();
+  const studentContext = await browser.newContext();
+
+  try {
+    const teacherPage = await teacherContext.newPage();
+
+    await teacherPage.goto('/teacher');
+    await teacherPage.getByLabel('老師密碼').fill(requireTeacherPassword());
+    await teacherPage.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(
+      teacherPage.getByRole('button', { name: '開啟搶答', exact: true }),
+    ).toBeVisible();
+
+    const studentPage = await studentContext.newPage();
+    await studentPage.goto('/student');
+    await studentPage
+      .getByRole('button', { name: '第三組', exact: true })
+      .click();
+    await expect(
+      studentPage.getByText('第三組', { exact: true }),
+    ).toBeVisible();
+
+    // E2E 全部測試共用同一個伺服器；上一個測試已把活動推進到 closed，
+    // 而「重設活動」屬 Phase 8，因此此輪驗證已結束階段的重新整理。
+    await expect(studentPage.getByText('目前階段：已結束')).toBeVisible();
+
+    await studentPage.reload();
+    await expect(
+      studentPage.getByText('第三組', { exact: true }),
+    ).toBeVisible();
+    await expect(studentPage.getByText('目前階段：已結束')).toBeVisible();
+
+    await teacherPage.reload();
+    await expect(
+      teacherPage.getByRole('button', { name: '開啟搶答', exact: true }),
+    ).toBeVisible();
+    await expect(teacherPage.getByLabel('老師密碼')).not.toBeVisible();
+  } finally {
+    await teacherContext.close();
+    await studentContext.close();
   }
 });

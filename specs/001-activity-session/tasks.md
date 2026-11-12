@@ -161,14 +161,14 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 ### Tests for User Story 4 ⚠️ 先寫、先失敗
 
-- [ ] T055 [P] [US4] 寫 `server/tests/integration/reconnect.test.ts`：以同一 token 重新連線得到相同身分；斷線期間階段改變，重連後第一個 `state` 是最新階段（FR-020；AC-001-18、19、20）
-- [ ] T056 [P] [US4] 寫 `server/tests/integration/restart.test.ts`：建立組別並開啟後關閉伺服器，以同一資料庫檔重新啟動，階段、組別、`countdownEndsAt` 與重啟前相同，舊 token 仍有效（FR-021；AC-001-21；SC-006）
-- [ ] T057 [P] [US4] 在 `e2e/tests/001-activity-session.spec.ts` 加入：學生在搶答中重新整理後仍顯示原組名與搶答中（AC-001-18；SC-003）
+- [x] T055 [P] [US4] 寫 `server/tests/integration/reconnect.test.ts`：以同一 token 重新連線得到相同身分；斷線期間階段改變，重連後第一個 `state` 是最新階段（FR-020；AC-001-18、19、20）
+- [x] T056 [P] [US4] 寫 `server/tests/integration/restart.test.ts`：建立組別並開啟後關閉伺服器，以同一資料庫檔重新啟動，階段、組別、`countdownEndsAt` 與重啟前相同，舊 token 仍有效（FR-021；AC-001-21；SC-006）
+- [x] T057 [P] [US4] 在 `e2e/tests/001-activity-session.spec.ts` 加入：學生在搶答中重新整理後仍顯示原組名與搶答中（AC-001-18；SC-003）
 
 ### Implementation for User Story 4
 
-- [ ] T058 [US4] 在 `web/src/lib/socket.ts` 與 `useSnapshot.ts` 補齊：重連後以保存的 token 重新驗證；連線中斷時顯示「重新連線中」提示
-- [ ] T059 [US4] 在 `server/src/index.ts` 啟動流程補齊：從資料庫載入活動狀態後才開始接受連線（讓 T056 通過）
+- [x] T058 [US4] 在 `web/src/lib/socket.ts` 與 `useSnapshot.ts` 補齊：重連後以保存的 token 重新驗證；連線中斷時顯示「重新連線中」提示
+- [x] T059 [US4] 在 `server/src/index.ts` 啟動流程補齊：從資料庫載入活動狀態後才開始接受連線（讓 T056 通過）
 
 **Checkpoint**: T055–T057 通過；人工依 quickstart 步驟 8、11 驗證。
 
@@ -182,16 +182,16 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 ### Tests for User Story 5 ⚠️ 先寫、先失敗
 
-- [ ] T060 [P] [US5] 在 `server/tests/unit/activity.test.ts` 加入：倒數 9 秒與 3601 秒被拒絕 `COUNTDOWN_OUT_OF_RANGE`；10 與 3600 秒被接受並設定 `countdownEndsAt`；不帶倒數時為 null（FR-023；AC-001-25、26）
-- [ ] T061 [P] [US5] 寫 `server/tests/integration/countdown.test.ts`（使用可控制的時鐘）：時間到自動變為 closed 並廣播；時間到之前手動 close 會取消計時；時間到與手動 close 同時發生只產生一次狀態改變；啟動時 `countdownEndsAt` 已過期會立即結束（FR-025、026；AC-001-23、24；research R7）
-- [ ] T062 [P] [US5] 寫 `web/tests/Countdown.test.tsx`：依 `serverNow` 與 `countdownEndsAt` 計算顯示的剩餘秒數；沒有倒數時不顯示（FR-024；AC-001-22、25）
+- [x] T060 [P] [US5] 在 `server/tests/unit/activity.test.ts` 加入：倒數 9 秒與 3601 秒被拒絕 `COUNTDOWN_OUT_OF_RANGE`；10 與 3600 秒被接受並設定 `countdownEndsAt`；不帶倒數時為 null（FR-023；AC-001-25、26）
+- [x] T061 [P] [US5] 寫 `server/tests/integration/countdown.test.ts`（使用可控制的時鐘）：時間到自動變為 closed 並廣播；時間到之前手動 close 會取消計時；時間到與手動 close 同時發生只產生一次狀態改變；啟動時 `countdownEndsAt` 已過期會立即結束（FR-025、026；AC-001-23、24；research R7）
+- [x] T062 [P] [US5] 寫 `web/tests/Countdown.test.tsx`：依 `serverNow` 與 `countdownEndsAt` 計算顯示的剩餘秒數；沒有倒數時不顯示（FR-024；AC-001-22、25）
 
 ### Implementation for User Story 5
 
-- [ ] T063 [US5] 在 `server/src/domain/activity.ts` 的 `open` 加入倒數參數與範圍檢查
-- [ ] T064 [US5] 在 `server/src/app/countdown.ts` 實作計時器：設定、取消、時間到呼叫 `closeActivity`、啟動時還原；時鐘以參數注入供測試控制
-- [ ] T065 [P] [US5] 在 `web/src/features/shared/Countdown.tsx` 實作剩餘時間顯示（以快照校正時間差）
-- [ ] T066 [US5] 在 `web/src/features/teacher/PhaseControl.tsx` 加入選用的倒數時間輸入；在 `TeacherPage.tsx` 與 `StudentPage.tsx` 顯示 `Countdown`
+- [x] T063 [US5] 在 `server/src/domain/activity.ts` 的 `open` 加入倒數參數與範圍檢查
+- [x] T064 [US5] 在 `server/src/app/countdown.ts` 實作計時器：設定、取消、時間到呼叫 `closeActivity`、啟動時還原；時鐘以參數注入供測試控制
+- [x] T065 [P] [US5] 在 `web/src/features/shared/Countdown.tsx` 實作剩餘時間顯示（以快照校正時間差）
+- [x] T066 [US5] 在 `web/src/features/teacher/PhaseControl.tsx` 加入選用的倒數時間輸入；在 `TeacherPage.tsx` 與 `StudentPage.tsx` 顯示 `Countdown`
 
 **Checkpoint**: T060–T062 通過；人工依 quickstart 步驟 7、10 驗證。
 
@@ -205,14 +205,14 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 ### Tests for User Story 6 ⚠️ 先寫、先失敗
 
-- [ ] T067 [P] [US6] 在 `server/tests/unit/activity.test.ts` 加入：closed 可 reset 回 preparing 並清空時間欄位；preparing 與 open 時 reset 得到 `INVALID_PHASE`（FR-022；AC-001-27、29）
-- [ ] T068 [P] [US6] 寫 `server/tests/integration/reset.test.ts`：`activity:reset` 未帶 `confirm: true` 得到 `CONFIRM_REQUIRED` 且狀態不變；帶確認後所有連線收到 preparing，組別保留，學生身分仍有效（AC-001-27、28）
+- [x] T067 [P] [US6] 在 `server/tests/unit/activity.test.ts` 加入：closed 可 reset 回 preparing 並清空時間欄位；preparing 與 open 時 reset 得到 `INVALID_PHASE`（FR-022；AC-001-27、29）
+- [x] T068 [P] [US6] 寫 `server/tests/integration/reset.test.ts`：`activity:reset` 未帶 `confirm: true` 得到 `CONFIRM_REQUIRED` 且狀態不變；帶確認後所有連線收到 preparing，組別保留，學生身分仍有效（AC-001-27、28）
 
 ### Implementation for User Story 6
 
-- [ ] T069 [US6] 在 `server/src/domain/activity.ts` 實作 `reset`；在 `server/src/app/activityCommands.ts` 實作 `resetActivity`，並提供 `onReset` 掛載點讓後續子功能清空各自的資料
-- [ ] T070 [US6] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `activity:reset`
-- [ ] T071 [US6] 在 `web/src/features/teacher/PhaseControl.tsx` 加入「重設活動」與確認對話框（只在已結束時顯示）
+- [x] T069 [US6] 在 `server/src/domain/activity.ts` 實作 `reset`；在 `server/src/app/activityCommands.ts` 實作 `resetActivity`，並提供 `onReset` 掛載點讓後續子功能清空各自的資料
+- [x] T070 [US6] 在 `server/src/infra/socket/commandRouter.ts` 註冊 `activity:reset`
+- [x] T071 [US6] 在 `web/src/features/teacher/PhaseControl.tsx` 加入「重設活動」與確認對話框（只在已結束時顯示）
 
 **Checkpoint**: T067–T068 通過；人工依 quickstart 步驟 12 驗證。
 

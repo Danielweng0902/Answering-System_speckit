@@ -64,4 +64,25 @@ describe('/teacher', () => {
     expect(screen.getByText('第一組')).toBeDefined();
     expect(screen.getByText('在線 1 人')).toBeDefined();
   });
+
+  it('搶答中有倒數結束時間時顯示倒數', () => {
+    const now = new Date();
+    routeSnapshot = {
+      ...teacherSnapshot,
+      serverNow: now.toISOString(),
+      countdownEndsAt: new Date(now.getTime() + 65_000).toISOString(),
+    };
+    renderTeacherRoute();
+
+    expect(screen.getByRole('timer').textContent).toMatch(
+      /^剩餘時間 \d{2}:\d{2}$/,
+    );
+  });
+
+  it('搶答中沒有倒數結束時間時不顯示倒數', () => {
+    routeSnapshot = teacherSnapshot;
+    renderTeacherRoute();
+
+    expect(screen.queryByRole('timer')).toBeNull();
+  });
 });

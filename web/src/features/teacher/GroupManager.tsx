@@ -1,4 +1,4 @@
-import type { Ack, TeacherSnapshot } from '@classroom/shared';
+import type { TeacherSnapshot } from '@classroom/shared';
 import { useId, useState, type FormEvent } from 'react';
 import { sendCommand } from '../../lib/socket';
 import styles from './GroupManager.module.css';
@@ -25,7 +25,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
     setIsSending(true);
 
     try {
-      const ack: Ack = await sendCommand('group:create', { name: newName });
+      const ack = await sendCommand('group:create', { name: newName });
 
       if (ack.ok) {
         setNewName('');
@@ -57,7 +57,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
     setIsSending(true);
 
     try {
-      const ack: Ack = await sendCommand('group:rename', {
+      const ack = await sendCommand('group:rename', {
         groupId,
         name: renameName,
       });

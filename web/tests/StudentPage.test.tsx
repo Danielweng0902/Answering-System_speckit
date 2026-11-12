@@ -30,7 +30,10 @@ const groups = [
   { id: 'g2', name: '第二組' },
 ];
 
-function studentSnapshot(phase: Phase): StudentSnapshot {
+function studentSnapshot(
+  phase: Phase,
+  overrides: Partial<StudentSnapshot> = {},
+): StudentSnapshot {
   return {
     revision: 1,
     serverNow: '2026-11-12T00:00:00.000Z',
@@ -39,6 +42,7 @@ function studentSnapshot(phase: Phase): StudentSnapshot {
     groups,
     role: 'student',
     myGroupId: 'g1',
+    ...overrides,
   };
 }
 
@@ -105,6 +109,26 @@ describe('StudentPage', () => {
     expect(
       screen.getByRole('heading', { name: testCase.heading }),
     ).toBeDefined();
+  });
+
+  it('搶答中有倒數結束時間時顯示倒數', () => {
+    const now = new Date();
+    renderPage(
+      studentSnapshot('open', {
+        serverNow: now.toISOString(),
+        countdownEndsAt: new Date(now.getTime() + 65_000).toISOString(),
+      }),
+    );
+
+    expect(screen.getByRole('timer').textContent).toMatch(
+      /^剩餘時間 \d{2}:\d{2}$/,
+    );
+  });
+
+  it('搶答中沒有倒數結束時間時不顯示倒數', () => {
+    renderPage(studentSnapshot('open'));
+
+    expect(screen.queryByRole('timer')).toBeNull();
   });
 
   it('準備中可更換組別，成功後清除 token 並以 guest 身分重新連線', async () => {

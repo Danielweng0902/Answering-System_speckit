@@ -3,6 +3,7 @@ import type { Phase } from '@classroom/shared';
 import type { UseSnapshotResult } from '../../lib/useSnapshot';
 import { clearToken } from '../../lib/session';
 import { connectSocket, sendCommand } from '../../lib/socket';
+import { Countdown } from '../shared/Countdown';
 import { GroupPicker } from './GroupPicker';
 import styles from './StudentPage.module.css';
 
@@ -78,6 +79,13 @@ export function StudentPage({
         <p className={styles.notice} role="alert">
           {errorMessage}
         </p>
+      )}
+
+      {snapshot.phase === 'open' && (
+        <Countdown
+          serverNow={snapshot.serverNow}
+          countdownEndsAt={snapshot.countdownEndsAt}
+        />
       )}
 
       {snapshot.phase === 'preparing' && (

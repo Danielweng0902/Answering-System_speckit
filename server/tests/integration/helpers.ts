@@ -21,39 +21,62 @@ export type TestClientOptions = {
   autoConnect?: boolean;
 };
 
-export type TestServer = ServerControl & {
+export type TestServerOptions = Omit<
+  CreateServerOptions,
+  'dataDir' | 'port'
+> & {
+  /** Reuse an existing directory, for example when testing a restart. */
+  dataDir?: string;
+};
+
+export type CloseTestServerOptions = {
+  /** Keep the SQLite file so a later startTestServer can reuse this directory. */
+  preserveDataDir?: boolean;
+};
+
+export type TestServer = Omit<ServerControl, 'close'> & {
   dataDir: string;
+  close: (options?: CloseTestServerOptions) => Promise<void>;
   connect: (options?: TestClientOptions) => Socket;
 };
 
 export async function startTestServer(
-  options: Omit<CreateServerOptions, 'dataDir' | 'port'> = {},
+  options: TestServerOptions = {},
 ): Promise<TestServer> {
-  const dataDir = await mkdtemp(join(tmpdir(), 'classroom-server-'));
+  const { dataDir: existingDataDir, ...serverOptions } = options;
+  const dataDir =
+    existingDataDir ?? (await mkdtemp(join(tmpdir(), 'classroom-server-')));
   let server: ServerControl;
 
   try {
     server = await createServer({
-      ...options,
+      ...serverOptions,
       dataDir,
       port: 0,
-      teacherPassword: options.teacherPassword ?? 'test-password',
+      teacherPassword: serverOptions.teacherPassword ?? 'test-password',
     });
   } catch (error) {
-    await rm(dataDir, { recursive: true, force: true });
+    // Never remove a caller-owned directory when startup itself fails.
+    if (existingDataDir === undefined) {
+      await rm(dataDir, { recursive: true, force: true });
+    }
     throw error;
   }
 
   const clients = new Set<Socket>();
 
-  async function close(): Promise<void> {
+  async function close(
+    closeOptions: CloseTestServerOptions = {},
+  ): Promise<void> {
     for (const client of clients) {
       client.removeAllListeners();
       client.disconnect();
     }
     clients.clear();
     await server.close();
-    await rm(dataDir, { recursive: true, force: true });
+    if (!closeOptions.preserveDataDir) {
+      await rm(dataDir, { recursive: true, force: true });
+    }
   }
 
   return {

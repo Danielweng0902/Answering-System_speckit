@@ -1,4 +1,5 @@
 import { Link, Route, Routes } from 'react-router';
+import { ConnectionStatus } from '../features/shared/ConnectionStatus';
 import { StudentPage } from '../features/student/StudentPage';
 import { TeacherPage } from '../features/teacher/TeacherPage';
 import styles from './App.module.css';
@@ -29,13 +30,18 @@ export function AppRoutes() {
   const snapshotState = useSnapshot();
 
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route
-        path="/teacher"
-        element={<TeacherPage snapshot={snapshotState.snapshot} />}
+    <>
+      <ConnectionStatus
+        connectionState={snapshotState.connectionState ?? 'connecting'}
       />
-      <Route path="/student" element={<StudentPage {...snapshotState} />} />
-    </Routes>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/teacher"
+          element={<TeacherPage snapshot={snapshotState.snapshot} />}
+        />
+        <Route path="/student" element={<StudentPage {...snapshotState} />} />
+      </Routes>
+    </>
   );
 }

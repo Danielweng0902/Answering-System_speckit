@@ -1,0 +1,9 @@
+.timer {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}

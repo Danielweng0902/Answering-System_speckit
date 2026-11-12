@@ -1,5 +1,6 @@
 import type { Snapshot } from '@classroom/shared';
 import { useState } from 'react';
+import { Countdown } from '../shared/Countdown';
 import { GroupManager } from './GroupManager';
 import { PhaseControl } from './PhaseControl';
 import { TeacherLogin } from './TeacherLogin';
@@ -43,6 +44,12 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
         </h1>
       </header>
       <PhaseControl snapshot={snapshot} />
+      {snapshot.phase === 'open' && (
+        <Countdown
+          serverNow={snapshot.serverNow}
+          countdownEndsAt={snapshot.countdownEndsAt}
+        />
+      )}
       <GroupManager snapshot={snapshot} />
     </section>
   );

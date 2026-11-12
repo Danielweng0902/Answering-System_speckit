@@ -32,7 +32,7 @@ Worker 的呼叫方式依你的環境而定（OpenCode worker 工具或其他委
 |---|---|
 | Constitution 1.0.0 | 完成（`.specify/memory/constitution.md`；開頭的 Sync Impact Report 註解在第一次 commit 前刪除） |
 | Feature Contract v0.2 | 草稿，**尚待 OpenSpec 組確認**（`docs/shared/FEATURE-CONTRACT.md`） |
-| 001 activity-session | analyze 已由監督覆核；Phase 1（T001–T008）骨架通過自動檢查；Phase 1–5（T001–T054）完成並通過監督驗收，見 `docs/verification/`；下一步 Phase 6（US4，T055–T059） |
+| 001 activity-session | analyze 已由監督覆核；Phase 1（T001–T008）骨架通過自動檢查；Phase 1–8（T001–T071）完成並通過監督驗收，見 `docs/verification/`；下一步 Phase 9 收尾（T072–T079） |
 | 002 guided-notes-import | spec、圖完成 |
 | 003 buzz-in | spec、圖完成 |
 | 004 export | spec、圖完成 |

@@ -39,6 +39,22 @@ describe('useSnapshot', () => {
     expect(result.current.snapshot?.revision).toBe(5);
   });
 
+  it('connect 與 disconnect 時回傳對應的連線狀態', () => {
+    const { result } = renderHook(() => useSnapshot());
+
+    expect(result.current.connectionState).toBe('connecting');
+
+    act(() => {
+      fakeSocket.emit('disconnect');
+    });
+    expect(result.current.connectionState).toBe('reconnecting');
+
+    act(() => {
+      fakeSocket.emit('connect');
+    });
+    expect(result.current.connectionState).toBe('connected');
+  });
+
   it('重新連線（身分改變）後接受相同 revision 的新身分快照', () => {
     const { result } = renderHook(() => useSnapshot());
     act(() => {
