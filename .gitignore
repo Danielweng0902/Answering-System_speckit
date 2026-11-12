@@ -28,3 +28,11 @@ __pycache__/
 
 # 設計參考截圖（別人的作品，不公開）
 design/references/screenshots/
+
+# 各自的 AI 工具設定與 skill（本機安裝，不進版本控制）
+CLAUDE.md
+opencode.json
+.mcp.json
+.claude/
+.agents/
+.opencode/

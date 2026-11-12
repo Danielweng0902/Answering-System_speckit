@@ -19,7 +19,7 @@ NCU SE6005 軟體工程期末專題：課堂搶答系統（SpecKit 組）。文�
 
 ## 2. 可以用與不可以用的 skill
 
-可以用（已放在 `.claude/skills/`）：
+可以用（各自在本機安裝，不進版本控制）：
 
 - 實作紀律：`test-driven-development`、`systematic-debugging`、`verification-before-completion`、`requesting-code-review`、`receiving-code-review`、`finishing-a-development-branch`
 - 需求追問（只由人手動觸發）：`grill-me`、`grill-with-docs`；交接：`handoff`

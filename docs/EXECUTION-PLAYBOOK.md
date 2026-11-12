@@ -51,7 +51,7 @@ Worker 的呼叫方式依你的環境而定（OpenCode worker 工具或其他委
 
 ## 4. Spec Kit 指令
 
-在 Codex 中的寫法是 `$speckit-<名稱>`（skill 在 `.agents/skills/`）。Claude Code 是 `/speckit-<名稱>`，OpenCode 是 `/speckit.<名稱>`。
+在 Codex 中的寫法是 `$speckit-<名稱>`（skill 在本機的 `.agents/skills/`，不進版本控制）。Claude Code 是 `/speckit-<名稱>`，OpenCode 是 `/speckit.<名稱>`。
 
 **切換子功能**：Spec Kit 以 `.specify/feature.json` 決定目前的子功能，切換 git branch 不會改變它。開始處理某個子功能前先寫入：
 
