@@ -259,6 +259,9 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     ).toBeVisible();
     await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
 
+    // 002 起開啟搶答前必須先有題目；自行匯入，不依賴其他測試留下的狀態。
+    await importQuestions(teacherPage);
+
     // 步驟 7：以 30 秒倒數開啟搶答，三個畫面 2 秒內顯示搶答中，
     // 剩餘時間相差不超過 1 秒（都在 29–30 秒）（AC-001-01、22）。
     await phaseControl.getByLabel('設定倒數').check();

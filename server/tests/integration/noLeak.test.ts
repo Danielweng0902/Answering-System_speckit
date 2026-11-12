@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { issueSession } from '../../src/app/access.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
 import {
+  seedQuestion,
   sendCommand,
   startTestServer,
   waitForState,
@@ -40,7 +41,7 @@ describe('資訊不外洩（原則 IV、VI；SC-005）', () => {
     await server.close();
   });
 
-  it('學生與 guest 收到的一連串 state 快照都不含 presence（原則 VI）', async () => {
+  it('學生與 guest 收到的一連串 state 快照都不含 presence、questions、guidedNotes（原則 VI）', async () => {
     insertGroup(server.db, { id: 'group-1', name: '第一組', position: 1 });
     insertGroup(server.db, { id: 'group-2', name: '第二組', position: 2 });
 
@@ -118,7 +119,8 @@ describe('資訊不外洩（原則 IV、VI；SC-005）', () => {
     });
     await Promise.all([studentState, guestSawLeave]);
 
-    // 開啟 → 結束 → 重設。
+    // 開啟 → 結束 → 重設（002 起開啟前必須先有題目）。
+    seedQuestion(server.db);
     await runCommand('activity:open', {});
     await runCommand('activity:close', {});
     await runCommand('activity:reset', { confirm: true });
@@ -137,6 +139,8 @@ describe('資訊不外洩（原則 IV、VI；SC-005）', () => {
       ...guestStates,
     ]) {
       expect(snapshot).not.toHaveProperty('presence');
+      expect(snapshot).not.toHaveProperty('questions');
+      expect(snapshot).not.toHaveProperty('guidedNotes');
     }
   });
 
