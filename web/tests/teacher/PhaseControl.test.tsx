@@ -20,6 +20,8 @@ function makeSnapshot(overrides: Partial<TeacherSnapshot> = {}): TeacherSnapshot
     ],
     presence: {},
     role: 'teacher',
+    questions: [],
+    guidedNotes: null,
     ...overrides,
   };
 }

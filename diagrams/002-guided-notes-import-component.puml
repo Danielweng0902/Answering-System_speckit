@@ -1,37 +1,99 @@
 @startuml
 !pragma layout smetana
-title 002 Guided Notes 匯入：組件圖（概念層）
+title 002 Guided Notes 匯入：組件圖（技術層）
 
-actor 老師
-component "老師端畫面" as TeacherUI
-cloud "Google Sheets\n（知道連結者可檢視）" as GS
+actor "老師" as Teacher
 
-package "搶答系統（伺服器）" {
-  component "匯入入口\n(Import Gateway)" as Gateway
-  component "試算表取得\n(Sheet Fetcher)" as Fetcher
-  component "學習單解析\n(Guided Notes Parser)" as Parser
-  component "匯入驗證\n(Import Validator)" as Validator
-  component "題目庫\n(Question Bank)" as Bank
-  component "活動階段管理\n（001）" as Phase
-  database "活動資料儲存" as Store
+cloud "Google Sheets\nexport?format=xlsx" as GoogleSheets
+
+package "老師端 web/src" {
+  component "TeacherPage.tsx\n路徑：web/src/features/teacher/" as TeacherPage
+  component "QuestionImport.tsx\n讀取、摘要、確認\n路徑：web/src/features/teacher/" as QuestionImportUI
+  component "QuestionList.tsx\n題目清單\n路徑：web/src/features/teacher/" as QuestionListUI
+  component "api.ts\nimportFromFile(file)\nimportFromLink(url)\n路徑：web/src/lib/" as WebApi
+  component "socket.ts\nsendCommand() 與 state 事件\n路徑：web/src/lib/" as WebSocket
 }
 
-老師 --> TeacherUI
-TeacherUI --> Gateway : 連結或 xlsx 檔
-Gateway --> Phase : 檢查老師身分與「準備中」
-Gateway --> Fetcher : 以連結取得試算表
-Fetcher --> GS : 下載為試算表檔
-Gateway --> Parser : 試算表內容
-Parser --> Validator : 題目與空格
-Validator --> Gateway : 摘要或錯誤
-Gateway --> TeacherUI : 匯入摘要／錯誤說明
-TeacherUI --> Gateway : 確認匯入
-Gateway --> Bank : 取代題目
-Bank --> Store : 保存題目、空格位置、原檔
+package "伺服器 server/src" {
+  component "questionRoutes.ts\nPOST /api/questions/import/file\nPOST /api/questions/import/link\n路徑：infra/http/" as QuestionRoutes
+  component "importService.ts\npreviewFromFile()\npreviewFromLink()\nconfirm()\n路徑：app/" as ImportService
+  component "googleSheetsFetcher.ts\nnormalizeSheetUrl()\nfetchSheetXlsx()\n路徑：infra/sheets/" as GoogleSheetsFetcher
+  component "workbookReader.ts\nassertWorkbookSize()\nreadWorkbook()\n路徑：infra/xlsx/" as WorkbookReader
+  component "guidedNotesParser.ts\nfindHeader()\nparseGuidedNotes()\n路徑：domain/" as GuidedNotesParser
+  component "importValidator.ts\nvalidateImport()\n路徑：domain/" as ImportValidator
+  component "index.ts 註冊 →\ncommandRouter.ts register()\n指令：questions:confirm\n路徑：src/、infra/socket/" as QuestionsConfirmCommand
+  component "activityCommands.ts 呼叫 →\nactivity.ts open(questionCount)\n路徑：app/、domain/" as ActivityManager
+  component "broadcaster.ts\nbroadcastState()\nstate = STATE_EVENT\n路徑：infra/socket/" as StateBroadcaster
+  component "snapshot.ts\ncreateSnapshot()\nTeacherSnapshot 延伸\n路徑：app/" as SnapshotBuilder
+  component "questionBank.ts\nreplace() / listSummaries()\nhasQuestions() / guidedNotesInfo()\n路徑：app/" as QuestionBank
+  component "questionRepo.ts\nreplaceAll() / list()\ncount() / getGuidedNotes()\n路徑：infra/db/" as QuestionRepo
+  component "activityRepo.ts\ngetActivity() / updateActivity()\n路徑：infra/db/" as ActivityRepo
+  database "SQLite\nguided_notes\nquestions / blanks\nactivity\n路徑：infra/db/database.ts" as SQLite
+}
 
-note right of Parser
-  依表頭「題號／題目／作答」
-  與合併範圍定位，
-  不使用固定儲存格位置
+Teacher --> TeacherPage : 操作匯入畫面
+TeacherPage --> QuestionImportUI : snapshot : TeacherSnapshot
+TeacherPage --> QuestionListUI : questions : QuestionSummary[]
+QuestionImportUI --> WebApi : importFromFile() 或 importFromLink()
+QuestionImportUI --> WebSocket : sendCommand()
+WebSocket --> TeacherPage : state 更新 Snapshot\n再傳入 questions / guidedNotes
+
+WebApi --> QuestionRoutes : HTTP POST\nBearer token、xlsx bytes 或 { url }
+WebSocket --> QuestionsConfirmCommand : questions:confirm\n{ importId }
+
+QuestionRoutes --> ImportService : previewFromFile()\n或 previewFromLink()
+QuestionRoutes --> ActivityRepo : getActivity()（階段檢查）
+QuestionRoutes --> WorkbookReader : assertWorkbookSize()（上傳前置檢查）
+ImportService --> GoogleSheetsFetcher : parseSheetLink()\nfetchSheetXlsx()
+GoogleSheetsFetcher --> GoogleSheets : HTTPS 下載 xlsx\n手動檢查轉址主機
+GoogleSheetsFetcher --> WorkbookReader : assertWorkbookSize()
+ImportService --> WorkbookReader : readWorkbook()
+WorkbookReader --> ImportService : SheetGrid[]
+ImportService --> GuidedNotesParser : parseGuidedNotes(grids)
+GuidedNotesParser --> ImportService : ParseResult
+ImportService --> ImportValidator : validateImport(parsed)
+ImportValidator --> ImportService : ImportValidationResult
+ImportService --> QuestionBank : hasQuestions()\n（ImportSummary.replacesExisting）
+
+QuestionsConfirmCommand --> ImportService : confirm(importId)
+ImportService --> ActivityRepo : getActivity() 與 updateActivity()\n成功時 revision + 1
+ImportService --> QuestionBank : replace(guidedNotes, questions)
+QuestionBank --> QuestionRepo : replaceAll() 或 list()/count()
+QuestionRepo --> SQLite : transaction 刪舊寫新\nblanks ON DELETE CASCADE
+ActivityRepo --> SQLite : 保存 activity.revision
+
+QuestionsConfirmCommand --> StateBroadcaster : ack.ok 後 broadcastState()
+StateBroadcaster --> SnapshotBuilder : createSnapshot()
+SnapshotBuilder --> QuestionRepo : list() 與 getGuidedNotes()
+SnapshotBuilder --> ActivityRepo : getActivity()
+StateBroadcaster --> WebSocket : state : TeacherSnapshot\nrevision +1、questions、guidedNotes
+
+ActivityManager --> QuestionRepo : count()\nactivity:open 的題目數
+ActivityManager --> ActivityRepo : getActivity() 與 updateActivity()
+
+note right of ActivityManager
+  activity:open 檢查順序：
+  NO_GROUPS → QUESTIONS_REQUIRED → COUNTDOWN_OUT_OF_RANGE。
+end note
+
+note right of QuestionRoutes
+  只在準備中允許讀取；HTTP 失敗碼：
+  UNAUTHORIZED、FORBIDDEN、INVALID_PHASE、INVALID_INPUT、
+  FILE_INVALID、FILE_TOO_LARGE、LINK_INVALID、
+  LINK_NOT_SHARED、LINK_UNREACHABLE、
+  HEADER_NOT_FOUND、NO_QUESTIONS、DUPLICATE_QUESTION_NUMBER；
+  全部失敗都不寫入題目資料。
+end note
+
+note right of GuidedNotesParser
+  findHeader() 以同一列的「題號／題目／作答」定位；
+  parseGuidedNotes() 依合併範圍辨識題組，
+  不寫死儲存格座標。
+end note
+
+note bottom of ImportService
+  讀取結果不落地：只保留最近一次 importId 15 分鐘；
+  confirm() 在同一個 SQLite transaction 取代題目，
+  並把 activity.revision 加 1。
 end note
 @enduml

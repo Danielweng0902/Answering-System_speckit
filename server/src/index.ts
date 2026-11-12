@@ -5,11 +5,13 @@ import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 import { config as loadDotenv } from 'dotenv';
 import { Server as SocketIOServer } from 'socket.io';
+import type { QuestionsConfirmPayload } from '@classroom/shared';
 import { loadConfig } from './config.js';
 import { repositoryRoot, resolveFromRepositoryRoot } from './paths.js';
 import { createActivityCommands } from './app/activityCommands.js';
 import { createCountdown, type CountdownScheduler } from './app/countdown.js';
 import { createGroupCommands } from './app/groupCommands.js';
+import { createImportService } from './app/importService.js';
 import { leaveGroup } from './app/studentCommands.js';
 import { getActivity } from './infra/db/activityRepo.js';
 import { openDatabase } from './infra/db/database.js';
@@ -26,6 +28,10 @@ export type CreateServerOptions = {
   webDistPath?: string;
   /** 倒數計時的時鐘與排程器（T064）；測試可注入手動時鐘。 */
   scheduler?: CountdownScheduler;
+  /** 002 連結匯入的 fetch；測試注入假的 fetch，不連網路。 */
+  fetchImpl?: typeof fetch;
+  /** 002 匯入服務的時鐘（15 分鐘有效期）；預設真實時鐘。 */
+  now?: () => Date;
 };
 
 export type ServerControl = Pick<StateBroadcaster, 'broadcastState'> & {
@@ -88,11 +94,20 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
   }
   const database = openDatabase(databasePath);
 
+  // 002 匯入服務：HTTP 讀取與 Socket questions:confirm 共用同一份記憶體
+  // 讀取結果，所以先建立再傳給 HTTP app 與指令註冊。
+  const importService = createImportService({
+    db: database,
+    now: options.now,
+    fetchImpl: options.fetchImpl,
+  });
+
   const httpServer = createHttpServer(
     createApp({
       database,
       webDistPath: options.webDistPath,
       teacherPassword: options.teacherPassword ?? config.teacherPassword,
+      importService,
     }),
   );
   const io = new SocketIOServer(httpServer);
@@ -150,6 +165,15 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     commandRouter.register(socket, 'activity:open', teacherOnly, activityCommands.openActivity);
     commandRouter.register(socket, 'activity:close', teacherOnly, activityCommands.closeActivity);
     commandRouter.register(socket, 'activity:reset', teacherOnly, activityCommands.resetActivity);
+    // 002（T024）：questions:confirm 只有老師、只在準備中；ack.ok 由路由
+    // 決定是否廣播，所有老師分頁同步收到新的題目摘要（research R6）。
+    commandRouter.register(
+      socket,
+      'questions:confirm',
+      teacherOnly,
+      (_identity, payload) =>
+        importService.confirm((payload as QuestionsConfirmPayload).importId),
+    );
     commandRouter.register(socket, 'student:leave', studentOnly, () => {
       const token: unknown = socket.handshake.auth.token;
       return leaveGroup(

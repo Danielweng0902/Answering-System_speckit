@@ -5,6 +5,7 @@ import { issueSession } from '../../src/app/access.js';
 import { getActivity, type Activity } from '../../src/infra/db/activityRepo.js';
 import { insertGroup, listGroups } from '../../src/infra/db/groupRepo.js';
 import {
+  seedQuestion,
   sendCommand,
   startTestServer,
   waitForState,
@@ -46,6 +47,8 @@ describe('activity:reset 重設活動（老師＋學生＋guest）', () => {
     server = await startTestServer();
     insertGroup(server.db, { id: 'group-1', name: '第一組', position: 1 });
     insertGroup(server.db, { id: 'group-2', name: '第二組', position: 2 });
+    // 002（FR-020）：開啟搶答前先有題目。
+    seedQuestion(server.db);
 
     const teacherToken = issueSession(server.db, { role: 'teacher' });
     studentToken = issueSession(server.db, {

@@ -2,12 +2,15 @@ import {
   ERROR_MESSAGES,
   type ApiErrorResponse,
   type ErrorCode,
+  type ImportSummary,
   type StudentJoinResponse,
   type TeacherLoginResponse,
 } from '@classroom/shared';
+import { getToken } from './session';
 
 const GENERIC_LOGIN_ERROR = '目前無法登入，請稍後再試';
 const GENERIC_JOIN_ERROR = '目前無法進場，請稍後再試';
+const GENERIC_IMPORT_ERROR = '目前無法讀取學習單，請稍後再試';
 
 export type LoginTeacherResult =
   | { ok: true; token: string }
@@ -18,6 +21,13 @@ export type LoginTeacherResult =
 
 export type JoinStudentResult =
   | { ok: true; token: string; groupId: string }
+  | {
+      ok: false;
+      error: { code: ErrorCode | null; message: string };
+    };
+
+export type ImportQuestionsResult =
+  | { ok: true; summary: ImportSummary }
   | {
       ok: false;
       error: { code: ErrorCode | null; message: string };
@@ -55,6 +65,19 @@ function isStudentJoinResponse(
     value.role === 'student' &&
     typeof value.token === 'string' &&
     typeof value.groupId === 'string'
+  );
+}
+
+function isImportSummary(value: unknown): value is ImportSummary {
+  return (
+    isRecord(value) &&
+    typeof value.importId === 'string' &&
+    typeof value.sheetName === 'string' &&
+    typeof value.questionCount === 'number' &&
+    typeof value.blankCount === 'number' &&
+    Array.isArray(value.questions) &&
+    Array.isArray(value.warnings) &&
+    typeof value.replacesExisting === 'boolean'
   );
 }
 
@@ -146,4 +169,80 @@ export async function joinStudent(groupId: string): Promise<JoinStudentResult> {
   }
 
   return { ok: true, token: body.token, groupId: body.groupId };
+}
+
+async function readQuestionsImport(
+  request: () => Promise<Response>,
+): Promise<ImportQuestionsResult> {
+  let response: Response;
+
+  try {
+    response = await request();
+  } catch {
+    return {
+      ok: false,
+      error: { code: null, message: GENERIC_IMPORT_ERROR },
+    };
+  }
+
+  let body: unknown;
+
+  try {
+    body = (await response.json()) as unknown;
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: isApiErrorResponse(body)
+        ? body.error
+        : { code: null, message: GENERIC_IMPORT_ERROR },
+    };
+  }
+
+  if (!isImportSummary(body)) {
+    return {
+      ok: false,
+      error: { code: null, message: GENERIC_IMPORT_ERROR },
+    };
+  }
+
+  return { ok: true, summary: body };
+}
+
+/** 以原始檔案位元組讀取 xlsx 摘要；確認前不會更動題目。 */
+export async function importFromFile(
+  file: File,
+): Promise<ImportQuestionsResult> {
+  return readQuestionsImport(async () => {
+    const bytes = await file.arrayBuffer();
+
+    return fetch('/api/questions/import/file', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${getToken() ?? ''}`,
+        'content-type': 'application/octet-stream',
+        'x-file-name': encodeURIComponent(file.name),
+      },
+      body: bytes,
+    });
+  });
+}
+
+/** 送出 Google 試算表連結以讀取摘要；確認前不會更動題目。 */
+export async function importFromLink(
+  url: string,
+): Promise<ImportQuestionsResult> {
+  return readQuestionsImport(() =>
+    fetch('/api/questions/import/link', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${getToken() ?? ''}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    }),
+  );
 }

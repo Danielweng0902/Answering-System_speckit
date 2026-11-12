@@ -15,7 +15,9 @@
   "dependencies": {
     "@classroom/shared": "*",
     "dotenv": "^17.2.3",
+    "exceljs": "4.4.0",
     "express": "^5.1.0",
+    "jszip": "3.10.2",
     "socket.io": "^4.8.1",
     "zod": "^4.1.12"
   },

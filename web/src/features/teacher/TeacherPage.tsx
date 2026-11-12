@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Countdown } from '../shared/Countdown';
 import { GroupManager } from './GroupManager';
 import { PhaseControl } from './PhaseControl';
+import { QuestionImport } from './QuestionImport';
+import { QuestionList } from './QuestionList';
 import { TeacherLogin } from './TeacherLogin';
 import styles from './TeacherPage.module.css';
 
@@ -50,6 +52,8 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
           countdownEndsAt={snapshot.countdownEndsAt}
         />
       )}
+      <QuestionImport snapshot={snapshot} />
+      <QuestionList questions={snapshot.questions} />
       <GroupManager snapshot={snapshot} />
     </section>
   );

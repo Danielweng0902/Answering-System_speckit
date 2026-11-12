@@ -9,7 +9,12 @@ import express, {
 } from 'express';
 import type { DatabaseSync } from 'node:sqlite';
 import { ERROR_MESSAGES, type ErrorCode } from '@classroom/shared';
+import {
+  createImportService,
+  type ImportService,
+} from '../../app/importService.js';
 import { createAuthRouter } from './authRoutes.js';
+import { createQuestionRouter } from './questionRoutes.js';
 
 export type HttpAppOptions = {
   /** Database used by the authentication routes. */
@@ -18,6 +23,8 @@ export type HttpAppOptions = {
   webDistPath?: string | undefined;
   /** Kept on app.locals for the authentication routes. */
   teacherPassword?: string | undefined;
+  /** 002 匯入服務；未注入時以資料庫建立預設實例（時鐘與 fetch 不可控）。 */
+  importService?: ImportService | undefined;
 };
 
 const DEFAULT_WEB_DIST = fileURLToPath(
@@ -66,6 +73,12 @@ export function createApp(options: HttpAppOptions): Express {
         app.locals.teacherPassword as string | undefined,
     }),
   );
+
+  // 002 匯入路由：只讀取不寫入；raw body 中介層只掛在上傳路徑，
+  // 不影響其他 API 的 express.json。
+  const importService =
+    options.importService ?? createImportService({ db: options.database });
+  app.use(createQuestionRouter({ database: options.database, importService }));
 
   // A missing development build must not prevent server startup.
   if (existsSync(webDistPath)) {

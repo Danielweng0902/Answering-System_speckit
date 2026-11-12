@@ -5,6 +5,7 @@ import { issueSession } from '../../src/app/access.js';
 import { getActivity, type Activity } from '../../src/infra/db/activityRepo.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
 import {
+  seedQuestion,
   sendCommand,
   startTestServer,
   waitForState,
@@ -36,6 +37,8 @@ describe('activity 階段同步（老師＋兩組學生＋guest）', () => {
     server = await startTestServer();
     insertGroup(server.db, { id: 'group-1', name: '第一組', position: 1 });
     insertGroup(server.db, { id: 'group-2', name: '第二組', position: 2 });
+    // 002（FR-020）：沒有題目不能開啟搶答，先以 repository 直接寫入一題。
+    seedQuestion(server.db);
 
     const teacherToken = issueSession(server.db, { role: 'teacher' });
     const studentOneToken = issueSession(server.db, {

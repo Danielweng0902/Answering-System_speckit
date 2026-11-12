@@ -1,85 +1,248 @@
 @startuml
 !pragma layout smetana
-title 002 Guided Notes 匯入：類別圖（領域物件）
+title 002 Guided Notes 匯入：類別圖（技術層）
 
-enum 題目類型 {
-  單題
-  題組
+skinparam classAttributeIconSize 0
+
+enum QuestionKind <<shared/src/protocol.ts；string union>> {
+  single
+  group
 }
 
-enum 來源種類 {
-  連結
-  檔案
+class CellRange <<server/src/domain/sheetGrid.ts>> {
+  top : number
+  left : number
+  bottom : number
+  right : number
 }
 
-class 學習單 {
-  來源 : 來源種類
-  原始檔內容
-  工作表名稱
+class SheetGrid <<server/src/domain/sheetGrid.ts>> {
+  name : string
+  cells : Map<string, string>
+  merges : CellRange[]
 }
 
-class 表頭位置 {
-  表頭列
-  題號欄
-  題目欄
-  作答欄
+class HeaderLocation <<server/src/domain/guidedNotesParser.ts>> {
+  row : number
+  numberColumn : number
+  promptColumn : number
+  answerColumn : number
 }
 
-class 題目 {
-  題號
-  類型 : 題目類型
-  題目敘述 [0..1]
-  順序
+class ParsedBlank <<server/src/domain/guidedNotesParser.ts>> {
+  position : number
+  prefix : string
+  cell : string
+  hasContent? : boolean
 }
 
-class 空格 {
-  順序
-  前綴 [0..1]
-  原檔位置
+class ParsedQuestion <<server/src/domain/guidedNotesParser.ts>> {
+  number : number
+  kind : QuestionKind
+  prompt : string
+  position : number
+  rows : number[]
+  blanks : ParsedBlank[]
 }
 
-class 匯入摘要 {
-  題數
-  空格數
-  提醒事項 [0..*]
+class ParseFailure <<server/src/domain/guidedNotesParser.ts>> {
+  ok : false
+  code : 'HEADER_NOT_FOUND' | 'NO_QUESTIONS'
+  message : string
 }
 
-class 匯入錯誤 {
-  原因
-  位置 [0..1]
-  修正方式
+class ImportValidationFailure <<server/src/domain/importValidator.ts>> {
+  ok : false
+  code : 'DUPLICATE_QUESTION_NUMBER'
+  message : string
 }
 
-class 學習單解析器 {
-  --
-  尋找表頭(活頁簿) : 表頭位置
-  解析(活頁簿) : 匯入摘要 或 匯入錯誤
+class CommandError <<shared/src/protocol.ts>> {
+  code : ErrorCode
+  message : string
 }
 
-class 題目庫 {
-  --
-  取代(學習單, 題目清單)
-  題目清單()
-  是否有題目()
+class QuestionSummary <<shared/src/protocol.ts>> {
+  number : number
+  kind : QuestionKind
+  prompt : string
+  blankCount : number
 }
 
-學習單 "1" *-- "1..*" 題目
-題目 "1" *-- "1..*" 空格
-學習單解析器 ..> 表頭位置 : 找出
-學習單解析器 ..> 匯入摘要 : 成功
-學習單解析器 ..> 匯入錯誤 : 失敗
-匯入摘要 "1" o-- "1..*" 題目
-題目庫 "1" o-- "0..1" 學習單
-題目 --> 題目類型
-學習單 --> 來源種類
+class ImportSummaryBlank <<shared/src/protocol.ts>> {
+  prefix : string
+  cell : string
+}
 
-note bottom of 空格
-  原檔位置＝作答欄在該列的儲存格；
-  若為合併儲存格，取左上角
+class ImportSummaryQuestion <<shared/src/protocol.ts>> {
+  number : number
+  kind : QuestionKind
+  prompt : string
+  blankCount : number
+  blanks : ImportSummaryBlank[]
+}
+
+class ImportWarning <<shared/src/protocol.ts；union>> {
+  code : 'NUMBERS_NOT_SEQUENTIAL' | 'BLANK_HAS_CONTENT' | 'MULTIPLE_SHEETS_WITH_HEADER'
+  message : string
+}
+
+class ImportSummary <<shared/src/protocol.ts>> {
+  importId : string
+  sheetName : string
+  questionCount : number
+  blankCount : number
+  questions : ImportSummaryQuestion[]
+  warnings : ImportWarning[]
+  replacesExisting : boolean
+}
+
+class GuidedNotesInfo <<shared/src/protocol.ts>> {
+  sheetName : string
+  sourceKind : 'link' | 'file'
+  fileName : string | null
+  importedAt : string
+}
+
+class TeacherSnapshot <<shared/src/protocol.ts>> {
+  role : 'teacher'
+  presence : Record<string, number>
+  questions : QuestionSummary[]
+  guidedNotes : GuidedNotesInfo | null
+}
+
+class GuidedNotesSource <<server/src/infra/db/questionRepo.ts>> {
+  sourceKind : 'link' | 'file'
+  sourceUrl : string | null
+  fileName : string | null
+}
+
+class GuidedNotesRecord <<server/src/infra/db/questionRepo.ts>> {
+  sourceKind : 'link' | 'file'
+  sourceUrl : string | null
+  fileName : string | null
+  file : Uint8Array
+  sheetName : string
+  importedAt : string
+}
+
+class GuidedNotesMeta <<server/src/infra/db/questionRepo.ts>> {
+  sourceKind : 'link' | 'file'
+  sourceUrl : string | null
+  fileName : string | null
+  sheetName : string
+  importedAt : string
+}
+
+class BlankInput <<server/src/infra/db/questionRepo.ts>> {
+  position : number
+  prefix : string
+  cell : string
+}
+
+class QuestionInput <<server/src/infra/db/questionRepo.ts>> {
+  id : string
+  number : number
+  kind : QuestionKind
+  prompt : string
+  position : number
+  blanks : BlankInput[]
+}
+
+class StoredQuestion <<server/src/infra/db/questionRepo.ts；type alias>> {
+  StoredQuestion = QuestionInput
+}
+
+class GuidedNotesParser <<server/src/domain/guidedNotesParser.ts>> {
+  findHeader(grid : SheetGrid) : HeaderLocation | null
+  parseGuidedNotes(grids : SheetGrid[]) : ParseResult
+}
+
+class ImportValidator <<server/src/domain/importValidator.ts>> {
+  validateImport(parsed : ParsedImportInput) : ImportValidationResult
+}
+
+class ImportService <<server/src/app/importService.ts>> {
+  previewFromFile(fileName : string | null, bytes : Uint8Array) : Promise<PreviewResult>
+  previewFromLink(url : string) : Promise<PreviewResult>
+  confirm(importId : string) : Ack
+}
+
+class QuestionBank <<server/src/app/questionBank.ts>> {
+  replace(guidedNotes : GuidedNotesRecord, questions : QuestionInput[]) : void
+  listSummaries() : QuestionSummary[]
+  hasQuestions() : boolean
+  count() : number
+  guidedNotesInfo() : GuidedNotesMeta | null
+}
+
+SheetGrid "1" *-- "0..*" CellRange : merges
+ParsedQuestion "1" *-- "0..*" ParsedBlank : blanks
+ParsedQuestion --> QuestionKind
+QuestionInput "1" *-- "0..*" BlankInput : blanks
+QuestionInput --> QuestionKind
+ImportSummary "1" *-- "0..*" ImportSummaryQuestion : questions
+ImportSummary "1" *-- "0..*" ImportWarning : warnings
+ImportSummaryQuestion "1" *-- "0..*" ImportSummaryBlank : blanks
+ImportSummaryQuestion ..> QuestionSummary : 延伸
+ImportSummaryQuestion --> QuestionKind
+TeacherSnapshot "1" o-- "0..*" QuestionSummary : questions
+TeacherSnapshot "1" o-- "0..1" GuidedNotesInfo : guidedNotes
+GuidedNotesRecord ..> GuidedNotesSource : 延伸
+GuidedNotesMeta ..> GuidedNotesSource : 延伸
+StoredQuestion ..> QuestionInput : stored alias
+GuidedNotesParser ..> SheetGrid
+GuidedNotesParser ..> HeaderLocation : findHeader
+GuidedNotesParser ..> ParsedQuestion : 成功結果
+GuidedNotesParser ..> ParseFailure : 失敗結果
+ImportValidator ..> ParsedQuestion
+ImportValidator ..> ImportWarning : 提醒
+ImportValidator ..> ImportValidationFailure : 失敗結果
+ImportService ..> ParsedQuestion : 暫存 15 分鐘
+ImportService ..> ImportSummary : previewFrom*
+ImportService ..> GuidedNotesRecord : confirm 組成
+ImportService ..> QuestionInput : confirm 組成
+QuestionBank ..> GuidedNotesRecord : replace
+QuestionBank ..> QuestionInput : replace
+QuestionBank ..> QuestionSummary : listSummaries
+QuestionBank ..> GuidedNotesMeta : guidedNotesInfo
+
+note right of ImportWarning
+  TypeScript union 的實際欄位：
+  NUMBERS_NOT_SEQUENTIAL 附 numbers : number[]；
+  BLANK_HAS_CONTENT 附 number : number、cell : string；
+  MULTIPLE_SHEETS_WITH_HEADER 附 sheetName : string。
 end note
 
-note bottom of 題目
-  題號儲存格垂直合併多列＝題組，
-  每一列一個空格
+note bottom of TeacherSnapshot
+  TeacherSnapshot 也沿用 SnapshotBase 的 revision、
+  serverNow、phase、countdownEndsAt、groups；
+  本圖只列出 002 匯入相關欄位。
+end note
+
+note bottom of GuidedNotesRecord
+  程式沒有名為 GuidedNotes 或 SourceKind 的 export；
+  來源種類直接以 sourceKind : 'link' | 'file' 表示。
+end note
+
+note bottom of QuestionInput
+  程式沒有名為 Question 或 Blank 的 export；
+  寫入／讀取使用 QuestionInput／StoredQuestion 與 BlankInput。
+end note
+
+note bottom of CommandError
+  程式沒有統一的 ImportError 型別；
+  domain 以 ParseFailure、ImportValidationFailure 回傳，
+  API／socket 以 CommandError 包裝。
+end note
+
+note right of ParsedBlank
+  cell 為 A1 位置；作答欄若在合併範圍內，
+  cellText() 讀取合併範圍左上角的值。
+end note
+
+note right of ParsedQuestion
+  numberColumn 垂直合併多列時 kind = 'group'；
+  rows 保存該題涵蓋的 1 起算列號。
 end note
 @enduml
