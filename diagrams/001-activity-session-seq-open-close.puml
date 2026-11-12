@@ -1,44 +1,98 @@
 @startuml
 title 001 時序圖：老師開啟到結束搶答，學生同步
 
-actor 老師
-participant "老師端畫面" as T
-participant "活動階段管理" as P
-participant "倒數計時" as C
-participant "活動資料儲存" as S
-participant "狀態同步" as B
-participant "學生端畫面\n（各組）" as U
-actor 學生
+actor "老師" as Teacher
+participant "老師端畫面\nPhaseControl.tsx" as T
+participant "指令路由\ncommandRouter.ts" as R
+participant "活動階段管理\nactivityCommands.ts / activity.ts" as P
+participant "倒數計時\ncountdown.ts" as C
+participant "應用組裝\nindex.ts" as X
+participant "活動資料儲存\nactivityRepo.ts / groupRepo.ts" as S
+participant "狀態同步\nbroadcaster.ts / snapshot.ts" as B
+participant "學生端畫面\n（各組）StudentPage.tsx" as U
+actor "學生" as Student
 
 == 開啟搶答 ==
-老師 -> T : 按「開啟搶答」（可填倒數時間）
-T -> P : 開啟搶答(倒數秒數?)
-P -> P : 檢查：老師身分、階段為準備中、\n至少一個組別、倒數在允許範圍
-alt 檢查不通過
-  P --> T : 拒絕並說明原因
+Teacher -> T : 按「開啟搶答」（可填倒數時間）
+T -> R : activity:open\n{ countdownSeconds?: number }（含 Ack callback）
+R -> R : 依序檢查 zod schema →\ngetSocketIdentity() 是否為 teacher
+alt 格式或身分檢查不通過
+  R --> T : Ack 失敗（INVALID_INPUT／FORBIDDEN）
 else 檢查通過
-  P -> S : 保存 階段=搶答中、開啟時間、倒數結束時間
-  opt 有設定倒數
-    P -> C : 設定倒數
+  R -> P : openActivity(identity, payload)
+  P -> S : getActivity()；countGroups()
+  S --> P : Activity、groupCount
+  P -> P : open() 檢查：open 冪等；closed → INVALID_PHASE；\n無組別 → NO_GROUPS；倒數不在 10–3600 秒 → COUNTDOWN_OUT_OF_RANGE
+  alt domain 檢查不通過
+    P --> R : Ack 失敗（錯誤代碼；不寫入資料）
+    R --> T : Ack 失敗
+  else domain 檢查通過
+    opt changed = true
+      P -> S : updateActivity（同一 transaction；revision +1）
+      opt 有設定倒數
+        P -> C : onOpened(countdownEndsAt) → schedule()
+      else 沒有倒數
+        P -> C : onOpened(null) → cancel()
+      end
+    else open 再 open（changed = false）
+      note right of P
+        不寫入資料，也不重新排程
+      end note
+    end
+    P --> R : Ack { ok: true }
+    R -> B : broadcastState()（成功 Ack 皆觸發；前端忽略舊 revision）
+    B -> S : getActivity()；listGroups()
+    B --> T : state（TeacherSnapshot：open、countdownEndsAt）
+    B --> U : state（StudentSnapshot：open、countdownEndsAt）
+    R --> T : Ack { ok: true }
+    U --> Student : 顯示作答區入口（2 秒內）
   end
-  P -> B : 階段已改變
-  B --> T : 目前狀態（搶答中、剩餘時間）
-  B --> U : 目前狀態（搶答中、剩餘時間）
-  U --> 學生 : 顯示作答區入口（2 秒內）
 end
 
-== 結束搶答（老師手動或倒數歸零，只生效一次）==
+== 結束搶答（老師手動或倒數歸零，只改變一次）==
 alt 老師手動結束
-  老師 -> T : 按「結束搶答」
-  T -> P : 結束搶答()
+  Teacher -> T : 按「結束搶答」
+  T -> R : activity:close\n{}（含 Ack callback）
+  R -> R : 依序檢查 zod schema → teacher 身分
+  alt 格式或身分檢查不通過
+    R --> T : Ack 失敗（INVALID_INPUT／FORBIDDEN）
+  else 檢查通過
+    R -> P : closeActivity(identity, payload)
+  end
 else 倒數歸零
-  C -> P : 時間到，結束搶答()
+  C -> X : onExpire()
+  X -> P : closeExpiredActivity()（與手動 close 同一路徑）
 end
-P -> P : 檢查：階段為搶答中\n（若已結束則不做任何事）
-P -> C : 取消倒數
-P -> S : 保存 階段=已結束、結束時間
-P -> B : 階段已改變
-B --> T : 目前狀態（已結束）
-B --> U : 目前狀態（已結束）
-U --> 學生 : 顯示結果區入口（2 秒內）
+
+note over P,S : 以下共用 closeCurrent()；路由拒絕時不會進入
+P -> S : getActivity()
+S --> P : Activity
+P -> P : close()：open → closed；closed 冪等；preparing → INVALID_PHASE
+alt domain 拒絕（僅手動事件可到達）
+  P --> R : Ack 失敗（INVALID_PHASE；不寫入資料）
+  R --> T : Ack 失敗
+else domain 成功
+  opt changed = true
+    P -> S : updateActivity（同一 transaction；revision +1）
+  end
+  P -> C : onClosed() → cancel()（含冪等成功）
+  alt 手動結束
+    P --> R : Ack { ok: true }
+    R -> B : broadcastState()（含冪等成功）
+    B -> S : getActivity()；listGroups()
+    B --> T : state（closed）
+    B --> U : state（closed）
+    R --> T : Ack { ok: true }
+    U --> Student : 顯示結果區入口（2 秒內）
+  else 倒數歸零
+    P --> X : changed : boolean
+    opt changed = true
+      X -> B : broadcastState()
+      B -> S : getActivity()；listGroups()
+      B --> T : state（closed）
+      B --> U : state（closed）
+      U --> Student : 顯示結果區入口（2 秒內）
+    end
+  end
+end
 @enduml

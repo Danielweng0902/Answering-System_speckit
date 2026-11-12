@@ -222,13 +222,13 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 
 **Purpose**: 邊界情況、圖與程式一致性、人工驗證、文件。
 
-- [ ] T072 [P] 寫 `server/tests/integration/edgeCases.test.ts`：老師兩個連線同時登入看到相同狀態；同組一人斷線不影響其他成員；組別改名後學生快照顯示新名稱（spec Edge Cases）
-- [ ] T073 [P] 寫 `server/tests/integration/noLeak.test.ts`：擷取學生與 guest 連線收到的所有 `state`，斷言不含 `presence`；擷取伺服器 log，斷言不含密碼與 token（原則 IV、VI；SC-005）
-- [ ] T074 完成 `e2e/tests/001-activity-session.spec.ts`：依 quickstart 的 12 個步驟走完整流程
-- [ ] T075 **圖與程式一致性檢查（原則 VII）**：依 plan.md「圖表與模組對應」逐列核對元件與型別是否存在、名稱與關係是否一致；有差異時修正程式，或修正 `.puml` 並重跑 `scripts/render-diagrams.sh`；把核對結果寫入 `docs/verification/001-diagram-consistency.md`
-- [ ] T076 [P] 把 specify 階段的圖細化為技術層：在 `diagrams/001-activity-session-component.puml` 與 `-class.puml` 補上實際模組與型別名稱，重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`
-- [ ] T077 [P] 撰寫根目錄 `README.md`：系統簡述、安裝、設定 `.env`、啟動、測試指令（不含任何密碼）
-- [ ] T078 執行 `npm test`、`npm run test:e2e`、`npm run check`，把指令與輸出記錄在 `docs/verification/001-automated.md`
+- [x] T072 [P] 寫 `server/tests/integration/edgeCases.test.ts`：老師兩個連線同時登入看到相同狀態；同組一人斷線不影響其他成員；組別改名後學生快照顯示新名稱（spec Edge Cases）
+- [x] T073 [P] 寫 `server/tests/integration/noLeak.test.ts`：擷取學生與 guest 連線收到的所有 `state`，斷言不含 `presence`；擷取伺服器 log，斷言不含密碼與 token（原則 IV、VI；SC-005）
+- [x] T074 完成 `e2e/tests/001-activity-session.spec.ts`：依 quickstart 的 12 個步驟走完整流程
+- [x] T075 **圖與程式一致性檢查（原則 VII）**：依 plan.md「圖表與模組對應」逐列核對元件與型別是否存在、名稱與關係是否一致；有差異時修正程式，或修正 `.puml` 並重跑 `scripts/render-diagrams.sh`；把核對結果寫入 `docs/verification/001-diagram-consistency.md`
+- [x] T076 [P] 把 specify 階段的圖細化為技術層：在 `diagrams/001-activity-session-component.puml` 與 `-class.puml` 補上實際模組與型別名稱，重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`
+- [x] T077 [P] 撰寫根目錄 `README.md`：系統簡述、安裝、設定 `.env`、啟動、測試指令（不含任何密碼）
+- [x] T078 執行 `npm test`、`npm run test:e2e`、`npm run check`，把指令與輸出記錄在 `docs/verification/001-automated.md`
 - [ ] T079 **人工驗證**（由設計與驗證負責人執行）：依 quickstart 的人工驗證表逐步操作，把結果、截圖與發現的問題記錄在 `docs/verification/001-manual.md`；問題另開 GitHub issue
 
 ---

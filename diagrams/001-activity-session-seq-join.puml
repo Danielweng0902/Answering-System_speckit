@@ -1,44 +1,66 @@
 @startuml
 title 001 時序圖：學生進場與重新連線
 
-actor 學生
-participant "學生端畫面" as U
-participant "身分驗證" as A
-participant "組別管理" as G
-participant "活動階段管理" as P
-participant "狀態同步" as B
+actor "學生" as Student
+participant "學生端畫面\nStudentPage.tsx / GroupPicker.tsx" as U
+participant "身分驗證\naccess.ts / authRoutes.ts" as A
+participant "活動資料儲存\nactivityRepo.ts / groupRepo.ts / sessionRepo.ts" as S
+participant "狀態同步\nbroadcaster.ts / snapshot.ts / presence.ts" as B
 
 == 第一次進場 ==
-學生 -> U : 開啟學生端
-U -> G : 取得組別清單
-G --> U : 組別清單
-學生 -> U : 選擇組別
-U -> A : 以組別進場(組別)
-A -> G : 組別是否存在？
+Student -> U : 開啟學生端
+U -> B : Socket.IO connect（auth.token 可省略）
+B -> A : resolveIdentity(database, token)
+A --> B : AccessIdentity（無效或未帶 token 為 guest）
+B -> S : createSnapshot 讀取 getActivity()／listGroups()
+S --> B : Activity、Group[]
+B --> U : state（Snapshot：phase、groups、role）
+U --> Student : 顯示選組畫面（依 groups 即時更新）
+
+Student -> U : 選擇組別
+U -> A : POST /api/student/join\n{ groupId: string }
+A -> S : getGroupById(groupId)
 alt 組別不存在
-  G --> A : 否
-  A --> U : 拒絕，請重新選擇
+  S --> A : null
+  A --> U : 404（GROUP_NOT_FOUND）
+  U --> Student : 顯示錯誤訊息，留在選組畫面
 else 組別存在
-  G --> A : 是
-  A -> A : 建立學生身分（屬於該組別）
-  A --> U : 進場成功（身分憑據）
-  U -> B : 訂閱狀態更新
-  B -> P : 取得目前狀態
-  P --> B : 階段、剩餘時間
-  B --> U : 目前狀態
-  U --> 學生 : 依階段顯示：等待／作答區入口／結果區入口
+  S --> A : Group
+  A -> A : issueSession({ role: 'student', groupId })
+  A -> S : insertSession（只保存 tokenHash）
+  A --> U : 200 { token, role: 'student', groupId }
+  U -> U : saveToken(token)；connectSocket(token)
+  U -> B : Socket.IO connect（auth.token）
+  B -> A : resolveIdentity(database, token)
+  A --> B : StudentIdentity
+  B -> S : getGroupById(groupId)；recordPresenceChange()（revision +1）
+  B --> U : state（StudentSnapshot：myGroupId；不含 presence）
+  U --> Student : 依階段顯示：等待／作答區入口／結果區入口
 end
 
 == 重新整理或斷線重連 ==
-學生 -> U : 重新整理頁面（或網路恢復）
-U -> A : 以既有身分憑據恢復身分
-alt 身分仍有效（組別仍存在）
-  A --> U : 恢復為原組別
-  U -> B : 重新訂閱狀態更新
-  B --> U : 目前狀態（可能已在斷線期間改變）
-  U --> 學生 : 顯示目前階段
-else 組別已被刪除（僅可能發生在準備中）
-  A --> U : 身分失效
-  U --> 學生 : 回到選組畫面並說明原因
+Student -> U : 重新整理頁面（或網路恢復）
+U -> B : Socket.IO reconnect（auth callback 讀取目前 token）
+B -> A : resolveIdentity(database, token)
+A -> S : findSessionByTokenHash(tokenHash)
+alt token 對應有效學生身分
+  A --> B : StudentIdentity(groupId)
+  B -> S : getGroupById(groupId)
+  alt 組別仍存在
+    S --> B : Group
+    B -> S : recordPresenceChange()（revision +1）
+    B --> U : state（最新階段、countdownEndsAt、myGroupId）
+    U --> Student : 顯示目前階段
+  else 組別已被刪除（僅可能發生在準備中）
+    S --> B : null
+    B --> U : session:invalid\n{ code: 'GROUP_NOT_FOUND' }
+    U -> U : clearToken()；connectSocket(null)
+    B --> U : state（guest；含最新完整狀態）
+    U --> Student : 回到選組畫面並說明原因
+  end
+else token 不存在或無效
+  A --> B : GuestIdentity
+  B --> U : state（GuestSnapshot）
+  U --> Student : 顯示選組畫面
 end
 @enduml
