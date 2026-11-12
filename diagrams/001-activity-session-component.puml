@@ -1,42 +1,104 @@
 @startuml
 !pragma layout smetana
-title 001 活動與組別進場：組件圖（概念層）
+title 001 活動與組別進場：組件圖（技術層）
 
-actor 老師
-actor 學生
+actor "老師" as Teacher
+actor "學生" as Student
 
 component "老師端畫面" as TeacherUI
 component "學生端畫面" as StudentUI
 
-package "搶答系統（伺服器）" {
+package "搶答系統（伺服器）" as Server {
   component "身分驗證\n(Access Control)" as Auth
   component "組別管理\n(Group Registry)" as Groups
   component "活動階段管理\n(Activity Phase Manager)" as Phase
   component "倒數計時\n(Countdown)" as Timer
+  component "指令路由\n(Command Router)" as Router
   component "狀態同步\n(State Broadcaster)" as Sync
   database "活動資料儲存\n(Activity Store)" as Store
 }
 
-老師 --> TeacherUI
-學生 --> StudentUI
+note right of TeacherUI
+  web/src/features/teacher/
+  TeacherPage.tsx、TeacherLogin.tsx
+  GroupManager.tsx、PhaseControl.tsx
+  倒數顯示：web/src/features/shared/Countdown.tsx
+end note
 
-TeacherUI --> Auth : 密碼登入
-StudentUI --> Auth : 選擇組別進場
-TeacherUI --> Groups : 新增／改名／刪除組別
-TeacherUI --> Phase : 開啟／結束／重設
-Auth --> Groups : 檢查組別是否存在
-Phase --> Groups : 開啟前檢查至少一組
-Phase --> Timer : 設定／取消倒數
-Timer --> Phase : 時間到，結束搶答
-Phase --> Store : 保存階段與時間
-Groups --> Store : 保存組別
-Phase --> Sync : 階段已改變
-Groups --> Sync : 組別已改變
-Sync --> TeacherUI : 推送目前狀態
-Sync --> StudentUI : 推送目前狀態
+note right of StudentUI
+  web/src/features/student/
+  StudentPage.tsx、GroupPicker.tsx
+  倒數顯示：web/src/features/shared/Countdown.tsx
+end note
+
+note right of Auth
+  server/src/app/access.ts
+  server/src/infra/http/authRoutes.ts
+  server/src/app/studentCommands.ts
+end note
+
+note right of Groups
+  server/src/domain/groupRegistry.ts
+  server/src/app/groupCommands.ts
+end note
+
+note right of Phase
+  server/src/domain/activity.ts
+  server/src/app/activityCommands.ts
+end note
+
+note right of Timer
+  server/src/app/countdown.ts
+end note
+
+note right of Router
+  server/src/infra/socket/commandRouter.ts
+  檢查順序：zod schema → 身分 → 用例
+  成功 Ack 才呼叫 broadcastState()
+end note
+
+note right of Sync
+  server/src/app/snapshot.ts
+  server/src/infra/socket/broadcaster.ts
+  server/src/app/presence.ts
+end note
+
+note right of Store
+  server/src/infra/db/database.ts
+  server/src/infra/db/activityRepo.ts
+  server/src/infra/db/groupRepo.ts
+  server/src/infra/db/sessionRepo.ts
+end note
+
+Teacher --> TeacherUI
+Student --> StudentUI
+
+TeacherUI --> Auth : POST /api/teacher/login
+StudentUI --> Auth : POST /api/student/join
+Auth --> Store : insertSession / findSession；\n進場前以 getGroupById 確認組別
+
+TeacherUI --> Router : sendCommand：group:*、activity:*
+StudentUI --> Router : sendCommand：student:leave
+Router --> Auth : student:leave → leaveGroup()
+Router --> Groups : group:create / group:rename / group:delete
+Router --> Phase : activity:open / activity:close / activity:reset
+Router --> Sync : Ack ok 後 broadcastState()
+
+Sync --> Auth : resolveIdentity(token)
+Groups --> Store : groupRepo / activityRepo
+Phase --> Store : activityRepo / countGroups
+Phase --> Timer : onOpened / onClosed
+Timer --> Phase : 經 index.ts：onExpire → closeExpiredActivity()
+Groups --> Sync : 經 index.ts：onGroupDeleted → invalidateGroup()
+Timer --> Sync : 經 index.ts：到期且改變時 broadcastState()
+Sync --> Store : 讀取 activity / groups；presence 改變時更新 revision
+
+Sync --> TeacherUI : state（依身分過濾的 Snapshot）
+Sync --> StudentUI : state／session:invalid
 
 note bottom of Phase
   階段只能由伺服器改變：
   準備中 → 搶答中 → 已結束
+  domain/activity.ts：open() → close() → reset()
 end note
 @enduml

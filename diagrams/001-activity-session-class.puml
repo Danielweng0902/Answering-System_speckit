@@ -1,79 +1,135 @@
 @startuml
 !pragma layout smetana
-title 001 活動與組別進場：類別圖（領域物件）
+title 001 活動與組別進場：類別圖（技術層）
 
-enum 階段 {
-  準備中
-  搶答中
-  已結束
+enum "階段 (Phase)" as Phase {
+  preparing
+  open
+  closed
 }
 
-enum 身分種類 {
-  老師
-  學生
+note bottom of Phase
+  preparing = 準備中；open = 搶答中；closed = 已結束
+end note
+
+enum "身分種類 (Role)" as Role {
+  guest
+  student
+  teacher
 }
 
-class 活動 {
-  目前階段 : 階段
-  開啟時間
-  倒數結束時間 [0..1]
-  結束時間 [0..1]
+note bottom of Role
+  guest = 訪客；student = 學生；teacher = 老師
+end note
+
+class "活動 (ActivityState)" as ActivityState {
+  phase : Phase
+  openedAt : string|null
+  countdownEndsAt : string|null
+  closedAt : string|null
   --
-  開啟搶答(倒數秒數 [0..1])
-  結束搶答()
-  重設()
-  剩餘秒數(現在時間)
+  open(activity, groupCount, now, countdownSeconds?) : ActivityTransition
+  close(activity, now) : ActivityTransition
+  reset(activity, confirm) : ActivityTransition
 }
 
-class 組別 {
-  名稱
-  建立順序
-  --
-  改名(新名稱)
+class "活動資料列 (Activity)" as ActivityRecord {
+  id : number
+  phase : Phase
+  openedAt : string|null
+  countdownEndsAt : string|null
+  closedAt : string|null
+  revision : number
 }
 
-class 組別名冊 {
-  --
-  新增(名稱)
-  改名(組別, 新名稱)
-  刪除(組別)
-  是否存在(組別)
-  數量()
+class "組別 (GroupRegistryEntry)" as GroupEntry {
+  id : string
+  name : string
+  position : number
 }
 
-class 參與者 {
-  身分 : 身分種類
-  是否在線
-  --
-  重新連線()
+class "持久化組別 (Group)" as GroupRecord {
+  id : string
+  name : string
+  position : number
 }
 
-class 活動狀態快照 {
-  目前階段 : 階段
-  剩餘秒數 [0..1]
-  組別清單
+class "組別名冊 (groupRegistry.ts 純函式)" as Registry {
+  createGroup(phase, groups, name, generateId?) : GroupRegistryResult
+  renameGroup(phase, groups, groupId, name) : GroupRegistryResult
+  deleteGroup(phase, groups, groupId) : GroupRegistryResult
 }
 
-活動 "1" *-- "1" 組別名冊
-組別名冊 "1" o-- "0..50" 組別
-組別 "1" <-- "0..*" 參與者 : 學生所屬
-活動 "1" <-- "0..*" 參與者 : 參與
-活動 ..> 活動狀態快照 : 產生
-活動 --> 階段
-參與者 --> 身分種類
+class "參與者 (AccessIdentity)" as Participant <<union>> {
+  role : 'guest'|'student'|'teacher'
+  groupId : string（僅 StudentIdentity）
+}
 
-note right of 活動
-  規則：
+class "身分憑據 (Session)" as Session {
+  tokenHash : string
+  role : SessionRole
+  groupId : string|null
+  createdAt : string
+}
+
+class "活動狀態快照 (Snapshot)" as Snapshot <<union>> {
+  revision : number
+  serverNow : string
+  phase : Phase
+  countdownEndsAt : string|null
+  groups : GroupSummary[]
+  role : 'guest'|'student'|'teacher'
+  myGroupId : string（僅 StudentSnapshot）
+  presence : Record<string, number>（僅 TeacherSnapshot）
+}
+
+class "組別摘要 (GroupSummary)" as GroupSummary {
+  id : string
+  name : string
+}
+
+ActivityState --> Phase : phase
+ActivityRecord --> Phase : phase
+Registry --> Phase : phase 參數
+Registry --> GroupEntry : groups : GroupRegistryEntry[]
+GroupRecord ..> GroupEntry : 欄位相同，作為參數傳入
+Participant --> Role : role
+Participant ..> GroupRecord : student 的 groupId
+Session --> Role : role（SessionRole = 不含 guest）
+Session ..> Participant : resolveIdentity() 的來源
+Snapshot --> Phase : phase
+Snapshot --> Role : role
+Snapshot --> GroupSummary : groups
+GroupRecord ..> GroupSummary : createSnapshot() 映射 id、name
+ActivityRecord ..> Snapshot : createSnapshot() 提供 phase / countdownEndsAt / revision
+
+note bottom of ActivityState
+  規則（server/src/domain/activity.ts）：
   1. 階段只能依序前進
   2. 開啟前至少要有一個組別
   3. 只有「已結束」可以重設
-  4. 重複的操作不改變狀態
+  4. 重複 open／close 回覆成功但 changed = false
 end note
 
-note right of 組別名冊
-  規則：
+note bottom of ActivityRecord
+  server/src/infra/db/activityRepo.ts。
+  domain 操作的是不含 id、revision 的 ActivityState；
+  revision 由指令或 presence 變更在應用層加 1。
+end note
+
+note right of Registry
+  規則（server/src/domain/groupRegistry.ts）：
   1. 只有「準備中」可以修改
-  2. 名稱 1–30 字元、不重複
+  2. 名稱去除前後空白後為 1–30 個字且不重複
   3. 最多 50 組
+  程式沒有名為 GroupRegistry 的類別；名冊是 GroupRegistryEntry[]。
+end note
+
+note bottom of Participant
+  AccessIdentity = GuestIdentity | StudentIdentity | TeacherIdentity
+  （server/src/app/access.ts）。
+  「是否在線」不是 Session 或身分欄位；broadcaster.ts 以
+  connectedStudents: Map<string, number> 統計，
+  只有 TeacherSnapshot 另有 presence: Record<string, number>。
 end note
 @enduml

@@ -67,9 +67,9 @@ specify 階段的圖是概念層；本計畫把每個概念元件對應到實際
 
 | 類別圖中的物件（`diagrams/001-*-class.puml`） | 程式中的型別 |
 |---|---|
-| 活動、階段 | `Activity`、`Phase`（`server/src/domain/activity.ts`、`shared/src/protocol.ts`） |
-| 組別、組別名冊 | `Group`、`GroupRegistry`（`server/src/domain/groupRegistry.ts`） |
-| 參與者、身分種類 | `Session`、`Role`（`server/src/app/access.ts`） |
+| 活動、階段 | `ActivityState`（`server/src/domain/activity.ts`）、`Activity`（`server/src/infra/db/activityRepo.ts`）、`Phase`（`shared/src/protocol.ts`） |
+| 組別、組別名冊 | `GroupRegistryEntry[]` 與名冊函式（`server/src/domain/groupRegistry.ts`）、`Group`（`server/src/infra/db/groupRepo.ts`） |
+| 參與者、身分種類 | `AccessIdentity`（`server/src/app/access.ts`）、`Session`（`server/src/infra/db/sessionRepo.ts`）、`Role`（`shared/src/protocol.ts`） |
 | 活動狀態快照 | `Snapshot`（`shared/src/protocol.ts`） |
 
 ## Project Structure
