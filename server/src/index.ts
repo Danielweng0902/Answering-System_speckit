@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 import { config as loadDotenv } from 'dotenv';
 import { Server as SocketIOServer } from 'socket.io';
-import type { QuestionsConfirmPayload } from '@classroom/shared';
+import type {
+  AnswerVoidPayload,
+  QuestionsConfirmPayload,
+} from '@classroom/shared';
 import { loadConfig } from './config.js';
 import { repositoryRoot, resolveFromRepositoryRoot } from './paths.js';
 import { createActivityCommands } from './app/activityCommands.js';
@@ -188,6 +191,19 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
         if (identity.role === 'student') {
           broadcaster.broadcastSubmissionChanged(identity.groupId);
         }
+      },
+    );
+    // 003 US3：作廢由老師送 groupId；成功後使用同一個作答定向通道，
+    // 只通知老師與該組，其他組與 guest 不會收到作廢相關資訊。
+    commandRouter.register(
+      socket,
+      'answer:void',
+      teacherOnly,
+      answerCommands.voidAnswer,
+      (_identity, payload) => {
+        broadcaster.broadcastSubmissionChanged(
+          (payload as AnswerVoidPayload).groupId,
+        );
       },
     );
     commandRouter.register(socket, 'student:leave', studentOnly, () => {

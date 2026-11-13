@@ -227,7 +227,7 @@
 - 題目敘述在作答區一併顯示（存在時），讓學生不需對照紙本。
 - 老師看板在本子功能中是老師端的畫面；適合投影的看板屬於 005。
 - 本子功能依賴 001（身分、組別、階段、同步）與 002（題目與空格）。
-- 行為規則來自 `docs/shared/FEATURE-CONTRACT.md` v0.2（Default，待 OpenSpec 組確認）。老師作廢（FR-029、FR-030）是 2026-11-12 釐清新增的行為，也需經 OpenSpec 組同意。
+- 行為規則來自 `docs/shared/FEATURE-CONTRACT.md` v0.3（Default，待 OpenSpec 組確認）。老師作廢（FR-029、FR-030）是 2026-11-12 釐清新增的行為，已於 2026-11-13 經 OpenSpec 組同意（Feature Contract D24）。
 
 ## Diagrams
 

@@ -932,3 +932,187 @@ test('US6 草稿與作答保存：重新整理保留已送出與未送出內容�
     await studentContext.close();
   }
 });
+
+test('US3 作廢：取消不生效，確認後該組可重送並得到新 rank、其他組順位與 winner 更新（AC-003-29、30）', async ({
+  browser,
+}) => {
+  const teacherContext = await browser.newContext();
+  const studentOneContext = await browser.newContext();
+  const studentTwoContext = await browser.newContext();
+
+  try {
+    const teacherPage = await teacherContext.newPage();
+    await teacherPage.goto('/teacher');
+    await teacherPage.getByLabel('老師密碼').fill(requireTeacherPassword());
+    await teacherPage.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(
+      teacherPage.getByRole('button', { name: '開啟搶答', exact: true }),
+    ).toBeVisible();
+    await resetToPreparing(teacherPage);
+
+    const groupOneName = '作廢驗證一組';
+    const groupTwoName = '作廢驗證二組';
+    await addGroup(teacherPage, groupOneName);
+    await addGroup(teacherPage, groupTwoName);
+    await importQuestions(teacherPage);
+
+    const studentOnePage = await studentOneContext.newPage();
+    const studentTwoPage = await studentTwoContext.newPage();
+    for (const [page, groupName] of [
+      [studentOnePage, groupOneName],
+      [studentTwoPage, groupTwoName],
+    ] as const) {
+      await page.goto('/student');
+      await page.getByRole('button', { name: groupName, exact: true }).click();
+      await expect(page.getByText('目前階段：準備中')).toBeVisible();
+    }
+
+    await teacherPage
+      .getByRole('button', { name: '開啟搶答', exact: true })
+      .click();
+    for (const page of [studentOnePage, studentTwoPage]) {
+      await expect(page.getByText('目前階段：搶答中')).toBeVisible();
+    }
+
+    async function submitAnswer(
+      page: Page,
+      questionNumber: number,
+      answer: string,
+    ): Promise<void> {
+      const question = page.getByRole('region', {
+        name: `第 ${questionNumber} 題`,
+        exact: true,
+      });
+      await question
+        .getByLabel(`第 ${questionNumber} 題答案`, { exact: true })
+        .fill(answer);
+      await question
+        .getByRole('button', {
+          name: `送出第 ${questionNumber} 題`,
+          exact: true,
+        })
+        .click();
+      await expect(
+        question.getByText(`本組已送出：${answer}`, { exact: true }),
+      ).toBeVisible({ timeout: 2_000 });
+    }
+
+    await submitAnswer(studentOnePage, 1, 'e2e 要被作廢的一組答案');
+    await submitAnswer(studentTwoPage, 1, 'e2e 二組保留答案');
+
+    const board = teacherPage.getByRole('region', { name: '作答看板' });
+    async function boardCell(questionNumber: number, groupName: string) {
+      const headers = await board.locator('thead th').allTextContents();
+      const column = headers.findIndex((text) => text.trim() === groupName);
+      expect(column).toBeGreaterThan(0);
+      return board
+        .getByRole('row', {
+          name: new RegExp(`^第 ${questionNumber} 題`),
+        })
+        .getByRole('cell')
+        .nth(column - 1);
+    }
+
+    let groupOneCell = await boardCell(1, groupOneName);
+    let groupTwoCell = await boardCell(1, groupTwoName);
+    await expect(groupOneCell).toContainText('第 1 順位');
+    await expect(groupTwoCell).toContainText('第 2 順位');
+
+    await groupOneCell
+      .getByRole('button', { name: '作廢', exact: true })
+      .click();
+    await expect(
+      groupOneCell.getByRole('button', { name: '確認作廢', exact: true }),
+    ).toBeVisible();
+    await expect(
+      groupOneCell.getByRole('button', { name: '取消', exact: true }),
+    ).toBeVisible();
+    await groupOneCell
+      .getByRole('button', { name: '取消', exact: true })
+      .click();
+    await expect(
+      groupOneCell.getByRole('button', { name: '確認作廢', exact: true }),
+    ).toHaveCount(0);
+    await expect(groupOneCell).toContainText(
+      '已送出：e2e 要被作廢的一組答案',
+    );
+    await expect(
+      studentOnePage.getByText('老師已作廢這一題的作答，請重新送出'),
+    ).toHaveCount(0);
+
+    await groupOneCell
+      .getByRole('button', { name: '作廢', exact: true })
+      .click();
+    await groupOneCell
+      .getByRole('button', { name: '確認作廢', exact: true })
+      .click();
+
+    const studentOneQuestion = studentOnePage.getByRole('region', {
+      name: '第 1 題',
+      exact: true,
+    });
+    await expect(
+      studentOneQuestion.getByText('老師已作廢這一題的作答，請重新送出', {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 2_000 });
+    await expect(
+      studentOneQuestion.getByLabel('第 1 題答案', { exact: true }),
+    ).toBeEnabled();
+
+    await expect(groupOneCell).toContainText(
+      '已作廢：e2e 要被作廢的一組答案',
+      { timeout: 2_000 },
+    );
+    await expect(groupOneCell).toContainText('原第 1 順位');
+    await expect(
+      groupOneCell.getByRole('button', { name: '作廢', exact: true }),
+    ).toHaveCount(0);
+    await expect(groupTwoCell).toContainText('第 2 順位');
+    await expect(groupTwoCell).toContainText('搶答成功');
+    await expect(
+      board.getByText('第 1 題：1 組送出', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      board.getByText(`${groupOneName}：已送出 0 題`, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      studentTwoPage.getByText('老師已作廢這一題的作答，請重新送出'),
+    ).toHaveCount(0);
+    await expect(
+      studentTwoPage.getByText('本組已送出：e2e 二組保留答案', { exact: true }),
+    ).toBeVisible();
+
+    await studentOneQuestion
+      .getByLabel('第 1 題答案', { exact: true })
+      .fill('e2e 一組重新送出答案');
+    await studentOneQuestion
+      .getByRole('button', { name: '送出第 1 題', exact: true })
+      .click();
+    await expect(
+      studentOneQuestion.getByText('本組已送出：e2e 一組重新送出答案', {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 2_000 });
+
+    groupOneCell = await boardCell(1, groupOneName);
+    groupTwoCell = await boardCell(1, groupTwoName);
+    await expect(groupOneCell).toContainText(
+      '已送出：e2e 一組重新送出答案',
+      { timeout: 2_000 },
+    );
+    await expect(groupOneCell).toContainText('第 3 順位');
+    await expect(groupTwoCell).toContainText('第 2 順位');
+    await expect(groupTwoCell).toContainText('搶答成功');
+    await expect(
+      board.getByText('第 1 題：2 組送出', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      board.getByText(`${groupOneName}：已送出 1 題`, { exact: true }),
+    ).toBeVisible();
+  } finally {
+    await teacherContext.close();
+    await studentOneContext.close();
+    await studentTwoContext.close();
+  }
+});

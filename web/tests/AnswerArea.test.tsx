@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react';
 import type {
   StudentOpenSnapshot,
@@ -208,6 +209,39 @@ describe('AnswerArea 本機草稿（AC-003-28、32；FR-027）', () => {
     expect(input.value).toBe('伺服器答案');
     expect(input.disabled).toBe(true);
     expect(screen.getByText('本組已送出：伺服器答案')).not.toBeNull();
+  });
+
+  it('作廢狀態顯示提示並解鎖輸入，可重新送出（FR-030）', async () => {
+    vi.mocked(sendCommand).mockResolvedValue({ ok: true });
+    render(
+      <AnswerArea
+        snapshot={snapshot({
+          myAnswers: [
+            { questionNumber: 1, state: 'voided', answers: ['被作廢的答案'] },
+            { questionNumber: 2, state: 'not_submitted', answers: [] },
+          ],
+        })}
+      />,
+    );
+
+    const question = screen.getByRole('region', { name: '第 1 題' });
+    expect(
+      screen.getByText('老師已作廢這一題的作答，請重新送出'),
+    ).not.toBeNull();
+    const input = screen.getByLabelText('第 1 題答案') as HTMLInputElement;
+    expect(input.disabled).toBe(false);
+
+    fireEvent.change(input, { target: { value: '重新送出的答案' } });
+    fireEvent.click(
+      within(question).getByRole('button', { name: '送出第 1 題' }),
+    );
+
+    await waitFor(() => {
+      expect(sendCommand).toHaveBeenCalledWith('answer:submit', {
+        questionNumber: 1,
+        answers: ['重新送出的答案'],
+      });
+    });
   });
 });
 

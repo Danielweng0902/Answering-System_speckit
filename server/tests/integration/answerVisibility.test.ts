@@ -511,3 +511,109 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
     }
   });
 });
+
+describe('answer:void 可見範圍（US3；T026；FR-030；SC-002）', () => {
+  it('作廢只送老師與該組；其他組與 guest 封包數為 0，兩個 counter 各 +1 而 activity.revision 不變', async () => {
+    const target = await startTestServer();
+    server = target;
+    insertGroup(target.db, { id: 'group-a', name: '甲組', position: 1 });
+    insertGroup(target.db, { id: 'group-b', name: '乙組', position: 2 });
+    seedQuestions(target.db, [{ number: 1, prompt: '第一題題目' }]);
+
+    const teacher = target.connect({
+      token: issueSession(target.db, { role: 'teacher' }),
+      autoConnect: false,
+    });
+    const studentA = target.connect({
+      token: issueSession(target.db, {
+        role: 'student',
+        groupId: 'group-a',
+      }),
+      autoConnect: false,
+    });
+    const studentB = target.connect({
+      token: issueSession(target.db, {
+        role: 'student',
+        groupId: 'group-b',
+      }),
+      autoConnect: false,
+    });
+    const guest = target.connect({ autoConnect: false });
+    const sockets = [teacher, studentA, studentB, guest];
+    const initialStates = sockets.map((socket) => waitForState(socket));
+    for (const socket of sockets) socket.connect();
+    await Promise.all(initialStates);
+
+    const openedStates = sockets.map((socket) => waitForState(socket));
+    expect(await sendCommand(teacher, 'activity:open', {})).toEqual({
+      ok: true,
+    });
+    await Promise.all(openedStates);
+
+    const afterSubmit = Promise.all([
+      waitForState(teacher),
+      waitForState(studentA),
+    ]);
+    expect(
+      await sendCommand(studentA, 'answer:submit', {
+        questionNumber: 1,
+        answers: ['甲組將被作廢的答案'],
+      }),
+    ).toEqual({ ok: true });
+    await afterSubmit;
+
+    const baseActivity = activity(target);
+    const baseAnswerEventCount = answerEventCount(target);
+    const baseARevision = answerRevision(target, 'group-a');
+    const baseBRevision = answerRevision(target, 'group-b');
+    const teacherPackets: CapturedStates = { count: 0, latest: null, all: [] };
+    const aPackets: CapturedStates = { count: 0, latest: null, all: [] };
+    const bPackets: CapturedStates = { count: 0, latest: null, all: [] };
+    const guestPackets: CapturedStates = { count: 0, latest: null, all: [] };
+    captureStates(teacher, teacherPackets);
+    captureStates(studentA, aPackets);
+    captureStates(studentB, bPackets);
+    captureStates(guest, guestPackets);
+
+    const directedStates = Promise.all([
+      waitForState(teacher),
+      waitForState(studentA),
+    ]);
+    expect(
+      await sendCommand(teacher, 'answer:void', {
+        groupId: 'group-a',
+        questionNumber: 1,
+      }),
+    ).toEqual({ ok: true });
+    await directedStates;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(teacherPackets.count).toBe(1);
+    expect(aPackets.count).toBe(1);
+    expect(bPackets.count).toBe(0);
+    expect(guestPackets.count).toBe(0);
+    expect(bPackets.latest).toBeNull();
+    expect(guestPackets.latest).toBeNull();
+    expect(aPackets.all.at(-1)?.revision).toBe(
+      baseActivity.revision + baseARevision + 1,
+    );
+    expect(teacherPackets.all.at(-1)?.revision).toBe(
+      baseActivity.revision + baseAnswerEventCount + 1,
+    );
+    expect(answerRevision(target, 'group-a')).toBe(baseARevision + 1);
+    expect(answerRevision(target, 'group-b')).toBe(baseBRevision);
+    expect(answerEventCount(target)).toBe(baseAnswerEventCount + 1);
+    expect(activity(target).revision).toBe(baseActivity.revision);
+
+    const aVoided = aPackets.latest;
+    if (!aVoided) throw new Error('甲組沒有收到作廢快照');
+    expectStudentSnapshotIsOpen(aVoided);
+    expect(aVoided.myAnswers).toEqual([
+      {
+        questionNumber: 1,
+        state: 'voided',
+        answers: ['甲組將被作廢的答案'],
+      },
+    ]);
+  });
+});

@@ -156,6 +156,7 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
         {snapshot.questions.map((question) => {
           const myAnswer = states.get(question.number);
           const isSubmitted = myAnswer?.state === 'submitted';
+          const isVoided = myAnswer?.state === 'voided';
           const isSubmitting = submittingQuestion === question.number;
           const draft = drafts[question.number] ?? [];
           const answers = isSubmitted
@@ -204,6 +205,11 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                 {isSubmitted && (
                   <p className={styles.submitted} role="status">
                     本組已送出：{answers.join('、')}
+                  </p>
+                )}
+                {isVoided && (
+                  <p className={styles.submitted} role="status">
+                    老師已作廢這一題的作答，請重新送出
                   </p>
                 )}
                 {error !== undefined && (

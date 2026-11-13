@@ -3,7 +3,11 @@ import type { Ack, Snapshot } from '@classroom/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 import { issueSession } from '../../src/app/access.js';
 import { createSnapshot } from '../../src/app/snapshot.js';
-import { getActivity, type Activity } from '../../src/infra/db/activityRepo.js';
+import {
+  getActivity,
+  getAnswerEventCount,
+  type Activity,
+} from '../../src/infra/db/activityRepo.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
 import { list as listQuestions } from '../../src/infra/db/questionRepo.js';
 import {
@@ -34,8 +38,15 @@ type SubmissionAnswerRow = {
   answerText: string;
 };
 
+type GroupAnswerRevisionRow = {
+  groupId: string;
+  answerRevision: number;
+};
+
 type CapturedState = {
   activity: Activity;
+  answerEventCount: number;
+  groupAnswerRevisions: GroupAnswerRevisionRow[];
   submissions: SubmissionRow[];
   answers: SubmissionAnswerRow[];
   studentSnapshot: Snapshot;
@@ -74,6 +85,17 @@ function submissionAnswers(database: TestServer['db']): SubmissionAnswerRow[] {
     .all() as SubmissionAnswerRow[];
 }
 
+function groupAnswerRevisions(
+  target: TestServer,
+): GroupAnswerRevisionRow[] {
+  return target.db
+    .prepare(
+      `SELECT group_id AS groupId, answer_revision AS answerRevision
+       FROM group_answer_revisions ORDER BY group_id`,
+    )
+    .all() as GroupAnswerRevisionRow[];
+}
+
 function captureState(target: TestServer): CapturedState {
   const activity = getActivity(target.db);
   if (!activity) {
@@ -81,6 +103,8 @@ function captureState(target: TestServer): CapturedState {
   }
   return {
     activity,
+    answerEventCount: getAnswerEventCount(target.db),
+    groupAnswerRevisions: groupAnswerRevisions(target),
     submissions: submissions(target.db),
     answers: submissionAnswers(target.db),
     studentSnapshot: createSnapshot(
@@ -190,6 +214,24 @@ async function submitWithState(
   const ack = await sendCommand(socket, 'answer:submit', {
     questionNumber,
     answers,
+  });
+  const states = await Promise.all(statePromises);
+  return { ack, states };
+}
+
+async function voidWithState(
+  fixture: Fixture,
+  studentSocket: Socket,
+  groupId: string,
+  questionNumber: number,
+): Promise<{ ack: Ack; states: Snapshot[] }> {
+  const statePromises = [
+    waitForState(fixture.teacher),
+    waitForState(studentSocket),
+  ];
+  const ack = await sendCommand(fixture.teacher, 'answer:void', {
+    groupId,
+    questionNumber,
   });
   const states = await Promise.all(statePromises);
   return { ack, states };
@@ -732,6 +774,288 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
       { questionNumber: 1, groupId: 'group-2', rank: 2 },
       { questionNumber: 2, groupId: 'group-2', rank: 1 },
       { questionNumber: 2, groupId: 'group-1', rank: 2 },
+    ]);
+  });
+});
+
+describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () => {
+  it('preparing 與 closed 都回 INVALID_PHASE，作答、counter 與結果不變（AC-003-31）', async () => {
+    const fixture = await startFixture();
+
+    let before = captureState(fixture.server);
+    expectFailureUnchanged(
+      fixture.server,
+      before,
+      await sendCommand(fixture.teacher, 'answer:void', {
+        groupId: 'group-1',
+        questionNumber: 1,
+      }),
+      'INVALID_PHASE',
+    );
+
+    await openActivity(fixture);
+    expect(
+      (await submitWithState(fixture, fixture.studentOne, 1, ['保留答案']))
+        .ack,
+    ).toEqual({ ok: true });
+    const closingStates = fixture.sockets.map((socket) => waitForState(socket));
+    expect(
+      await sendCommand(fixture.teacher, 'activity:close', {}),
+    ).toEqual({ ok: true });
+    await Promise.all(closingStates);
+
+    before = captureState(fixture.server);
+    expectFailureUnchanged(
+      fixture.server,
+      before,
+      await sendCommand(fixture.teacher, 'answer:void', {
+        groupId: 'group-1',
+        questionNumber: 1,
+      }),
+      'INVALID_PHASE',
+    );
+  });
+
+  it('老師作廢成功保留 Submission 與答案，open 學生看到 voided，老師看板與進度排除該作答（FR-029、FR-030）', async () => {
+    const fixture = await startFixture();
+    await openActivity(fixture);
+    expect(
+      (
+        await submitWithState(fixture, fixture.studentOne, 1, [
+          '要被作廢的答案',
+        ])
+      ).ack,
+    ).toEqual({ ok: true });
+
+    const { ack, states } = await voidWithState(
+      fixture,
+      fixture.studentOne,
+      'group-1',
+      1,
+    );
+    expect(ack).toEqual({ ok: true });
+    expect(submissions(fixture.server.db)).toMatchObject([
+      {
+        questionNumber: 1,
+        groupId: 'group-1',
+        rank: 1,
+        voidedAt: expect.any(String),
+      },
+    ]);
+    expect(submissionAnswers(fixture.server.db)).toEqual([
+      {
+        questionNumber: 1,
+        groupId: 'group-1',
+        blankPosition: 1,
+        answerText: '要被作廢的答案',
+      },
+    ]);
+
+    const studentState = states[1];
+    if (
+      studentState?.role !== 'student' ||
+      studentState.phase !== 'open'
+    ) {
+      throw new Error('該組沒有收到 open 作廢快照');
+    }
+    expect(studentState.myAnswers[0]).toEqual({
+      questionNumber: 1,
+      state: 'voided',
+      answers: ['要被作廢的答案'],
+    });
+    expect(JSON.stringify(studentState)).not.toContain('"rank"');
+
+    const teacherState = states[0];
+    if (teacherState?.role !== 'teacher') {
+      throw new Error('老師沒有收到作廢快照');
+    }
+    const questionOne = teacherState.board.find(
+      (question) => question.questionNumber === 1,
+    );
+    expect(questionOne?.winnerGroupId).toBeNull();
+    expect(
+      questionOne?.cells.find((cell) => cell.groupId === 'group-1'),
+    ).toEqual({
+      questionNumber: 1,
+      groupId: 'group-1',
+      groupName: '第一組',
+      state: 'voided',
+      answers: ['要被作廢的答案'],
+      rank: 1,
+    });
+    expect(teacherState.progress.perQuestion[0]).toEqual({
+      questionNumber: 1,
+      submittedGroupCount: 0,
+    });
+    expect(
+      teacherState.progress.perGroup.find(
+        (entry) => entry.groupId === 'group-1',
+      ),
+    ).toEqual({ groupId: 'group-1', submittedQuestionCount: 0 });
+  });
+
+  it('題號、組別、有效作答不存在或 student 冒充老師都被拒，資料與 counter 完全不變（原則 III）', async () => {
+    const fixture = await startFixture();
+    await openActivity(fixture);
+
+    const cases = [
+      {
+        socket: fixture.teacher,
+        payload: { groupId: 'group-1', questionNumber: 99 },
+        code: 'QUESTION_NOT_FOUND',
+      },
+      {
+        socket: fixture.teacher,
+        payload: { groupId: 'missing-group', questionNumber: 1 },
+        code: 'GROUP_NOT_FOUND',
+      },
+      {
+        socket: fixture.teacher,
+        payload: { groupId: 'group-1', questionNumber: 1 },
+        code: 'SUBMISSION_NOT_FOUND',
+      },
+      {
+        socket: fixture.studentOne,
+        payload: { groupId: 'group-1', questionNumber: 1 },
+        code: 'FORBIDDEN',
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const before = captureState(fixture.server);
+      expectFailureUnchanged(
+        fixture.server,
+        before,
+        await sendCommand(testCase.socket, 'answer:void', testCase.payload),
+        testCase.code,
+      );
+    }
+  });
+
+  it('同筆不可作廢兩次；其他組 rank 不變、原 winner 由下一個有效 rank 接任，該組重送使用 max(rank)+1（AC-003-29、30）', async () => {
+    const fixture = await startFixture();
+    insertGroup(fixture.server.db, {
+      id: 'group-3',
+      name: '第三組',
+      position: 3,
+    });
+    const studentThree = await connectStudent(
+      fixture.server,
+      'group-3',
+      fixture.sockets,
+    );
+    fixture.sockets.push(studentThree);
+    await openActivity(fixture);
+
+    for (const [socket, answer] of [
+      [fixture.studentOne, '第一組原始答案'],
+      [fixture.studentTwo, '第二組答案'],
+      [studentThree, '第三組答案'],
+    ] as const) {
+      expect(
+        (await submitWithState(fixture, socket, 1, [answer])).ack,
+      ).toEqual({ ok: true });
+    }
+
+    const { ack, states } = await voidWithState(
+      fixture,
+      fixture.studentOne,
+      'group-1',
+      1,
+    );
+    expect(ack).toEqual({ ok: true });
+    expect(
+      submissions(fixture.server.db).map(
+        ({ groupId, rank, voidedAt }) => ({
+          groupId,
+          rank,
+          voided: voidedAt !== null,
+        }),
+      ),
+    ).toEqual([
+      { groupId: 'group-1', rank: 1, voided: true },
+      { groupId: 'group-2', rank: 2, voided: false },
+      { groupId: 'group-3', rank: 3, voided: false },
+    ]);
+
+    const teacherAfterVoid = states[0];
+    if (teacherAfterVoid?.role !== 'teacher') {
+      throw new Error('老師沒有收到作廢後看板');
+    }
+    const boardAfterVoid = teacherAfterVoid.board.find(
+      (question) => question.questionNumber === 1,
+    );
+    expect(boardAfterVoid?.winnerGroupId).toBe('group-2');
+    expect(
+      boardAfterVoid?.cells.find((cell) => cell.groupId === 'group-2')?.rank,
+    ).toBe(2);
+    expect(teacherAfterVoid.progress.perQuestion[0]).toEqual({
+      questionNumber: 1,
+      submittedGroupCount: 2,
+    });
+    expect(
+      teacherAfterVoid.progress.perGroup.find(
+        (entry) => entry.groupId === 'group-1',
+      )?.submittedQuestionCount,
+    ).toBe(0);
+
+    const beforeDuplicate = captureState(fixture.server);
+    expectFailureUnchanged(
+      fixture.server,
+      beforeDuplicate,
+      await sendCommand(fixture.teacher, 'answer:void', {
+        groupId: 'group-1',
+        questionNumber: 1,
+      }),
+      'SUBMISSION_NOT_FOUND',
+    );
+
+    expect(
+      (
+        await submitWithState(fixture, fixture.studentOne, 1, [
+          '第一組重新送出',
+        ])
+      ).ack,
+    ).toEqual({ ok: true });
+    expect(
+      submissions(fixture.server.db).map(
+        ({ groupId, rank, voidedAt }) => ({
+          groupId,
+          rank,
+          voided: voidedAt !== null,
+        }),
+      ),
+    ).toEqual([
+      { groupId: 'group-1', rank: 1, voided: true },
+      { groupId: 'group-2', rank: 2, voided: false },
+      { groupId: 'group-3', rank: 3, voided: false },
+      { groupId: 'group-1', rank: 4, voided: false },
+    ]);
+    expect(submissionAnswers(fixture.server.db)).toEqual([
+      {
+        questionNumber: 1,
+        groupId: 'group-1',
+        blankPosition: 1,
+        answerText: '第一組原始答案',
+      },
+      {
+        questionNumber: 1,
+        groupId: 'group-2',
+        blankPosition: 1,
+        answerText: '第二組答案',
+      },
+      {
+        questionNumber: 1,
+        groupId: 'group-3',
+        blankPosition: 1,
+        answerText: '第三組答案',
+      },
+      {
+        questionNumber: 1,
+        groupId: 'group-1',
+        blankPosition: 1,
+        answerText: '第一組重新送出',
+      },
     ]);
   });
 });

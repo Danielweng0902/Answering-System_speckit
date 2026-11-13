@@ -118,21 +118,21 @@ description: "Task list for 003 搶答作答與結果"
 
 ### Tests for User Story 3 ⚠️ 先寫、先失敗
 
-- [ ] T026 [P] [US3] **（作廢，等 OpenSpec）** 在 `server/tests/integration/answerCommands.test.ts` 新增作廢案例：老師作廢成功 → ack `{ ok: true }`、`voided_at` 已設定、Submission 與 SubmissionAnswer 保留；組別或題號不存在 → `GROUP_NOT_FOUND`／`QUESTION_NOT_FOUND`；該組該題未送出或已作廢 → `SUBMISSION_NOT_FOUND`；非 open 階段 → `INVALID_PHASE`（AC-003-31）；作廢後其他組 rank 不變、該組重送得到 `max(rank)+1`（AC-003-29、30）；同筆作廢兩次 → `SUBMISSION_NOT_FOUND`（Edge Cases）；student 送 `answer:void` → `FORBIDDEN`；每種失敗後資料不變（原則 III）；看板的作廢顯示（原 T027 案例，2026-11-13 移入）：某組作廢未重送 → board cell 顯示最新作廢作答 `state: 'voided'`、progress 不計（FR-029）；作廢事件只送老師與該組，其他組封包數 0（FR-030）
+- [x] T026 [P] [US3] **（作廢）** 在 `server/tests/integration/answerCommands.test.ts` 新增作廢案例：老師作廢成功 → ack `{ ok: true }`、`voided_at` 已設定、Submission 與 SubmissionAnswer 保留；組別或題號不存在 → `GROUP_NOT_FOUND`／`QUESTION_NOT_FOUND`；該組該題未送出或已作廢 → `SUBMISSION_NOT_FOUND`；非 open 階段 → `INVALID_PHASE`（AC-003-31）；作廢後其他組 rank 不變、該組重送得到 `max(rank)+1`（AC-003-29、30）；同筆作廢兩次 → `SUBMISSION_NOT_FOUND`（Edge Cases）；student 送 `answer:void` → `FORBIDDEN`；每種失敗後資料不變（原則 III）；看板的作廢顯示（原 T027 案例，2026-11-13 移入）：某組作廢未重送 → board cell 顯示最新作廢作答 `state: 'voided'`、progress 不計（FR-029）；作廢事件只送老師與該組，其他組封包數 0（FR-030）
 - [x] T027 [P] [US3] 寫 `server/tests/unit/snapshot.test.ts` 與 `server/tests/integration/answerVisibility.test.ts` 的看板案例：老師快照任何階段都有 `board`（每題每組 cell：state、answers、rank；`winnerGroupId` = `decideWinner` 結果）與 `progress`（perQuestion 有效送出組數、perGroup 有效送出題數）（AC-003-13、15；FR-019–FR-022）；題組 cell 的 `answers` 依 blank position 順序（AC-003-25 老師側）；closed 後看板維持結束當下內容（AC-003-16）；作答事件送出後老師快照即時更新（FR-021）
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] **（作廢，等 OpenSpec）** 在 `server/src/infra/db/answerRepo.ts` 新增 `voidSubmission(questionId, groupId, now)`（同一 transaction 設 `voided_at`）與 `findLatest(questionId, groupId)`（含已作廢，取最新一筆；語意與 `buildClosedMyAnswers` 的 `.at(-1)`（rank 最大＝最新）一致，見 docs/verification/003-security-review-midcourse.md）（FR-029；research R2）
+- [x] T028 [US3] **（作廢）** 在 `server/src/infra/db/answerRepo.ts` 新增 `voidSubmission(questionId, groupId, now)`（同一 transaction 設 `voided_at`）與 `findLatest(questionId, groupId)`（含已作廢，取最新一筆；語意與 `buildClosedMyAnswers` 的 `.at(-1)`（rank 最大＝最新）一致，見 docs/verification/003-security-review-midcourse.md）（FR-029；research R2）
 - [x] T029 [US3] 在 `server/src/app/answerProjections.ts` 新增 `buildBoard()` 與 `buildProgress()`：board 每題每組固定一筆 cell 並以 `decideWinner` 標示 winner；cell 依契約取該組最新 Submission（有有效作答顯示之；最新作廢判定與 `findLatest` 同語意，作廢資料在 T026 範圍才會出現）；progress 只計 `voided_at IS NULL`（FR-019、FR-020；research R3、R5）
 - [x] T030 [US3] 在 `shared/src/protocol.ts` 的 `TeacherSnapshot` 加 `board` 與 `progress`，並在 `server/src/app/snapshot.ts` 的老師快照（任何階段）輸出（FR-019–FR-022）
-- [ ] T031 [US3] **（作廢，等 OpenSpec）** 在 `server/src/app/answerCommands.ts` 新增 void 用例並在 `commandRouter`/`index.ts` 註冊 `answer:void`（teacher；open 由用例檢查）：依 contracts「answer:void 觸發順序」在同一 transaction 完成檢查與作廢、兩個 counter +1、定向廣播（讓 T026 通過；FR-029、FR-030）
+- [x] T031 [US3] **（作廢）** 在 `server/src/app/answerCommands.ts` 新增 void 用例並在 `commandRouter`/`index.ts` 註冊 `answer:void`（teacher；open 由用例檢查）：依 contracts「answer:void 觸發順序」在同一 transaction 完成檢查與作廢、兩個 counter +1、定向廣播（讓 T026 通過；FR-029、FR-030）
 - [x] T032 [US3] 新增 `web/src/features/teacher/AnswerBoard.tsx`（＋`.module.css`，只用 `tokens.css`）：題 × 組表格（狀態、每空格答案、rank、搶答成功標示）與進度摘要（research R9）；在 `web/src/features/teacher/TeacherPage.tsx` 掛上（作廢按鈕在 T053）
 - [x] T033 [US3] 在 `e2e/tests/003-buzz-in.spec.ts` 加入：看板在送出後 2 秒內更新、各題 rank 與搶答成功標示、進度摘要正確（AC-003-13–15；quickstart 步驟 9、10 的看板部分）
-- [ ] T053 [US3] **（作廢，等 OpenSpec；2026-11-13 自 T032、T033 拆出）** 作廢的 UI 與 e2e：`AnswerBoard.tsx` 已送出格加「作廢」按鈕 — 按第一次展開「確認／取消」，確認才送 `answer:void`，ack 失敗顯示訊息（research R9）；e2e 補作廢 → 取消 → 再按作廢與確認、第二組成為搶答成功、進度更新、同組重送得到新 rank 的流程（AC-003-29、30；quickstart 步驟 14–17）
+- [x] T053 [US3] **（作廢；2026-11-13 自 T032、T033 拆出，OpenSpec 組已同意）** 作廢的 UI 與 e2e：`AnswerBoard.tsx` 已送出格加「作廢」按鈕 — 按第一次展開「確認／取消」，確認才送 `answer:void`，ack 失敗顯示訊息（research R9）；e2e 補作廢 → 取消 → 再按作廢與確認、第二組成為搶答成功、進度更新、同組重送得到新 rank 的流程（AC-003-29、30；quickstart 步驟 14–17）
 
 **Checkpoint（看板）**: AC-003-13–16 通過；老師可即時檢視每題各組狀態、答案、順位與進度。
-**Checkpoint（作廢，等 OpenSpec）**: AC-003-29–31 通過；老師端完整，可實機示範完整搶答課堂流程。
+**Checkpoint（作廢）**: AC-003-29–31 通過；老師端完整，可實機示範完整搶答課堂流程。
 
 ---
 
@@ -218,7 +218,7 @@ description: "Task list for 003 搶答作答與結果"
 - **Phase 2 Foundational**：依賴 Phase 1；擋住所有 user story。
 - **Phase 3 US1**：依賴 Phase 2。
 - **Phase 4 US2**：依賴 US1（把 submit 的廣播與 revision 換成 R4 機制）。
-- **Phase 5 US3**：依賴 US2。**2026-11-13 拆分：看板與進度（T027、T029、T030、T032、T033）屬 Feature Contract 既有 C4/D9 共識，已先行實作；作廢（T026、T028、T031、T053）等 OpenSpec 組同意（spec Assumptions、playbook §12）。**
+- **Phase 5 US3**：依賴 US2。**2026-11-13 拆分：看板與進度（T027、T029、T030、T032、T033）屬 Feature Contract 既有 C4/D9 共識，已先行實作；作廢（T026、T028、T031、T053）已於 2026-11-13 經 OpenSpec 組同意（Feature Contract D24），開始實作。**
 - **Phase 6 US4**：依賴 US1、US2；與 US3 共用 `answerProjections.ts`、`snapshot.ts`。**2026-11-13：因 US3 暫緩而先於 US3 實作，兩者依序執行不平行。**
 - **Phase 7 US5**：依賴 US1（送出）與 US4（結果顯示）。**2026-11-13 調整：US3 暫緩期間先實作學生側（T038、T039、T041）；T040 需要 US3 的 `AnswerBoard.tsx`，US3 同意後做（T040 含 StudentResults 的前綴顯示一併處理）。**
 - **Phase 8 US6**：依賴 US1、US2（作答與 counter 已存在）；reset／confirm 觸及 001、002 檔案。**2026-11-13：因 US3 暫緩而提前於 US5 之前實作。**

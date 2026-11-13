@@ -135,6 +135,38 @@ export function findValid(
   );
 }
 
+/**
+ * Latest submission by rank, including voided history. readAnswers orders a
+ * question's rows by ascending rank, so the group's last row is the newest.
+ */
+export function findLatest(
+  database: DatabaseSync,
+  questionId: string,
+  groupId: string,
+): SubmissionRecord | null {
+  const candidates = readAnswers(database).filter(
+    (submission) =>
+      submission.questionId === questionId && submission.groupId === groupId,
+  );
+  return candidates.at(-1) ?? null;
+}
+
+/** Mark the group's only valid submission voided inside the caller transaction. */
+export function voidSubmission(
+  database: DatabaseSync,
+  questionId: string,
+  groupId: string,
+  now: string,
+): void {
+  database
+    .prepare(
+      `UPDATE submissions
+       SET voided_at = ?
+       WHERE question_id = ? AND group_id = ? AND voided_at IS NULL`,
+    )
+    .run(now, questionId, groupId);
+}
+
 /** The maximum rank includes voided submissions; ranks are never reused. */
 export function maxRank(database: DatabaseSync, questionId: string): number {
   const row = database

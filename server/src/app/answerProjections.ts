@@ -10,6 +10,7 @@ import type {
 } from '@classroom/shared';
 import { decideWinner } from '../domain/answerRanks.js';
 import {
+  findLatest,
   listByQuestion,
   listValidByGroup,
   type SubmissionRecord,
@@ -33,21 +34,18 @@ export function buildStudentQuestions(
 }
 
 
-/** Build the per-question own-group answer state for open student snapshots. */
+/**
+ * Build the per-question own-group answer state for open student snapshots.
+ * 最新 Submission（rank 最大）決定 submitted／voided，與 closed 投影及
+ * buildBoard 的「最新」語意一致；open 快照仍不含 rank（FR-030、FR-017）。
+ */
 export function buildMyAnswers(
   database: DatabaseSync,
   groupId: string,
 ): StudentOpenAnswer[] {
-  const submittedByQuestionNumber = new Map(
-    listValidByGroup(database, groupId).map((submission) => [
-      submission.questionNumber,
-      submission,
-    ]),
-  );
-
   return listQuestions(database).map((question) => {
-    const submission = submittedByQuestionNumber.get(question.number);
-    if (submission === undefined) {
+    const submission = findLatest(database, question.id, groupId);
+    if (submission === null) {
       return {
         questionNumber: question.number,
         state: 'not_submitted',
@@ -56,7 +54,7 @@ export function buildMyAnswers(
     }
     return {
       questionNumber: question.number,
-      state: 'submitted',
+      state: submission.voidedAt === null ? 'submitted' : 'voided',
       answers: [...submission.answers],
     };
   });

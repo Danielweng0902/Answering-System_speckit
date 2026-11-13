@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
-import type { Ack, AnswerSubmitInput } from '@classroom/shared';
+import type {
+  Ack,
+  AnswerSubmitInput,
+  AnswerVoidInput,
+} from '@classroom/shared';
 import { validateAnswer } from '../domain/answerValidation.js';
 import {
   getActivity,
@@ -12,7 +16,9 @@ import {
   incrementGroupAnswerRevision,
   insertSubmission,
   maxRank,
+  voidSubmission,
 } from '../infra/db/answerRepo.js';
+import { getGroupById } from '../infra/db/groupRepo.js';
 import { list as listQuestions } from '../infra/db/questionRepo.js';
 import {
   commandError,
@@ -21,6 +27,7 @@ import {
 
 export type AnswerCommandUseCases = {
   submitAnswer: CommandUseCase;
+  voidAnswer: CommandUseCase;
 };
 
 export type AnswerCommandDependencies = {
@@ -91,6 +98,34 @@ export function createAnswerCommands(
     return { ok: true };
   }
 
+  /** Must be called while an outer transaction is active. */
+  function voidInTransaction(input: AnswerVoidInput): Ack {
+    const activity = readActivity(database);
+    if (activity.phase !== 'open') {
+      return commandError('INVALID_PHASE');
+    }
+
+    const question = listQuestions(database).find(
+      (candidate) => candidate.number === input.questionNumber,
+    );
+    if (question === undefined) {
+      return commandError('QUESTION_NOT_FOUND');
+    }
+    if (getGroupById(database, input.groupId) === null) {
+      return commandError('GROUP_NOT_FOUND');
+    }
+
+    const validSubmission = findValid(database, question.id, input.groupId);
+    if (validSubmission === null) {
+      return commandError('SUBMISSION_NOT_FOUND');
+    }
+
+    voidSubmission(database, question.id, input.groupId, now());
+    incrementGroupAnswerRevision(database, input.groupId);
+    incrementAnswerEventCount(database);
+    return { ok: true };
+  }
+
   return {
     submitAnswer(identity, payload): Ack {
       if (identity.role !== 'student') {
@@ -103,6 +138,24 @@ export function createAnswerCommands(
         const ack = submitInTransaction(identity.groupId, input);
 
         // 失敗一律 ROLLBACK：不保存作答、rank 或 revision 變化（原則 III）。
+        database.exec(ack.ok ? 'COMMIT' : 'ROLLBACK');
+        return ack;
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
+    },
+    voidAnswer(identity, payload): Ack {
+      if (identity.role !== 'teacher') {
+        return commandError('FORBIDDEN');
+      }
+      const input = payload as AnswerVoidInput;
+
+      database.exec('BEGIN IMMEDIATE');
+      try {
+        const ack = voidInTransaction(input);
+
+        // 作廢失敗同樣整筆 ROLLBACK，保留原 Submission、答案與兩個 counter。
         database.exec(ack.ok ? 'COMMIT' : 'ROLLBACK');
         return ack;
       } catch (error) {
