@@ -24,12 +24,19 @@ export type CommandUseCase = (
   payload: unknown,
 ) => Ack;
 
+/** Optional per-command delivery scope; omitted commands remain global. */
+export type CommandBroadcast = (
+  identity: AccessIdentity,
+  payload: unknown,
+) => void;
+
 export type CommandRouter = {
   register: (
     socket: Socket,
     event: RegisteredCommandEvent,
     allowedRoles: readonly AllowedRole[],
     useCase: CommandUseCase,
+    broadcastOnSuccess?: CommandBroadcast,
   ) => void;
 };
 
@@ -93,6 +100,7 @@ export function registerCommand(
   allowedRoles: readonly AllowedRole[],
   useCase: CommandUseCase,
   broadcastState: () => void,
+  broadcastOnSuccess?: CommandBroadcast,
 ): void {
   socket.on(event, (...args: unknown[]) => {
     const { payload, acknowledge } = splitArguments(args);
@@ -123,7 +131,11 @@ export function registerCommand(
       return;
     }
     if (ack.ok) {
-      broadcastState();
+      if (broadcastOnSuccess === undefined) {
+        broadcastState();
+      } else {
+        broadcastOnSuccess(identity, parsed.data);
+      }
     }
     sendAck(ack);
   });
@@ -132,8 +144,15 @@ export function registerCommand(
 /** Factory kept in index-level code for future phases to register commands. */
 export function createCommandRouter(broadcastState: () => void): CommandRouter {
   return {
-    register(socket, event, allowedRoles, useCase) {
-      registerCommand(socket, event, allowedRoles, useCase, broadcastState);
+    register(socket, event, allowedRoles, useCase, broadcastOnSuccess) {
+      registerCommand(
+        socket,
+        event,
+        allowedRoles,
+        useCase,
+        broadcastState,
+        broadcastOnSuccess,
+      );
     },
   };
 }

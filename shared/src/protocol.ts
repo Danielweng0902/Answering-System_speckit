@@ -21,10 +21,37 @@ export type SnapshotBase = {
 
 export type GuestSnapshot = SnapshotBase & { role: 'guest' };
 
-export type StudentSnapshot = SnapshotBase & {
+type StudentSnapshotBase = SnapshotBase & {
   role: 'student';
   myGroupId: string;
+  /** 本次活動的前端草稿識別（FR-027）。 */
+  sessionId: string;
 };
+
+export type StudentPreparingSnapshot = StudentSnapshotBase & {
+  phase: 'preparing';
+};
+
+export type StudentOpenSnapshot = StudentSnapshotBase & {
+  phase: 'open';
+  questions: StudentQuestion[];
+  /** 每題固定一筆，只含本組狀態與答案；open 一定沒有 rank。 */
+  myAnswers: StudentOpenAnswer[];
+};
+
+export type StudentClosedSnapshot = StudentSnapshotBase & {
+  phase: 'closed';
+  questions: StudentQuestion[];
+  /** 每題固定一筆；winner 為 null 表示無有效作答（FR-023、FR-025）。 */
+  results: QuestionResult[];
+  /** 每題固定一筆，含本組順位；未送出或作廢的 rank 為 null（FR-024）。 */
+  myAnswers: StudentClosedAnswer[];
+};
+
+export type StudentSnapshot =
+  | StudentPreparingSnapshot
+  | StudentOpenSnapshot
+  | StudentClosedSnapshot;
 
 /** 老師快照中的學習單資訊（不含原檔位元組）。 */
 export type GuidedNotesInfo = {
@@ -43,6 +70,9 @@ export type TeacherSnapshot = SnapshotBase & {
   presence: Record<string, number>;
   questions: QuestionSummary[];
   guidedNotes: GuidedNotesInfo | null;
+  /** 003（FR-019–FR-022）：任何階段都有的題 × 組作答看板與整體進度。 */
+  board: AnswerBoardQuestion[];
+  progress: AnswerProgress;
 };
 
 export type Snapshot = GuestSnapshot | StudentSnapshot | TeacherSnapshot;
@@ -58,6 +88,64 @@ export type QuestionSummary = {
   kind: QuestionKind;
   prompt: string;
   blankCount: number;
+};
+
+/* ------------------------------------------------------------------ */
+/* 作答與搶答結果（003 contracts）                                      */
+/* ------------------------------------------------------------------ */
+
+export type StudentQuestion = {
+  number: number;
+  kind: QuestionKind;
+  prompt: string;
+  blanks: { position: number; prefix: string }[];
+};
+
+export type AnswerState = 'not_submitted' | 'submitted' | 'voided';
+
+export type StudentOpenAnswer = {
+  questionNumber: number;
+  state: AnswerState;
+  /** open 不含 rank；未送出時為空陣列。 */
+  answers: string[];
+};
+
+export type StudentClosedAnswer = {
+  questionNumber: number;
+  state: AnswerState;
+  answers: string[];
+  /** 只有本組有有效作答時才有順位。 */
+  rank: number | null;
+};
+
+export type QuestionResult = {
+  questionNumber: number;
+  winner: {
+    groupId: string;
+    groupName: string;
+    answers: string[];
+  } | null;
+};
+
+export type AnswerBoardCell = {
+  questionNumber: number;
+  groupId: string;
+  groupName: string;
+  state: AnswerState;
+  answers: string[];
+  /** 作廢時仍保留答案與原順位；未送出為 [] 與 null。 */
+  rank: number | null;
+};
+
+export type AnswerBoardQuestion = {
+  questionNumber: number;
+  cells: AnswerBoardCell[];
+  winnerGroupId: string | null;
+};
+
+export type AnswerProgress = {
+  perQuestion: { questionNumber: number; submittedGroupCount: number }[];
+  perGroup: { groupId: string; submittedQuestionCount: number }[];
 };
 
 export type ImportWarningCode =
@@ -132,6 +220,12 @@ export const ERROR_CODES = [
   'LINK_UNREACHABLE',
   'IMPORT_EXPIRED',
   'QUESTIONS_REQUIRED',
+  'QUESTION_NOT_FOUND',
+  'BLANK_COUNT_MISMATCH',
+  'ANSWER_EMPTY',
+  'ANSWER_TOO_LONG',
+  'ALREADY_SUBMITTED',
+  'SUBMISSION_NOT_FOUND',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -163,6 +257,12 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   LINK_UNREACHABLE: '無法連線到 Google 試算表，請檢查網路，或下載成 xlsx 後上傳',
   IMPORT_EXPIRED: '匯入摘要已失效，請重新讀取學習單',
   QUESTIONS_REQUIRED: '請先匯入題目',
+  QUESTION_NOT_FOUND: '找不到這個題號，請重新整理後再試',
+  BLANK_COUNT_MISMATCH: '這一題要填滿所有空格才能送出',
+  ANSWER_EMPTY: '每個空格都要填寫答案',
+  ANSWER_TOO_LONG: '每個空格最多 200 個字',
+  ALREADY_SUBMITTED: '本組已經送出這一題，不能再送出',
+  SUBMISSION_NOT_FOUND: '找不到可以作廢的作答，請重新整理後再試',
 };
 
 /* ------------------------------------------------------------------ */
@@ -193,6 +293,8 @@ export type ActivityClosePayload = Record<string, never>;
 export type ActivityResetPayload = { confirm: true };
 export type StudentLeavePayload = Record<string, never>;
 export type QuestionsConfirmPayload = { importId: string };
+export type AnswerSubmitPayload = { questionNumber: number; answers: string[] };
+export type AnswerVoidPayload = { groupId: string; questionNumber: number };
 
 export type CommandPayloads = {
   'group:create': GroupCreatePayload;
@@ -203,6 +305,8 @@ export type CommandPayloads = {
   'activity:reset': ActivityResetPayload;
   'student:leave': StudentLeavePayload;
   'questions:confirm': QuestionsConfirmPayload;
+  'answer:submit': AnswerSubmitPayload;
+  'answer:void': AnswerVoidPayload;
 };
 
 export const COMMAND_EVENTS = [
@@ -214,6 +318,8 @@ export const COMMAND_EVENTS = [
   'activity:reset',
   'student:leave',
   'questions:confirm',
+  'answer:submit',
+  'answer:void',
 ] as const;
 
 export type CommandEvent = (typeof COMMAND_EVENTS)[number];

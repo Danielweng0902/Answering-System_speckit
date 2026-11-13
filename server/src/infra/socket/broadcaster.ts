@@ -18,6 +18,8 @@ export type SocketDataWithIdentity = {
 export type StateBroadcaster = {
   /** Send one role-filtered snapshot to every connected socket. */
   broadcastState: () => void;
+  /** Send answer changes only to teachers and students in the changed group. */
+  broadcastSubmissionChanged: (groupId: string) => void;
   /** Current in-memory student connection counts by group. */
   getPresence: () => Record<string, number>;
   /**
@@ -82,6 +84,23 @@ export function createSocketBroadcaster(
         presence,
         now,
       );
+      socket.emit(STATE_EVENT, snapshot);
+    }
+  }
+
+  function broadcastSubmissionChanged(groupId: string): void {
+    const now = new Date();
+    const presence = getPresence();
+
+    for (const socket of io.sockets.sockets.values()) {
+      const identity = getSocketIdentity(socket);
+      const receivesSubmissionChange =
+        identity.role === 'teacher' ||
+        (identity.role === 'student' && identity.groupId === groupId);
+      if (!receivesSubmissionChange) {
+        continue;
+      }
+      const snapshot = createSnapshot(database, identity, presence, now);
       socket.emit(STATE_EVENT, snapshot);
     }
   }
@@ -152,5 +171,11 @@ export function createSocketBroadcaster(
     }
   }
 
-  return { broadcastState, getPresence, invalidateGroup, demoteToGuest };
+  return {
+    broadcastState,
+    broadcastSubmissionChanged,
+    getPresence,
+    invalidateGroup,
+    demoteToGuest,
+  };
 }

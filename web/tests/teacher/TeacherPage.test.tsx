@@ -29,6 +29,9 @@ const teacherSnapshot: TeacherSnapshot = {
   questions: [],
   guidedNotes: null,
   role: 'teacher',
+  // 003（T030）：TeacherSnapshot 必填的看板與進度欄位。
+  board: [],
+  progress: { perQuestion: [], perGroup: [{ groupId: 'g1', submittedQuestionCount: 0 }] },
 };
 
 function renderTeacherRoute(): void {

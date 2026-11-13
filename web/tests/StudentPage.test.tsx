@@ -11,6 +11,9 @@ import {
   type GuestSnapshot,
   type Phase,
   type Snapshot,
+  type StudentClosedSnapshot,
+  type StudentOpenSnapshot,
+  type StudentPreparingSnapshot,
   type StudentSnapshot,
 } from '@classroom/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +26,29 @@ vi.mock('../src/lib/socket', () => ({
   sendCommand: vi.fn(),
 }));
 
+// Node 26 的原生 localStorage getter 會覆蓋 Vitest jsdom 的 Storage；
+// 這個既有測試檔只需要可操作的記憶體版本，不改變任何既有斷言。
+const storageValues = new Map<string, string>();
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: {
+    get length() {
+      return storageValues.size;
+    },
+    clear: () => {
+      storageValues.clear();
+    },
+    getItem: (key: string) => storageValues.get(String(key)) ?? null,
+    key: (index: number) => [...storageValues.keys()][index] ?? null,
+    removeItem: (key: string) => {
+      storageValues.delete(String(key));
+    },
+    setItem: (key: string, value: string) => {
+      storageValues.set(String(key), String(value));
+    },
+  } satisfies Storage,
+});
+
 const fetchMock = vi.fn<typeof fetch>();
 
 const groups = [
@@ -34,15 +60,38 @@ function studentSnapshot(
   phase: Phase,
   overrides: Partial<StudentSnapshot> = {},
 ): StudentSnapshot {
-  return {
+  const base = {
     revision: 1,
     serverNow: '2026-11-12T00:00:00.000Z',
-    phase,
     countdownEndsAt: null,
     groups,
-    role: 'student',
+    role: 'student' as const,
     myGroupId: 'g1',
-    ...overrides,
+    sessionId: 'test-session',
+  };
+  if (phase === 'preparing') {
+    return {
+      ...base,
+      phase: 'preparing',
+      ...(overrides as Partial<StudentPreparingSnapshot>),
+    };
+  }
+  if (phase === 'open') {
+    return {
+      ...base,
+      phase: 'open',
+      questions: [],
+      myAnswers: [],
+      ...(overrides as Partial<StudentOpenSnapshot>),
+    };
+  }
+  return {
+    ...base,
+    phase: 'closed',
+    questions: [],
+    results: [],
+    myAnswers: [],
+    ...(overrides as Partial<StudentClosedSnapshot>),
   };
 }
 

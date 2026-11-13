@@ -1,0 +1,89 @@
+.board {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.title,
+.progressTitle,
+.description,
+.empty {
+  margin: var(--space-0);
+}
+
+.title {
+  font-size: var(--font-size-large);
+}
+
+.progressTitle {
+  font-size: var(--font-size-base);
+}
+
+.description,
+.empty,
+.muted {
+  color: var(--color-text-muted);
+}
+
+.description,
+.empty {
+  font-size: var(--font-size-small);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width-thin) solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.cell {
+  min-width: 8rem;
+}
+
+.cell span {
+  display: block;
+}
+
+.cell span + span {
+  margin-block-start: var(--space-1);
+}
+
+/* 題組逐格顯示的每格答案（AC-003-25），比標籤行略內縮。 */
+.blank {
+  padding-inline-start: var(--space-3);
+}
+
+.winner {
+  font-weight: 600;
+}
+
+.progress {
+  display: grid;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: var(--border-width-thin) solid var(--color-border);
+}
+
+.progressList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+  font-size: var(--font-size-small);
+}

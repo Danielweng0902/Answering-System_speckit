@@ -22,6 +22,9 @@ function makeSnapshot(overrides: Partial<TeacherSnapshot> = {}): TeacherSnapshot
     role: 'teacher',
     questions: [],
     guidedNotes: null,
+    // 003（T030）：TeacherSnapshot 必填的看板與進度欄位。
+    board: [],
+    progress: { perQuestion: [], perGroup: [] },
     ...overrides,
   };
 }

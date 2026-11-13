@@ -51,6 +51,18 @@ export const questionsConfirmSchema = z.object({
   importId: z.string().min(1),
 });
 
+/** 學生送出整題所有空格答案；組別只由連線身分決定。 */
+export const answerSubmitSchema = z.strictObject({
+  questionNumber: z.number().int().positive(),
+  answers: z.array(z.string()),
+});
+
+/** 老師作廢某組某題。 */
+export const answerVoidSchema = z.strictObject({
+  groupId: z.string().min(1),
+  questionNumber: z.number().int().positive(),
+});
+
 /** 各指令事件對應的 schema，供指令路由查表驗證。 */
 export const commandSchemas: {
   [E in CommandEvent]: z.ZodType<unknown>;
@@ -63,6 +75,8 @@ export const commandSchemas: {
   'activity:reset': activityResetSchema,
   'student:leave': studentLeaveSchema,
   'questions:confirm': questionsConfirmSchema,
+  'answer:submit': answerSubmitSchema,
+  'answer:void': answerVoidSchema,
 };
 
 export const commandEventSchema = z.enum(COMMAND_EVENTS);
@@ -104,6 +118,8 @@ export type GroupDeleteInput = z.infer<typeof groupDeleteSchema>;
 export type ActivityOpenInput = z.infer<typeof activityOpenSchema>;
 export type ActivityResetInput = z.infer<typeof activityResetSchema>;
 export type QuestionsConfirmInput = z.infer<typeof questionsConfirmSchema>;
+export type AnswerSubmitInput = z.infer<typeof answerSubmitSchema>;
+export type AnswerVoidInput = z.infer<typeof answerVoidSchema>;
 export type TeacherLoginInput = z.infer<typeof teacherLoginSchema>;
 export type StudentJoinInput = z.infer<typeof studentJoinSchema>;
 export type ImportLinkRequestInput = z.infer<typeof importLinkRequestSchema>;

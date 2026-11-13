@@ -1,0 +1,70 @@
+.results,
+.question {
+  display: grid;
+}
+
+.results {
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.title,
+.description,
+.questions,
+.questionTitle,
+.prompt,
+.noAnswer,
+.winner,
+.answers,
+.mine {
+  margin: var(--space-0);
+}
+
+.title {
+  font-size: var(--font-size-large);
+}
+
+.description,
+.prompt {
+  color: var(--color-text-muted);
+}
+
+.questions {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.question {
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.questionTitle {
+  font-size: var(--font-size-base);
+}
+
+.noAnswer,
+.answers,
+.mine {
+  font-size: var(--font-size-small);
+}
+
+.noAnswer {
+  color: var(--color-text-muted);
+}
+
+.winner {
+  font-size: var(--font-size-base);
+}
+
+.mine {
+  color: var(--color-text-muted);
+}

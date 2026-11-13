@@ -35,16 +35,22 @@ export function useSnapshot(): UseSnapshotResult {
     () => (getSocket().connected ? 'connected' : 'connecting'),
   );
   const latestRevisionRef = useRef(cachedSnapshot?.revision ?? -1);
+  const latestRoleRef = useRef(cachedSnapshot?.role ?? null);
 
   useEffect(() => {
     const socket = getSocket();
 
     const handleState = (nextSnapshot: Snapshot): void => {
-      if (nextSnapshot.revision <= latestRevisionRef.current) {
+      // 同一連線上身分改變（例如學生離開組別降級為 guest）時，新身分的
+      // revision 可能小於等於最後接受的學生快照；與重新連線同一原則，
+      // role 變換時重設比較基準並接受。相同 role 內維持單調規則。
+      const roleChanged = nextSnapshot.role !== latestRoleRef.current;
+      if (!roleChanged && nextSnapshot.revision <= latestRevisionRef.current) {
         return;
       }
 
       latestRevisionRef.current = nextSnapshot.revision;
+      latestRoleRef.current = nextSnapshot.role;
       cachedSnapshot = nextSnapshot;
       setSnapshot(nextSnapshot);
       // 重新選組成功後才清除「組別不存在」提示；以訪客重連時保留，讓學生看得到原因。
@@ -63,6 +69,7 @@ export function useSnapshot(): UseSnapshotResult {
     // 身分改變時 revision 可能不變，所以新連線要重設比較基準。
     const handleConnect = (): void => {
       latestRevisionRef.current = -1;
+      latestRoleRef.current = null;
       setConnectionState('connected');
     };
 
