@@ -201,11 +201,11 @@ description: "Task list for 003 搶答作答與結果"
 
 **Purpose**: 安全覆核、圖與程式一致性、文件、驗證紀錄。
 
-- [ ] T047 [P] **安全覆核**（GLM worker，只回報不改程式）：可見範圍（SC-002 的封包與快照兩層）、rank 競態與 transaction 邊界、payload 偽造與身分檢查、輸入驗證、log 不含答案內容、localStorage 草稿存取；監督者把發現整理成修正 task 或記入 `docs/verification/003-security-review.md`
-- [ ] T048 **圖與程式一致性檢查（原則 VII）**：依 plan.md「圖表與模組對應」逐列核對 `diagrams/003-buzz-in-*.puml` 的元件與型別在程式中存在、名稱與關係一致；有差異時修正程式，或修正 `.puml` 並重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`；結果寫入 `docs/verification/003-diagram-consistency.md`
-- [ ] T049 [P] 更新根目錄 `README.md`：操作流程加入學生作答、老師看板與作廢、結果步驟；測試說明加入 003
-- [ ] T050 執行 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/003-automated.md`（含 SC-001–SC-007 各由哪個測試涵蓋）
-- [ ] T051 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取作答區（單題與題組）、已送出鎖定、老師看板與進度、作廢確認、結果畫面，存到 `docs/verification/003-screenshots/`，交設計負責人驗收
+- [x] T047 [P] **安全覆核**（GLM worker，只回報不改程式）：可見範圍（SC-002 的封包與快照兩層）、rank 競態與 transaction 邊界、payload 偽造與身分檢查、輸入驗證、log 不含答案內容、localStorage 草稿存取；監督者把發現整理成修正 task 或記入 `docs/verification/003-security-review.md`
+- [x] T048 **圖與程式一致性檢查（原則 VII）**：依 plan.md「圖表與模組對應」逐列核對 `diagrams/003-buzz-in-*.puml` 的元件與型別在程式中存在、名稱與關係一致；有差異時修正程式，或修正 `.puml` 並重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`；結果寫入 `docs/verification/003-diagram-consistency.md`
+- [x] T049 [P] 更新根目錄 `README.md`：操作流程加入學生作答、老師看板與作廢、結果步驟；測試說明加入 003
+- [x] T050 執行 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/003-automated.md`（含 SC-001–SC-007 各由哪個測試涵蓋）
+- [x] T051 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取作答區（單題與題組）、已送出鎖定、老師看板與進度、作廢確認、結果畫面，存到 `docs/verification/003-screenshots/`，交設計負責人驗收
 - [ ] T052 **人工驗證**（由設計與驗證負責人執行）：依 quickstart.md 的 23 個步驟操作，結果記錄在 `docs/verification/003-manual.md`；問題另開 GitHub issue
 
 ---
@@ -278,3 +278,22 @@ description: "Task list for 003 搶答作答與結果"
 - US1 的全域廣播與 `activity.revision + 1` 是計畫好的中間狀態；US2 完成前不得把分支標示為支援 SC-002。
 - 介面樣式只引用 `web/src/styles/tokens.css`，不寫死色彩、字體（原則 IX）。
 - SC-003、SC-005 的 2 秒要求由事件驅動的自動測試與 quickstart 人工驗證涵蓋。
+
+## Phase 10: Convergence
+
+- [x] T054 修正 quickstart.md 與 docs/verification/003-manual.md 步驟 7，明訂以測試 client 驗證重複送出 per AC-003-04 (partial)
+- [x] T055 修正 quickstart.md 與 docs/verification/003-manual.md 步驟 16，明訂以測試 client 驗證重複作廢 per AC-003-29 (partial)
+- [x] T056 修正 quickstart.md 與 docs/verification/003-manual.md 步驟 21，明訂以測試 client 驗證結束後送出與作廢 per AC-003-20、AC-003-31 (partial)
+- [x] T057 修正 quickstart.md 與 docs/verification/003-manual.md 步驟 22–23，於再開啟搶答並進入作答區後檢查草稿，保持換題流程可執行 per AC-003-32 (partial)
+- [x] T058 補齊 e2e/tests/003-screenshots.spec.ts 的手機寬度截圖與 docs/verification/003-automated.md 證據，截圖存於 docs/verification/003-screenshots/ per EXECUTION-PLAYBOOK §10 (missing)
+
+## Phase 11: Convergence
+
+- [x] T059 修正 web/src/features/student/AnswerArea.tsx 題組先填後格的草稿保存，並在 web/tests/AnswerArea.test.tsx 驗證重新掛載保留輸入 per FR-027、AC-003-28 (partial)
+- [x] T060 保護 server/src/infra/socket/commandRouter.ts 提交後廣播例外，保留已完成用例的 ack 並以 server/tests/integration/errorHandling.test.ts 驗證連線存活與不洩漏內容 per contracts: ack、Constitution IV (partial)
+- [x] T061 在 specs/003-buzz-in/quickstart.md 與 docs/verification/003-manual.md 提供可執行的測試 client 操作與 ack 檢查方法 per AC-003-02、04、20、29、31 (partial)
+
+## Phase 12: Multi-model review fixes
+
+- [x] T062 清理三模型交叉覆核接受的前端殘留狀態：AnswerArea 在任一題送出中停用全部送出按鈕；AnswerBoard 以 cell signature 避免舊確認與舊錯誤隨新作答浮回，並只在 open 且 cell 仍可作廢時顯示相關錯誤，補回歸測試。既有 e2e 同組重送時即使 submitted 仍須保留 ALREADY_SUBMITTED 錯誤，不採用「submitted 一律隱藏錯誤」 per FR-005、FR-029、AC-003-24、AC-003-29 (partial)
+- [x] T063 將 broadcaster 的全域與定向廣播改為每個 socket 各自例外隔離，單一連線失敗不得中止其他連線，log 不含 snapshot 內容，補全域與定向回歸測試 per FR-005、FR-021、FR-030 (partial)

@@ -91,6 +91,11 @@ function splitArguments(args: unknown[]): {
  * 3. execute the use case,
  * 4. only on `{ ok: true }`, broadcast and return the successful ack.
  *
+ * A use-case exception is logged with the event name only and gets no ack
+ * (its transaction rolled back). A broadcast exception after a committed
+ * use case is also logged with the event name only; the original ack is
+ * still sent exactly once so the completed use case is not lost.
+ *
  * A missing Socket.IO ack callback is valid; the command still runs, but no
  * synchronous exception is raised for the acknowledgement itself.
  */
@@ -131,10 +136,18 @@ export function registerCommand(
       return;
     }
     if (ack.ok) {
-      if (broadcastOnSuccess === undefined) {
-        broadcastState();
-      } else {
-        broadcastOnSuccess(identity, parsed.data);
+      try {
+        if (broadcastOnSuccess === undefined) {
+          broadcastState();
+        } else {
+          broadcastOnSuccess(identity, parsed.data);
+        }
+      } catch {
+        // 廣播在用例 COMMIT 之後執行：失敗不得讓例外逃到 socket 事件
+        // 迴圈外成為未捕捉例外，也不得吞掉或重送已成功用例的 ack
+        // （contracts: ack 恰一次）。與用例例外相同，只記錄事件名稱，
+        // 不記錄 payload 或例外內容（原則 IV）。
+        console.error(`Command ${event} broadcast failed.`);
       }
     }
     sendAck(ack);

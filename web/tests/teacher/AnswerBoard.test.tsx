@@ -126,6 +126,185 @@ describe('AnswerBoard 作廢（US3；T053；FR-029）', () => {
     );
   });
 
+  it('活動關閉後不再保留作廢失敗提示（FR-029）', async () => {
+    vi.mocked(sendCommand).mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'INVALID_PHASE',
+        message: '目前階段不能執行這個操作',
+      },
+    });
+    const view = render(<AnswerBoard snapshot={snapshot()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '作廢' }));
+    fireEvent.click(screen.getByRole('button', { name: '確認作廢' }));
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      '目前階段不能執行這個操作',
+    );
+
+    view.rerender(<AnswerBoard snapshot={snapshot({ phase: 'closed' })} />);
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('cell 被作廢又重送後，舊作廢錯誤不會跟著新作答浮現（FR-029）', async () => {
+    vi.mocked(sendCommand).mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'SUBMISSION_NOT_FOUND',
+        message: '找不到可以作廢的作答，請重新整理後再試',
+      },
+    });
+    const view = render(<AnswerBoard snapshot={snapshot()} />);
+    fireEvent.click(screen.getByRole('button', { name: '作廢' }));
+    fireEvent.click(screen.getByRole('button', { name: '確認作廢' }));
+    expect(await screen.findByRole('alert')).toBeDefined();
+
+    view.rerender(
+      <AnswerBoard
+        snapshot={snapshot({
+          board: [
+            {
+              questionNumber: 1,
+              winnerGroupId: 'group-2',
+              cells: [
+                {
+                  questionNumber: 1,
+                  groupId: 'group-1',
+                  groupName: '第一組',
+                  state: 'voided',
+                  answers: ['第一組被作廢的答案'],
+                  rank: 1,
+                },
+                {
+                  questionNumber: 1,
+                  groupId: 'group-2',
+                  groupName: '第二組',
+                  state: 'submitted',
+                  answers: ['第二組答案'],
+                  rank: 2,
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    view.rerender(
+      <AnswerBoard
+        snapshot={snapshot({
+          board: [
+            {
+              questionNumber: 1,
+              winnerGroupId: 'group-1',
+              cells: [
+                {
+                  questionNumber: 1,
+                  groupId: 'group-1',
+                  groupName: '第一組',
+                  state: 'submitted',
+                  answers: ['第一組新答案'],
+                  rank: 3,
+                },
+                {
+                  questionNumber: 1,
+                  groupId: 'group-2',
+                  groupName: '第二組',
+                  state: 'voided',
+                  answers: ['第二組被作廢的答案'],
+                  rank: 2,
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('cell 在確認期間被他人作廢後，重新送出不會自行彈回確認（FR-029）', () => {
+    const view = render(<AnswerBoard snapshot={snapshot()} />);
+    fireEvent.click(screen.getByRole('button', { name: '作廢' }));
+    expect(screen.getByRole('button', { name: '確認作廢' })).toBeDefined();
+
+    view.rerender(
+      <AnswerBoard
+        snapshot={snapshot({
+          board: [
+            {
+              questionNumber: 1,
+              winnerGroupId: 'group-2',
+              cells: [
+                {
+                  questionNumber: 1,
+                  groupId: 'group-1',
+                  groupName: '第一組',
+                  state: 'voided',
+                  answers: ['第一組舊答案'],
+                  rank: 1,
+                },
+                {
+                  questionNumber: 1,
+                  groupId: 'group-2',
+                  groupName: '第二組',
+                  state: 'submitted',
+                  answers: ['第二組答案'],
+                  rank: 2,
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: '確認作廢' })).toBeNull();
+
+    view.rerender(
+      <AnswerBoard
+        snapshot={snapshot({
+          progress: {
+            perQuestion: [{ questionNumber: 1, submittedGroupCount: 1 }],
+            perGroup: [
+              { groupId: 'group-1', submittedQuestionCount: 1 },
+              { groupId: 'group-2', submittedQuestionCount: 0 },
+            ],
+          },
+          board: [
+            {
+              questionNumber: 1,
+              winnerGroupId: 'group-1',
+              cells: [
+                {
+                  questionNumber: 1,
+                  groupId: 'group-1',
+                  groupName: '第一組',
+                  state: 'submitted',
+                  answers: ['第一組新答案'],
+                  rank: 3,
+                },
+                {
+                  questionNumber: 1,
+                  groupId: 'group-2',
+                  groupName: '第二組',
+                  state: 'voided',
+                  answers: ['第二組被作廢的答案'],
+                  rank: 2,
+                },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: '確認作廢' })).toBeNull();
+    expect(screen.getByRole('button', { name: '作廢' })).toBeDefined();
+  });
+
   it('非 open 階段不顯示作廢入口', () => {
     render(<AnswerBoard snapshot={snapshot({ phase: 'closed' })} />);
 

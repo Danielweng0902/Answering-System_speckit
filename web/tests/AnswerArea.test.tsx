@@ -243,6 +243,51 @@ describe('AnswerArea 本機草稿（AC-003-28、32；FR-027）', () => {
       });
     });
   });
+
+  it('任一題送出中會停用其他題的送出按鈕，避免靜默忽略第二次點擊（AC-003-24）', async () => {
+    let resolveAck!: (ack: { ok: true }) => void;
+    vi.mocked(sendCommand).mockImplementation(
+      () => new Promise((resolve) => {
+        resolveAck = resolve;
+      }),
+    );
+    render(<AnswerArea snapshot={snapshot()} />);
+
+    fireEvent.change(screen.getByLabelText('第 1 題答案'), {
+      target: { value: '第一題答案' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '送出第 1 題' }));
+
+    const secondButton = screen.getByRole('button', {
+      name: '送出第 2 題',
+    }) as HTMLButtonElement;
+    expect(secondButton.disabled).toBe(true);
+    expect(sendCommand).toHaveBeenCalledTimes(1);
+
+    resolveAck({ ok: true });
+    await waitFor(() => {
+      expect(secondButton.disabled).toBe(false);
+    });
+    expect(sendCommand).toHaveBeenCalledTimes(1);
+  });
+
+  it('ack 失敗後會解除送出中狀態，學生可重試（AC-003-24）', async () => {
+    vi.mocked(sendCommand).mockResolvedValue({
+      ok: false,
+      error: { code: null, message: '伺服器沒有回應，請稍後再試' },
+    });
+    render(<AnswerArea snapshot={snapshot()} />);
+
+    fireEvent.change(screen.getByLabelText('第 1 題答案'), {
+      target: { value: '第一題答案' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '送出第 1 題' }));
+    expect(await screen.findByRole('alert')).toBeDefined();
+    expect(
+      (screen.getByRole('button', { name: '送出第 1 題' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
 });
 
 describe('AnswerArea 題組（US5；AC-003-22、23）', () => {
@@ -274,6 +319,31 @@ describe('AnswerArea 題組（US5；AC-003-22、23）', () => {
     expect(storedDrafts()).toEqual({
       1: ['前綴一的草稿', '前綴二的草稿'],
     });
+  });
+
+  it('先填題組後格時草稿以空字串補齊前格，重新掛載後仍保留（FR-027、AC-003-28）', () => {
+    const view = render(<AnswerArea snapshot={groupSnapshot()} />);
+
+    fireEvent.change(
+      screen.getByLabelText('第 1 題（2）答案', { exact: true }),
+      { target: { value: '先填第二格的答案' } },
+    );
+
+    // 儲存內容不可以是 sparse array（JSON 序列化後前格會變 null，
+    // 重新讀取時整題草稿會被丟棄）。
+    expect(storedDrafts()).toEqual({ 1: ['', '先填第二格的答案'] });
+
+    view.unmount();
+    render(<AnswerArea snapshot={groupSnapshot()} />);
+
+    expect(
+      (screen.getByLabelText('第 1 題（1）答案', { exact: true }) as HTMLInputElement)
+        .value,
+    ).toBe('');
+    expect(
+      (screen.getByLabelText('第 1 題（2）答案', { exact: true }) as HTMLInputElement)
+        .value,
+    ).toBe('先填第二格的答案');
   });
 
   it('只填部分空格或空格是純空白時，前端先拒絕並指出未填的前綴（AC-003-23）', async () => {

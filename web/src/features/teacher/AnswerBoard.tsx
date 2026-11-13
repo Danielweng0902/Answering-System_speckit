@@ -7,6 +7,23 @@ export type AnswerBoardProps = {
   snapshot: TeacherSnapshot;
 };
 
+type ActiveVoidConfirmation = {
+  key: string;
+  signature: string;
+};
+
+type ActiveVoidError = {
+  message: string;
+  signature: string;
+};
+
+function confirmationSignature(
+  phase: TeacherSnapshot['phase'],
+  cell: AnswerBoardCell,
+): string {
+  return JSON.stringify([phase, cell.state, cell.answers, cell.rank]);
+}
+
 /**
  * 題組（多空格）答案逐格顯示、以位置標示，順序即資料順序
  * （003 US5；T040；AC-003-25 老師側）。teacher 快照的 questions 是 002 的
@@ -50,9 +67,10 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
   const groupNames = new Map(
     snapshot.groups.map((group) => [group.id, group.name]),
   );
-  const [confirmingCell, setConfirmingCell] = useState<string | null>(null);
+  const [confirmingCell, setConfirmingCell] =
+    useState<ActiveVoidConfirmation | null>(null);
   const [voidingCell, setVoidingCell] = useState<string | null>(null);
-  const [voidErrors, setVoidErrors] = useState<Record<string, string>>({});
+  const [voidErrors, setVoidErrors] = useState<Record<string, ActiveVoidError>>({});
 
   function cellKey(cell: AnswerBoardCell): string {
     return `${String(cell.questionNumber)}:${cell.groupId}`;
@@ -83,7 +101,10 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
       if (!ack.ok) {
         setVoidErrors((current) => ({
           ...current,
-          [key]: ack.error.message,
+          [key]: {
+            message: ack.error.message,
+            signature: confirmationSignature(snapshot.phase, cell),
+          },
         }));
       }
     } finally {
@@ -125,6 +146,20 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                     <th scope="row">第 {question.questionNumber} 題</th>
                     {question.cells.map((cell) => {
                       const key = cellKey(cell);
+                      // 確認只對當初點開的同一份作答有效。cell 曾轉成其他
+                      // 狀態、被別人變動或 phase 改變後，即使 key 一樣也不
+                      // 能自動沿用舊確認（M5；T062）。
+                      const currentSignature = confirmationSignature(
+                        snapshot.phase,
+                        cell,
+                      );
+                      const isCurrentConfirmation =
+                        confirmingCell?.key === key &&
+                        confirmingCell.signature === currentSignature;
+                      const activeVoidError =
+                        voidErrors[key]?.signature === currentSignature
+                          ? voidErrors[key]
+                          : undefined;
                       return (
                         <td key={cell.groupId} className={styles.cell}>
                           {cell.state === 'not_submitted' && (
@@ -145,7 +180,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                 <span className={styles.winner}>搶答成功</span>
                               )}
                               {snapshot.phase === 'open' &&
-                                (confirmingCell === key ? (
+                                (isCurrentConfirmation ? (
                                   <div className={styles.voidActions}>
                                     <button
                                       className={styles.voidButton}
@@ -176,7 +211,13 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                     type="button"
                                     onClick={() => {
                                       clearVoidError(key);
-                                      setConfirmingCell(key);
+                                      setConfirmingCell({
+                                        key,
+                                        signature: confirmationSignature(
+                                          snapshot.phase,
+                                          cell,
+                                        ),
+                                      });
                                     }}
                                   >
                                     作廢
@@ -197,9 +238,9 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                               )}
                             </>
                           )}
-                          {voidErrors[key] !== undefined && (
+                          {activeVoidError !== undefined && (
                             <p className={styles.voidError} role="alert">
-                              {voidErrors[key]}
+                              {activeVoidError.message}
                             </p>
                           )}
                         </td>

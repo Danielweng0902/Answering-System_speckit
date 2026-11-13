@@ -73,18 +73,33 @@ export function createSocketBroadcaster(
     socket.emit(STATE_EVENT, snapshot);
   }
 
+  function emitSnapshotSafely(
+    socket: Socket,
+    createForSocket: () => Snapshot,
+  ): void {
+    try {
+      socket.emit(STATE_EVENT, createForSocket());
+    } catch {
+      // 單一連線的 snapshot/emit 失敗不得中止迴圈，其他客戶端仍要在
+      // 同一輪收到依其身分過濾的 state（FR-005、FR-021、FR-030）。
+      // 只記錄固定事件類型，不記錄 snapshot、identity、DB 或例外內容。
+      console.error(`Broadcast ${STATE_EVENT} failed.`);
+    }
+  }
+
   function broadcastState(): void {
     const now = new Date();
     const presence = getPresence();
 
     for (const socket of io.sockets.sockets.values()) {
-      const snapshot = createSnapshot(
-        database,
-        getSocketIdentity(socket),
-        presence,
-        now,
+      emitSnapshotSafely(socket, () =>
+        createSnapshot(
+          database,
+          getSocketIdentity(socket),
+          presence,
+          now,
+        ),
       );
-      socket.emit(STATE_EVENT, snapshot);
     }
   }
 
@@ -100,8 +115,9 @@ export function createSocketBroadcaster(
       if (!receivesSubmissionChange) {
         continue;
       }
-      const snapshot = createSnapshot(database, identity, presence, now);
-      socket.emit(STATE_EVENT, snapshot);
+      emitSnapshotSafely(socket, () =>
+        createSnapshot(database, identity, presence, now),
+      );
     }
   }
 

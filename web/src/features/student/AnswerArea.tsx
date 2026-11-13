@@ -81,7 +81,12 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
     value: string,
   ): void {
     persistDrafts((current) => {
-      const answers = [...(current[question.number] ?? [])];
+      const existing = current[question.number];
+      // 以空格數補滿空字串，避免先填後格時產生 sparse array：hole 經
+      // JSON.stringify 會變 null，重新讀取時整題草稿會被驗證拒絕（T059）。
+      const answers = question.blanks.map(
+        (_blank, index) => existing?.[index] ?? '',
+      );
       answers[blankIndex] = value;
       return { ...current, [question.number]: answers };
     });
@@ -220,7 +225,7 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                 <button
                   className={styles.button}
                   type="button"
-                  disabled={isSubmitted || isSubmitting}
+                  disabled={isSubmitted || submittingQuestion !== null}
                   onClick={() => {
                     void submit(question);
                   }}
