@@ -176,7 +176,7 @@ description: "Task list for 002 Guided Notes 匯入"
 - [x] T054 [P] 更新根目錄 `README.md`：操作流程加入「匯入學習單」步驟、測試腳本加入 002 的步驟、說明 Google 試算表需設為「知道連結者可檢視」
 - [x] T055 執行 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/002-automated.md`
 - [x] T056 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取匯入摘要（單題與題組）、取代提示、錯誤訊息（91 題號重複、連結未開放）、題目清單，存到 `docs/verification/002-screenshots/`，交設計負責人驗收
-- [ ] T057 **人工驗證**（由設計與驗證負責人執行）：依 quickstart.md 的 13 個步驟操作，結果記錄在 `docs/verification/002-manual.md`；問題另開 GitHub issue
+- [x] T057 **人工驗證**（由設計與驗證負責人執行）：依 quickstart.md 的 13 個步驟操作，結果記錄在 `docs/verification/002-manual.md`；問題另開 GitHub issue
 
 ---
 

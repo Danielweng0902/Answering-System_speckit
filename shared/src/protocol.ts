@@ -159,7 +159,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   NO_QUESTIONS: '表頭下方沒有找到任何題號，請確認題號欄填的是數字',
   DUPLICATE_QUESTION_NUMBER: '題號重複，請修正後重新匯入',
   LINK_INVALID: '這不是 Google 試算表連結，請貼上 docs.google.com/spreadsheets 開頭的網址',
-  LINK_NOT_SHARED: '無法讀取這份試算表。請把共用設定改成「知道連結者可檢視」，或下載成 xlsx 後上傳',
+  LINK_NOT_SHARED: '無法讀取這份試算表，可以改用以下方式：',
   LINK_UNREACHABLE: '無法連線到 Google 試算表，請檢查網路，或下載成 xlsx 後上傳',
   IMPORT_EXPIRED: '匯入摘要已失效，請重新讀取學習單',
   QUESTIONS_REQUIRED: '請先匯入題目',
