@@ -32,14 +32,14 @@ Worker 的呼叫方式依你的環境而定（OpenCode worker 工具或其他委
 |---|---|
 | Constitution 1.0.0 | 完成（`.specify/memory/constitution.md`；開頭的 Sync Impact Report 註解在第一次 commit 前刪除） |
 | Feature Contract v0.2 | 草稿，**尚待 OpenSpec 組確認**（`docs/shared/FEATURE-CONTRACT.md`） |
-| 001 activity-session | analyze 已由監督覆核；Phase 1（T001–T008）骨架通過自動檢查；Phase 1–8（T001–T071）完成並通過監督驗收，見 `docs/verification/`；下一步 Phase 9 收尾（T072–T079） |
-| 002 guided-notes-import | spec、圖完成 |
-| 003 buzz-in | spec、圖完成 |
+| 001 activity-session | 完成（T001–T079 全部通過驗收，PR #2 已合併，見 `docs/verification/`） |
+| 002 guided-notes-import | 實作完成（T001–T056；T057 人工驗證待組員執行） |
+| 003 buzz-in | 實作中：US1/US2/US4/US6 與 US5 學生側完成並驗收；看板（T027、T029、T030、T032、T033）派工中；作廢（T026、T028、T031、T053）等 OpenSpec 組同意；analyze 已補跑通過、GLM 中程複查零缺陷 |
 | 004 export | spec、圖完成 |
 | 005 fairness-and-extras | spec、圖完成 |
 | 測試用學習單 | `fixtures/guided-notes/`（8 份＋`expected.json`＋驗證腳本） |
 | 設計規範 | `design/DESIGN.md` 尚未建立（隊友負責）；介面先用暫定 token |
-| Git | 已 `git init`、已設定 `origin`，**尚無任何 commit** |
+| Git | 001/002 已 commit（PR #2 已合併）；003 分支的變更**尚未 commit**（等使用者指示） |
 
 ## 3. 必讀文件（依序）
 
@@ -179,7 +179,7 @@ printf '{"feature_directory":"specs/002-guided-notes-import"}\n' > .specify/feat
 - 順位以介面抽象：`RankingRule.rank(submissionsOfQuestion) → ranks`，003 實作「先到先得」，005 加入公平規則。
 - **可見範圍在伺服器產生快照時過濾**，不是在前端隱藏：搶答中，學生快照只含自己組的作答，不含順位、不含任何其他組的資料或數量；已結束才加入結果與自己組的順位。為這一點寫專門的測試：擷取學生連線收到的每一則訊息並斷言。
 - 老師快照含完整看板。
-- 尚未送出的草稿存在前端的 sessionStorage。
+- 尚未送出的草稿存在前端的 localStorage（003 research R7：key 以 sessionId 命名空間區分，重設活動或換題後清除）。
 - 用 001 的 `onReset` 掛載點清空作答。
 - E2E 要有「兩組幾乎同時送出同一題」與「同組兩人同時送出」。
 

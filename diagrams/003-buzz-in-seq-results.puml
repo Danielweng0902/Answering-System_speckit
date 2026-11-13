@@ -1,29 +1,44 @@
 @startuml
 title 003 時序圖：結束搶答與檢視結果
 
-actor 老師
+actor "老師" as Teacher
 participant "老師端畫面" as T
 participant "活動階段管理\n（001）" as P
 participant "作答受理" as I
+participant "作廢受理" as V
 participant "結果彙整" as RB
 participant "可見範圍過濾" as F
 participant "狀態同步" as B
 participant "學生端畫面" as U
-actor 學生
+actor "學生" as S
 
-老師 -> T : 按「結束搶答」
-T -> P : 結束搶答()
+== 老師結束 ==
+
+Teacher -> T : 按「結束搶答」
+T -> P : activity:close()
 P -> I : 階段已是「已結束」，停止受理
+P -> V : 階段已是「已結束」，停止作廢
 P -> RB : 彙整結果
-RB -> RB : 每一題：第 1 順位的組別與答案；\n無人作答則為空
-RB -> F : 搶答結果、各組順位
-F -> B : 給老師：完整結果\n給每一組：各題結果＋本組答案與順位
+RB -> RB : 每一題：有效作答中 rank 最小者的組別與答案；\n無有效作答則為無人作答
+RB -> F : 搶答結果、各組本組作答與順位
+F -> B : 老師：完整結果；學生：各題結果＋本組答案與順位；guest：無作答欄位
 B --> T : 完整結果（每題標示搶答成功）
 B --> U : 各題搶答成功組別與答案、本組順位
-U --> 學生 : 顯示結果（2 秒內）
+note over B,U
+  close 屬階段變更，activity.revision +1 並向所有連線送 state；
+  作答事件本身仍只採用定向送出
+end note
+U --> S : 顯示結果（2 秒內）
 
 == 結束後仍有答案送達 ==
-學生 -> U : 送出答案
-U -> I : 送出(...)
-I --> U : 拒絕：搶答已結束
+
+S -> U : 送出答案
+U -> I : answer:submit(...)
+I --> U : ack INVALID_PHASE：搶答已結束\n不改資料，不發送 state
+
+== 老師在已結束嘗試作廢 ==
+
+Teacher -> T : 對某組某題按 answer:void
+T -> V : answer:void(groupId, questionNumber)
+V --> T : ack INVALID_PHASE\n不重排順位、不改變結果，不發送 state
 @enduml

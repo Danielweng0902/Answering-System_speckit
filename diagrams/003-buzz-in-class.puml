@@ -3,24 +3,27 @@
 title 003 搶答作答與結果：類別圖（領域物件）
 
 class 作答 {
-  送達序號
-  送達時間
+  送達序號 rank
+  送達時間 receivedAt
+  作廢時間 voidedAt
 }
 
 class 空格答案 {
-  答案文字
+  答案文字 answerText
+  空格順序 blankPosition
 }
 
 class 作答簿 {
   --
-  受理(組別, 題目, 各空格答案) : 作答 或 拒絕原因
+  受理(學生連線身分, 題目, 各空格答案) : 作答 或 拒絕原因
+  作廢(老師, 組別, 題目) : 作答 或 拒絕原因
   某題的作答(題目) : 作答[*]
   某組的作答(組別) : 作答[*]
   清空()
 }
 
 interface 順位規則 {
-  排序(某題的作答) : 順位[*]
+  選搶答成功(某題的作答) : 順位[0..1]
 }
 
 class 先到先得規則
@@ -31,9 +34,9 @@ class 順位 {
 }
 
 class 作答狀況 {
-  每題各組的狀態、答案、順位
-  每題已送出組數
-  每組已送出題數
+  每題各組的狀態、答案、順位、是否作廢
+  每題已送出組數（不含作廢）
+  每組已送出題數（不含作廢）
 }
 
 class 搶答結果 {
@@ -43,7 +46,13 @@ class 搶答結果 {
 
 class 學生檢視 {
   本組已送出的答案
+  本組被作廢與可再送出狀態
   結束後：各題結果與本組順位
+}
+
+class 作答版本計數 {
+  每組 answerRevision
+  全域 answerEventCount
 }
 
 class 組別 <<001>>
@@ -62,18 +71,28 @@ class 空格 <<002>>
 作答狀況 ..> 順位
 搶答結果 "0..1" --> "1" 題目
 學生檢視 ..> 搶答結果 : 僅已結束
+作答簿 ..> 作答版本計數 : 每次送出或作廢 +1
 
 note right of 作答簿
-  受理規則：
+  受理／作廢都是同步 transaction：
   1. 階段必須是搶答中
-  2. 每組每題只能一筆
+  2. 每組每題只有一筆有效作答
   3. 題組須填滿所有空格
-  4. 每個答案 1–200 字元
-  5. 送達序號由系統遞增給定
+  4. 每個答案 1–200 個 code point
+  5. rank = 含作廢作答的最大 rank + 1
+  6. 作廢只標記，不刪除也不遞補
 end note
 
 note right of 順位規則
-  005 的公平順位機制
-  是另一個實作
+  目前：有效作答中 rank 最小者
+  005 的公平機制是另一個實作
+end note
+
+note bottom of 作答版本計數
+  作答與作廢不增加 activity.revision
+  teacher revision = activity.revision + answerEventCount
+  student revision = activity.revision + 本組 answerRevision
+  guest revision = activity.revision
+  只把 state 定向送老師與相關組別
 end note
 @enduml
