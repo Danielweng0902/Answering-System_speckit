@@ -34,3 +34,4 @@
 - 行為規則來自 `docs/shared/FEATURE-CONTRACT.md`，狀態為 Default，尚待 OpenSpec 組確認。
 - 規格內採用的數值預設列在 Assumptions，建議在 `/speckit-clarify` 時由組員確認。
 - 圖表（原則 VII）已產生，`scripts/check-diagrams.sh` 通過。
+- 2026-11-14 已完成 `/speckit-clarify`：5 題（作廢作答的 CSV 處理、D13／D14 欄位衝突、D12 助教回覆、格式保留的驗收標準、匯出檔名規則）已確認並整合至 spec.md 的 `## Clarifications`；新增 AC-004-16、AC-004-17 涵蓋 003 D24 作廢情境。
