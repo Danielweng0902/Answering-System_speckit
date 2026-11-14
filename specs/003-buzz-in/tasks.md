@@ -206,7 +206,7 @@ description: "Task list for 003 搶答作答與結果"
 - [x] T049 [P] 更新根目錄 `README.md`：操作流程加入學生作答、老師看板與作廢、結果步驟；測試說明加入 003
 - [x] T050 執行 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/003-automated.md`（含 SC-001–SC-007 各由哪個測試涵蓋）
 - [x] T051 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取作答區（單題與題組）、已送出鎖定、老師看板與進度、作廢確認、結果畫面，存到 `docs/verification/003-screenshots/`，交設計負責人驗收
-- [ ] T052 **人工驗證**（由設計與驗證負責人執行）：依 quickstart.md 的 23 個步驟操作，結果記錄在 `docs/verification/003-manual.md`；問題另開 GitHub issue
+- [x] T052 **人工驗證**（由設計與驗證負責人執行）：依 quickstart.md 的 23 個步驟操作，結果記錄在 `docs/verification/003-manual.md`；問題另開 GitHub issue
 
 ---
 
