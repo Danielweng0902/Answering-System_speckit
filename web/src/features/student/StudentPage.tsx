@@ -4,7 +4,9 @@ import type { UseSnapshotResult } from '../../lib/useSnapshot';
 import { clearToken } from '../../lib/session';
 import { connectSocket, sendCommand } from '../../lib/socket';
 import { Countdown } from '../shared/Countdown';
+import { AnswerArea } from './AnswerArea';
 import { GroupPicker } from './GroupPicker';
+import { StudentResults } from './StudentResults';
 import styles from './StudentPage.module.css';
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -96,8 +98,8 @@ export function StudentPage({
           }}
         />
       )}
-      {snapshot.phase === 'open' && <OpenView />}
-      {snapshot.phase === 'closed' && <ClosedView />}
+      {snapshot.phase === 'open' && <AnswerArea snapshot={snapshot} />}
+      {snapshot.phase === 'closed' && <StudentResults snapshot={snapshot} />}
     </section>
   );
 }
@@ -127,31 +129,6 @@ function PreparingView({ isLeaving, onLeave }: PreparingViewProps) {
       >
         更換組別
       </button>
-    </section>
-  );
-}
-
-function OpenView() {
-  return (
-    <section className={styles.phaseCard} aria-labelledby="student-open-title">
-      <h2 id="student-open-title" className={styles.phaseTitle}>
-        作答區
-      </h2>
-      <p className={styles.description}>搶答進行中，作答功能將在後續開放。</p>
-    </section>
-  );
-}
-
-function ClosedView() {
-  return (
-    <section
-      className={styles.phaseCard}
-      aria-labelledby="student-closed-title"
-    >
-      <h2 id="student-closed-title" className={styles.phaseTitle}>
-        結果區
-      </h2>
-      <p className={styles.description}>搶答已結束，結果功能將在後續開放。</p>
     </section>
   );
 }

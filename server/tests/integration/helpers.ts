@@ -9,6 +9,7 @@ import {
   STATE_EVENT,
   type Ack,
   type CommandEvent,
+  type QuestionKind,
   type SessionInvalidPayload,
   type Snapshot,
 } from '@classroom/shared';
@@ -19,12 +20,30 @@ import {
 } from '../../src/index.js';
 import { replaceAll } from '../../src/infra/db/questionRepo.js';
 
+type SeededBlank = {
+  position: number;
+  prefix: string;
+  cell: string;
+};
+
+export type SeedQuestionDefinition = {
+  number: number;
+  prompt: string;
+  kind?: QuestionKind;
+  blanks?: readonly SeededBlank[];
+};
+
 /**
- * 002（T020）：直接以 questionRepo 寫入一題（一個空格、guided_notes 一筆，
- * 原檔為空 Uint8Array），讓 001 的整合測試在 activity:open 前備好題目
- * （FR-020：沒有題目不能開啟搶答）。
+ * 002（T020）：直接以 questionRepo 寫入題目與 guided_notes 一筆（原檔為空
+ * Uint8Array），讓整合測試在 activity:open 前備好題目（FR-020）。
+ *
+ * 003 的測試需要多題或多空格，所以 `seedQuestions` 依 position 順序寫入；
+ * 既有的單題 `seedQuestion` 維持簽名不變。
  */
-export function seedQuestion(database: DatabaseSync): void {
+export function seedQuestions(
+  database: DatabaseSync,
+  definitions: readonly SeedQuestionDefinition[],
+): void {
   replaceAll(
     database,
     {
@@ -35,17 +54,24 @@ export function seedQuestion(database: DatabaseSync): void {
       sheetName: '學習單',
       importedAt: new Date().toISOString(),
     },
-    [
-      {
-        id: randomUUID(),
-        number: 1,
-        kind: 'single',
-        prompt: '種子題目',
-        position: 1,
-        blanks: [{ position: 1, prefix: '', cell: 'G5' }],
-      },
-    ],
+    definitions.map((definition, index) => ({
+      id: randomUUID(),
+      number: definition.number,
+      kind: definition.kind ?? 'single',
+      prompt: definition.prompt,
+      position: index + 1,
+      blanks: [...(definition.blanks ?? defaultBlanks(definition.number))],
+    })),
   );
+}
+
+function defaultBlanks(questionNumber: number): SeededBlank[] {
+  return [{ position: 1, prefix: '', cell: `G${questionNumber + 4}` }];
+}
+
+/** 在測試資料庫寫入一題單空格題目。 */
+export function seedQuestion(database: DatabaseSync): void {
+  seedQuestions(database, [{ number: 1, prompt: '種子題目' }]);
 }
 
 export type TestClientOptions = {

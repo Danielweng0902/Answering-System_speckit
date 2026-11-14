@@ -26,7 +26,7 @@ function snapshot(revision: number, role: 'guest' | 'student'): Snapshot {
   };
   return role === 'guest'
     ? { ...base, role: 'guest' }
-    : { ...base, role: 'student', myGroupId: 'g1' };
+    : { ...base, role: 'student', myGroupId: 'g1', sessionId: 'test-session' };
 }
 
 describe('useSnapshot', () => {
@@ -65,6 +65,30 @@ describe('useSnapshot', () => {
       fakeSocket.emit('state', snapshot(7, 'student'));
     });
     expect(result.current.snapshot?.role).toBe('student');
+  });
+
+  it('同一連線上身分由 student 降級為 guest 時，接受 revision 較小的快照並重設比較基準（003 T025）', () => {
+    const { result } = renderHook(() => useSnapshot());
+    act(() => {
+      fakeSocket.emit('state', snapshot(30, 'student'));
+    });
+    expect(result.current.snapshot?.role).toBe('student');
+
+    act(() => {
+      fakeSocket.emit('state', snapshot(12, 'guest'));
+    });
+    expect(result.current.snapshot?.role).toBe('guest');
+    expect(result.current.snapshot?.revision).toBe(12);
+
+    // 基準已重設為 guest 快照的 revision：更舊的 guest 快照仍被拒。
+    act(() => {
+      fakeSocket.emit('state', snapshot(11, 'guest'));
+    });
+    expect(result.current.snapshot?.revision).toBe(12);
+    act(() => {
+      fakeSocket.emit('state', snapshot(13, 'guest'));
+    });
+    expect(result.current.snapshot?.revision).toBe(13);
   });
 
   it('失效後以訪客重連仍保留提示，重新選組（收到學生快照）後才清除', () => {

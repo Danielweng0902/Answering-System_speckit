@@ -22,9 +22,11 @@ import {
 } from '../domain/activity.js';
 import {
   getActivity,
+  newSessionId,
   updateActivity,
   type Activity,
 } from '../infra/db/activityRepo.js';
+import { clearAll as clearAllAnswers } from '../infra/db/answerRepo.js';
 import { countGroups } from '../infra/db/groupRepo.js';
 import { count as countQuestions } from '../infra/db/questionRepo.js';
 import {
@@ -79,6 +81,7 @@ export function createActivityCommands(
   function persist(
     result: Extract<ActivityTransition, { ok: true }>,
     current: Activity,
+    withinTransaction?: () => void,
   ): void {
     if (!result.changed) {
       return;
@@ -86,6 +89,7 @@ export function createActivityCommands(
 
     database.exec('BEGIN');
     try {
+      withinTransaction?.();
       updateActivity(database, {
         ...current,
         ...result.activity,
@@ -153,7 +157,12 @@ export function createActivityCommands(
         return commandError(result.code);
       }
 
-      persist(result, current);
+      persist(result, current, () => {
+        // 003 US6 / R8：答案與空格答案、sessionId 必須和 phase/revision
+        // 在同一 transaction 改變；兩個作答 counter 刻意保留以維持單調 revision。
+        clearAllAnswers(database);
+        newSessionId(database);
+      });
       if (result.changed) {
         dependencies.onReset?.();
       }

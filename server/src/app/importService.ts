@@ -28,7 +28,11 @@ import {
 } from '../domain/guidedNotesParser.js';
 import { validateImport } from '../domain/importValidator.js';
 import type { SheetGrid } from '../domain/sheetGrid.js';
-import { getActivity, updateActivity } from '../infra/db/activityRepo.js';
+import {
+  getActivity,
+  newSessionId,
+  updateActivity,
+} from '../infra/db/activityRepo.js';
 import type { GuidedNotesRecord, QuestionInput } from '../infra/db/questionRepo.js';
 import {
   fetchSheetXlsx,
@@ -271,6 +275,9 @@ export function createImportService(
       database.exec('BEGIN');
       try {
         questionBank.replace(guidedNotes, questions);
+        // 003 US6 / R8：成功取代題目代表舊活動草稿失效，與題目寫入同一
+        // transaction 換新 sessionId；失敗時連同 revision 一起 ROLLBACK。
+        newSessionId(database);
         updateActivity(database, {
           ...activity,
           revision: activity.revision + 1,

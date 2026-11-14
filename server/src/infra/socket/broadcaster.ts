@@ -18,6 +18,8 @@ export type SocketDataWithIdentity = {
 export type StateBroadcaster = {
   /** Send one role-filtered snapshot to every connected socket. */
   broadcastState: () => void;
+  /** Send answer changes only to teachers and students in the changed group. */
+  broadcastSubmissionChanged: (groupId: string) => void;
   /** Current in-memory student connection counts by group. */
   getPresence: () => Record<string, number>;
   /**
@@ -71,18 +73,51 @@ export function createSocketBroadcaster(
     socket.emit(STATE_EVENT, snapshot);
   }
 
+  function emitSnapshotSafely(
+    socket: Socket,
+    createForSocket: () => Snapshot,
+  ): void {
+    try {
+      socket.emit(STATE_EVENT, createForSocket());
+    } catch {
+      // 單一連線的 snapshot/emit 失敗不得中止迴圈，其他客戶端仍要在
+      // 同一輪收到依其身分過濾的 state（FR-005、FR-021、FR-030）。
+      // 只記錄固定事件類型，不記錄 snapshot、identity、DB 或例外內容。
+      console.error(`Broadcast ${STATE_EVENT} failed.`);
+    }
+  }
+
   function broadcastState(): void {
     const now = new Date();
     const presence = getPresence();
 
     for (const socket of io.sockets.sockets.values()) {
-      const snapshot = createSnapshot(
-        database,
-        getSocketIdentity(socket),
-        presence,
-        now,
+      emitSnapshotSafely(socket, () =>
+        createSnapshot(
+          database,
+          getSocketIdentity(socket),
+          presence,
+          now,
+        ),
       );
-      socket.emit(STATE_EVENT, snapshot);
+    }
+  }
+
+  function broadcastSubmissionChanged(groupId: string): void {
+    const now = new Date();
+    const presence = getPresence();
+
+    for (const socket of io.sockets.sockets.values()) {
+      const identity = getSocketIdentity(socket);
+      const receivesSubmissionChange =
+        identity.role === 'teacher' ||
+        (identity.role === 'student' && identity.groupId === groupId);
+      if (!receivesSubmissionChange) {
+        continue;
+      }
+      emitSnapshotSafely(socket, () =>
+        createSnapshot(database, identity, presence, now),
+      );
     }
   }
 
@@ -152,5 +187,11 @@ export function createSocketBroadcaster(
     }
   }
 
-  return { broadcastState, getPresence, invalidateGroup, demoteToGuest };
+  return {
+    broadcastState,
+    broadcastSubmissionChanged,
+    getPresence,
+    invalidateGroup,
+    demoteToGuest,
+  };
 }

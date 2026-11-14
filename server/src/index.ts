@@ -5,10 +5,14 @@ import { fileURLToPath } from 'node:url';
 import type { DatabaseSync } from 'node:sqlite';
 import { config as loadDotenv } from 'dotenv';
 import { Server as SocketIOServer } from 'socket.io';
-import type { QuestionsConfirmPayload } from '@classroom/shared';
+import type {
+  AnswerVoidPayload,
+  QuestionsConfirmPayload,
+} from '@classroom/shared';
 import { loadConfig } from './config.js';
 import { repositoryRoot, resolveFromRepositoryRoot } from './paths.js';
 import { createActivityCommands } from './app/activityCommands.js';
+import { createAnswerCommands } from './app/answerCommands.js';
 import { createCountdown, type CountdownScheduler } from './app/countdown.js';
 import { createGroupCommands } from './app/groupCommands.js';
 import { createImportService } from './app/importService.js';
@@ -113,7 +117,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
   const io = new SocketIOServer(httpServer);
   const broadcaster = createSocketBroadcaster(io, database);
 
-  // Group commands are teacher-only; the router broadcasts only on success.
+  // Group and answer commands share the existing success-broadcast router.
   const commandRouter = createCommandRouter(broadcaster.broadcastState);
   const groupCommands = createGroupCommands(database, {
     onGroupDeleted: (groupId) => {
@@ -156,6 +160,7 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
       countdown.cancel();
     },
   });
+  const answerCommands = createAnswerCommands(database);
   const teacherOnly = ['teacher'] as const;
   const studentOnly = ['student'] as const;
   io.on('connection', (socket) => {
@@ -173,6 +178,33 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
       teacherOnly,
       (_identity, payload) =>
         importService.confirm((payload as QuestionsConfirmPayload).importId),
+    );
+    // 003 US1/US2：學生身分與 groupId 由 stored connection identity 決定；
+    // open 階段、答案格式、重複與順位由用例在同一 transaction 判定；成功後
+    // 只通知所有老師與送出的該組，其他組與 guest 不收到 state（research R4）。
+    commandRouter.register(
+      socket,
+      'answer:submit',
+      studentOnly,
+      answerCommands.submitAnswer,
+      (identity) => {
+        if (identity.role === 'student') {
+          broadcaster.broadcastSubmissionChanged(identity.groupId);
+        }
+      },
+    );
+    // 003 US3：作廢由老師送 groupId；成功後使用同一個作答定向通道，
+    // 只通知老師與該組，其他組與 guest 不會收到作廢相關資訊。
+    commandRouter.register(
+      socket,
+      'answer:void',
+      teacherOnly,
+      answerCommands.voidAnswer,
+      (_identity, payload) => {
+        broadcaster.broadcastSubmissionChanged(
+          (payload as AnswerVoidPayload).groupId,
+        );
+      },
     );
     commandRouter.register(socket, 'student:leave', studentOnly, () => {
       const token: unknown = socket.handshake.auth.token;

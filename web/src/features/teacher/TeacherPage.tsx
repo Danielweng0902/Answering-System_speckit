@@ -1,6 +1,7 @@
 import type { Snapshot } from '@classroom/shared';
 import { useState } from 'react';
 import { Countdown } from '../shared/Countdown';
+import { AnswerBoard } from './AnswerBoard';
 import { GroupManager } from './GroupManager';
 import { PhaseControl } from './PhaseControl';
 import { QuestionImport } from './QuestionImport';
@@ -55,6 +56,8 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
       <QuestionImport snapshot={snapshot} />
       <QuestionList questions={snapshot.questions} />
       <GroupManager snapshot={snapshot} />
+      {/* 003 US3（T032）：任何階段都有看板與進度（FR-019–FR-022）。 */}
+      <AnswerBoard snapshot={snapshot} />
     </section>
   );
 }

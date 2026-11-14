@@ -41,7 +41,7 @@ describe('資訊不外洩（原則 IV、VI；SC-005）', () => {
     await server.close();
   });
 
-  it('學生與 guest 收到的一連串 state 快照都不含 presence、questions、guidedNotes（原則 VI）', async () => {
+  it('學生快照不含 presence、guidedNotes，guest 任何階段也不含 questions（003 快照合約；原則 VI）', async () => {
     insertGroup(server.db, { id: 'group-1', name: '第一組', position: 1 });
     insertGroup(server.db, { id: 'group-2', name: '第二組', position: 2 });
 
@@ -133,14 +133,31 @@ describe('資訊不外洩（原則 IV、VI；SC-005）', () => {
     expect(newStudentStates.length).toBeGreaterThanOrEqual(3);
     expect(guestStates.length).toBeGreaterThanOrEqual(6);
 
-    for (const snapshot of [
-      ...studentStates,
-      ...newStudentStates,
-      ...guestStates,
-    ]) {
+    for (const snapshot of [...studentStates, ...newStudentStates]) {
+      // 003 合約：open 的學生快照合法包含 questions；presence 與 guidedNotes
+      // 仍然只屬老師快照（授權限定更新，不得放寬這兩項）。
+      expect(snapshot).not.toHaveProperty('presence');
+      expect(snapshot).not.toHaveProperty('guidedNotes');
+      if (
+        typeof snapshot === 'object' &&
+        snapshot !== null &&
+        'role' in snapshot &&
+        snapshot.role === 'guest'
+      ) {
+        expect(snapshot).not.toHaveProperty('questions');
+        expect(snapshot).not.toHaveProperty('sessionId');
+      }
+    }
+    for (const snapshot of guestStates) {
+      // guest 在三個階段都没有 002／003 的題目與作答欄位（FR-016）。
       expect(snapshot).not.toHaveProperty('presence');
       expect(snapshot).not.toHaveProperty('questions');
       expect(snapshot).not.toHaveProperty('guidedNotes');
+      expect(snapshot).not.toHaveProperty('sessionId');
+      expect(snapshot).not.toHaveProperty('myAnswers');
+      expect(snapshot).not.toHaveProperty('results');
+      expect(snapshot).not.toHaveProperty('board');
+      expect(snapshot).not.toHaveProperty('progress');
     }
   });
 

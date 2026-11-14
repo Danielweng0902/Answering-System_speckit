@@ -9,34 +9,46 @@ component "學生端畫面\n（作答區／結果區）" as StudentUI
 
 package "搶答系統（伺服器）" {
   component "作答受理\n(Submission Intake)" as Intake
+  component "作廢受理\n(Void Intake)" as VoidIntake
   component "順位判定\n(Ranking)" as Rank
   component "可見範圍過濾\n(Visibility Filter)" as Filter
   component "作答狀況彙整\n(Board Builder)" as Board
   component "結果彙整\n(Result Builder)" as Result
-  component "狀態同步（001）" as Sync
+  component "狀態同步（001）\n＋作答定向送出" as Sync
   component "活動階段管理（001）" as Phase
   component "題目庫（002）" as Bank
-  database "活動資料儲存" as Store
+  database "活動資料儲存\n＋作答 revision counter" as Store
 }
 
 學生 --> StudentUI
 老師 --> TeacherUI
-StudentUI --> Intake : 送出答案（組別、題號、各空格答案）
+StudentUI --> Intake : answer:submit（題號與答案，不帶 groupId）
+TeacherUI --> VoidIntake : answer:void（groupId、題號）
 Intake --> Phase : 檢查階段為搶答中
+VoidIntake --> Phase : 檢查階段為搶答中
 Intake --> Bank : 檢查題號與空格
-Intake --> Store : 依送達順序保存
-Intake --> Rank : 新的作答
-Rank --> Board : 各題順位
+VoidIntake --> Bank : 檢查題號與組別作答
+Intake --> Store : 同步 transaction 保存 rank 與 counter
+VoidIntake --> Store : 同步 transaction 標記作廢與 counter
+Intake --> Rank : 有效作答
+VoidIntake --> Rank : 作廢後有效作答
+Rank --> Board : 各題 rank 與有效作答的最小 rank
 Rank --> Result : 各題搶答成功
 Board --> Filter
 Result --> Filter
-Filter --> Sync : 依身分與階段決定可送出的內容
-Sync --> TeacherUI : 完整作答狀況
-Sync --> StudentUI : 只有本組資料；結束後才有結果
+Filter --> Sync : 依身分、階段與作答 revision 決定內容
+Sync --> TeacherUI : 作答事件：定向送完整看板
+Sync --> StudentUI : 作答事件：只送相關組；結束時送結果
 
 note bottom of Filter
-  搶答中：學生只收到自己組的資料
+  搶答中：學生只收到自己組的資料與 revision
   已結束：學生收到結果與自己組的順位
-  老師：任何階段都收到完整資料
+  老師：收到完整資料與 answerEventCount 形成的 revision
+end note
+
+note right of Sync
+  作答與作廢不增加 activity.revision
+  不送 state 給其他組與 guest
+  既有階段／題目變更仍全域送 state
 end note
 @enduml
