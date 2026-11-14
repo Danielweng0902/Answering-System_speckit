@@ -1,6 +1,8 @@
 import { mkdtemp, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { DatabaseSync } from 'node:sqlite';
 import { io as createSocketIOClient, type Socket } from 'socket.io-client';
 import {
   SESSION_INVALID_EVENT,
@@ -15,6 +17,36 @@ import {
   type CreateServerOptions,
   type ServerControl,
 } from '../../src/index.js';
+import { replaceAll } from '../../src/infra/db/questionRepo.js';
+
+/**
+ * 002（T020）：直接以 questionRepo 寫入一題（一個空格、guided_notes 一筆，
+ * 原檔為空 Uint8Array），讓 001 的整合測試在 activity:open 前備好題目
+ * （FR-020：沒有題目不能開啟搶答）。
+ */
+export function seedQuestion(database: DatabaseSync): void {
+  replaceAll(
+    database,
+    {
+      sourceKind: 'file',
+      sourceUrl: null,
+      fileName: 'seed.xlsx',
+      file: new Uint8Array(),
+      sheetName: '學習單',
+      importedAt: new Date().toISOString(),
+    },
+    [
+      {
+        id: randomUUID(),
+        number: 1,
+        kind: 'single',
+        prompt: '種子題目',
+        position: 1,
+        blanks: [{ position: 1, prefix: '', cell: 'G5' }],
+      },
+    ],
+  );
+}
 
 export type TestClientOptions = {
   token?: string;

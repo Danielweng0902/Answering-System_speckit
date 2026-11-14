@@ -11,6 +11,7 @@ import {
   type Group,
 } from '../../src/infra/db/groupRepo.js';
 import {
+  seedQuestion,
   sendCommand,
   startTestServer,
   waitForState,
@@ -39,6 +40,8 @@ describe('伺服器以同一 SQLite 資料夾重新啟動', () => {
       for (const group of groups) {
         insertGroup(server.db, group);
       }
+      // 002（FR-020）：開啟搶答前先有題目。
+      seedQuestion(server.db);
 
       const teacherToken = issueSession(server.db, { role: 'teacher' });
       const studentToken = issueSession(server.db, {

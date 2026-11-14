@@ -26,6 +26,8 @@ const teacherSnapshot: TeacherSnapshot = {
   countdownEndsAt: null,
   groups: [{ id: 'g1', name: '第一組' }],
   presence: { g1: 1 },
+  questions: [],
+  guidedNotes: null,
   role: 'teacher',
 };
 

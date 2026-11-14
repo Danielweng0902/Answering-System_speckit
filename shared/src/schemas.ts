@@ -47,6 +47,10 @@ export const activityResetSchema = z.object({
 
 export const studentLeaveSchema = z.object({});
 
+export const questionsConfirmSchema = z.object({
+  importId: z.string().min(1),
+});
+
 /** 各指令事件對應的 schema，供指令路由查表驗證。 */
 export const commandSchemas: {
   [E in CommandEvent]: z.ZodType<unknown>;
@@ -58,6 +62,7 @@ export const commandSchemas: {
   'activity:close': activityCloseSchema,
   'activity:reset': activityResetSchema,
   'student:leave': studentLeaveSchema,
+  'questions:confirm': questionsConfirmSchema,
 };
 
 export const commandEventSchema = z.enum(COMMAND_EVENTS);
@@ -88,12 +93,18 @@ export const studentJoinSchema = z.object({
   groupId: z.string().min(1),
 });
 
+export const importLinkRequestSchema = z.object({
+  url: z.string(),
+});
+
 /* 匯出推斷型別方便前後端使用。 */
 export type GroupCreateInput = z.infer<typeof groupCreateSchema>;
 export type GroupRenameInput = z.infer<typeof groupRenameSchema>;
 export type GroupDeleteInput = z.infer<typeof groupDeleteSchema>;
 export type ActivityOpenInput = z.infer<typeof activityOpenSchema>;
 export type ActivityResetInput = z.infer<typeof activityResetSchema>;
+export type QuestionsConfirmInput = z.infer<typeof questionsConfirmSchema>;
 export type TeacherLoginInput = z.infer<typeof teacherLoginSchema>;
 export type StudentJoinInput = z.infer<typeof studentJoinSchema>;
+export type ImportLinkRequestInput = z.infer<typeof importLinkRequestSchema>;
 export type AckInput = z.infer<typeof ackSchema>;

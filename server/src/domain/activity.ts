@@ -33,18 +33,21 @@ function unchanged(activity: ActivityState): ActivityTransition {
 }
 
 /**
- * open：preparing 且至少一組 → open，設定 openedAt（FR-015）。
- * preparing 沒有組別 → NO_GROUPS；open 再 open → 冪等成功；
- * closed → INVALID_PHASE（階段只能往前，AC-001-03）。
+ * open：preparing 且至少一組、至少一題 → open，設定 openedAt（FR-015）。
+ * preparing 沒有組別 → NO_GROUPS；沒有題目 → QUESTIONS_REQUIRED（002、
+ * FR-020）；open 再 open → 冪等成功；closed → INVALID_PHASE（階段只能
+ * 往前，AC-001-03）。
  *
  * countdownSeconds（T063、FR-023）：有值時必須是 10–3600 的整數，
- * 否則 COUNTDOWN_OUT_OF_RANGE；檢查順序固定在 NO_GROUPS 之後
- * （沒有組別時優先回 NO_GROUPS）。有效時 countdownEndsAt = now + 秒數
+ * 否則 COUNTDOWN_OUT_OF_RANGE。檢查順序固定為
+ * NO_GROUPS → QUESTIONS_REQUIRED → COUNTDOWN_OUT_OF_RANGE
+ * （contracts/socket-events.md）。有效時 countdownEndsAt = now + 秒數
  * （ISO 字串）；沒帶時 countdownEndsAt = null（AC-001-25）。
  */
 export function open(
   activity: ActivityState,
   groupCount: number,
+  questionCount: number,
   now: string,
   countdownSeconds?: number,
 ): ActivityTransition {
@@ -56,6 +59,9 @@ export function open(
   }
   if (groupCount < 1) {
     return failure('NO_GROUPS');
+  }
+  if (questionCount < 1) {
+    return failure('QUESTIONS_REQUIRED');
   }
   if (
     countdownSeconds !== undefined &&

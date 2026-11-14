@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { importQuestions } from './helpers.js';
 
 /**
  * US1（AC-001-01、02）：老師開啟與結束搶答，老師端與兩組學生端的
@@ -68,6 +69,9 @@ test('老師開啟後三個畫面顯示搶答中，結束後顯示已結束', as
       .getByRole('button', { name: '第二組', exact: true })
       .click();
     await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
+
+    // 伺服器要求先確認題目才能開啟搶答。
+    await importQuestions(teacherPage);
 
     // 老師開啟搶答，三個頁面都顯示搶答中。
     await teacherPage.getByRole('button', { name: '開啟搶答' }).click();
@@ -254,6 +258,9 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
       studentTwoPage.getByText('乙組', { exact: true }),
     ).toBeVisible();
     await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
+
+    // 002 起開啟搶答前必須先有題目；自行匯入，不依賴其他測試留下的狀態。
+    await importQuestions(teacherPage);
 
     // 步驟 7：以 30 秒倒數開啟搶答，三個畫面 2 秒內顯示搶答中，
     // 剩餘時間相差不超過 1 秒（都在 29–30 秒）（AC-001-01、22）。

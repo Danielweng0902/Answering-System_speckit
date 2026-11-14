@@ -26,6 +26,7 @@ import {
   type Activity,
 } from '../infra/db/activityRepo.js';
 import { countGroups } from '../infra/db/groupRepo.js';
+import { count as countQuestions } from '../infra/db/questionRepo.js';
 import {
   commandError,
   type CommandUseCase,
@@ -119,6 +120,8 @@ export function createActivityCommands(
       const result = openPhase(
         current,
         countGroups(database),
+        // 002（FR-020）：沒有題目不能開啟搶答 → QUESTIONS_REQUIRED。
+        countQuestions(database),
         now(),
         countdownSeconds,
       );

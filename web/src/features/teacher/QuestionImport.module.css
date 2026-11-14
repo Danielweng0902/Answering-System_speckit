@@ -1,0 +1,120 @@
+.section {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.title,
+.summaryTitle,
+.warningsTitle,
+.text,
+.errorMessage,
+.errorHint,
+.notice {
+  margin: var(--space-0);
+}
+
+.title {
+  font-size: var(--font-size-large);
+}
+
+.summaryTitle {
+  font-size: var(--font-size-base);
+}
+
+.warningsTitle {
+  font-size: var(--font-size-small);
+}
+
+.error {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+  font-size: var(--font-size-small);
+}
+
+.errorHint,
+.errorMessage {
+  margin: var(--space-0);
+}
+
+.errorHints {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-0);
+  padding-inline-start: var(--space-6);
+}
+
+.form,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--font-size-small);
+}
+
+.input {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.fileInput {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.button {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-background);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.summary {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-0);
+  padding-inline-start: var(--space-6);
+}
+
+.warnings {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.prefixes {
+  margin-inline-start: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
+.notice {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}

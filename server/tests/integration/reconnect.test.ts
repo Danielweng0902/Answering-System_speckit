@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { issueSession } from '../../src/app/access.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
 import {
+  seedQuestion,
   sendCommand,
   startTestServer,
   waitForState,
@@ -16,6 +17,8 @@ describe('斷線後以同一 token 重新連線', () => {
   beforeEach(async () => {
     server = await startTestServer();
     insertGroup(server.db, { id: 'group-1', name: '第一組', position: 1 });
+    // 002（FR-020）：開啟搶答前先有題目。
+    seedQuestion(server.db);
     teacherToken = issueSession(server.db, { role: 'teacher' });
     studentToken = issueSession(server.db, {
       role: 'student',

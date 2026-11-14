@@ -22,7 +22,7 @@ function state(overrides: Partial<ActivityState> = {}): ActivityState {
 
 describe('open', () => {
   it('preparing 且至少一組時轉為 open，設定 openedAt 並標示 changed', () => {
-    const result = open(state(), 2, OPENED_AT);
+    const result = open(state(), 2, 1, OPENED_AT);
 
     expect(result).toEqual({
       ok: true,
@@ -37,20 +37,20 @@ describe('open', () => {
   });
 
   it('不帶倒數時 countdownEndsAt 為 null（AC-001-25）', () => {
-    const result = open(state(), 1, OPENED_AT);
+    const result = open(state(), 1, 1, OPENED_AT);
 
     expect(result.ok && result.activity.countdownEndsAt).toBeNull();
   });
 
   it.each([9, 3601])('倒數 %i 秒不在範圍內，拒絕 COUNTDOWN_OUT_OF_RANGE（FR-023、AC-001-26）', (seconds) => {
-    expect(open(state(), 1, OPENED_AT, seconds)).toEqual({
+    expect(open(state(), 1, 1, OPENED_AT, seconds)).toEqual({
       ok: false,
       code: 'COUNTDOWN_OUT_OF_RANGE',
     });
   });
 
   it('倒數不是整數時也拒絕 COUNTDOWN_OUT_OF_RANGE', () => {
-    expect(open(state(), 1, OPENED_AT, 10.5)).toEqual({
+    expect(open(state(), 1, 1, OPENED_AT, 10.5)).toEqual({
       ok: false,
       code: 'COUNTDOWN_OUT_OF_RANGE',
     });
@@ -60,7 +60,7 @@ describe('open', () => {
     [10, '2026-11-12T08:00:10.000Z'],
     [3600, '2026-11-12T09:00:00.000Z'],
   ] as const)('倒數 %i 秒被接受，countdownEndsAt = now + 秒數（%s）', (seconds, expected) => {
-    const result = open(state(), 1, OPENED_AT, seconds);
+    const result = open(state(), 1, 1, OPENED_AT, seconds);
 
     expect(result).toEqual({
       ok: true,
@@ -75,22 +75,48 @@ describe('open', () => {
   });
 
   it('沒有組別時優先回 NO_GROUPS，倒數範圍在其後檢查', () => {
-    expect(open(state(), 0, OPENED_AT, 9)).toEqual({
+    expect(open(state(), 0, 0, OPENED_AT, 9)).toEqual({
       ok: false,
       code: 'NO_GROUPS',
     });
   });
 
   it('preparing 但沒有組別時拒絕 NO_GROUPS', () => {
-    expect(open(state(), 0, OPENED_AT)).toEqual({
+    expect(open(state(), 0, 1, OPENED_AT)).toEqual({
       ok: false,
       code: 'NO_GROUPS',
     });
   });
 
+  it('preparing 有組別但沒有題目時拒絕 QUESTIONS_REQUIRED（002、FR-020）', () => {
+    expect(open(state(), 2, 0, OPENED_AT)).toEqual({
+      ok: false,
+      code: 'QUESTIONS_REQUIRED',
+    });
+    expect(state()).toEqual(state());
+  });
+
+  it('檢查順序固定 NO_GROUPS → QUESTIONS_REQUIRED → COUNTDOWN_OUT_OF_RANGE（FR-020；contracts）', () => {
+    // 三者同時成立時，組別優先。
+    expect(open(state(), 0, 0, OPENED_AT, 9)).toEqual({
+      ok: false,
+      code: 'NO_GROUPS',
+    });
+    // 有組別時，題目優先於倒數範圍。
+    expect(open(state(), 2, 0, OPENED_AT, 9)).toEqual({
+      ok: false,
+      code: 'QUESTIONS_REQUIRED',
+    });
+    // 組別與題目都齊了才檢查倒數。
+    expect(open(state(), 2, 1, OPENED_AT, 9)).toEqual({
+      ok: false,
+      code: 'COUNTDOWN_OUT_OF_RANGE',
+    });
+  });
+
   it('open 再 open 回覆成功但不改變資料（冪等）', () => {
     const current = state({ phase: 'open', openedAt: OPENED_AT });
-    const result = open(current, 1, '2026-11-12T08:01:00.000Z');
+    const result = open(current, 1, 0, '2026-11-12T08:01:00.000Z');
 
     expect(result).toEqual({
       ok: true,
@@ -110,6 +136,7 @@ describe('open', () => {
           closedAt: CLOSED_AT,
         }),
         1,
+        1,
         '2026-11-12T08:06:00.000Z',
       ),
     ).toEqual({ ok: false, code: 'INVALID_PHASE' });
@@ -117,15 +144,22 @@ describe('open', () => {
 
   it('失敗時不修改輸入（純函式）', () => {
     const noGroups = state();
-    open(noGroups, 0, OPENED_AT);
+    open(noGroups, 0, 1, OPENED_AT);
     expect(noGroups).toEqual(state());
+
+    const noQuestions = state();
+    expect(open(noQuestions, 2, 0, OPENED_AT)).toEqual({
+      ok: false,
+      code: 'QUESTIONS_REQUIRED',
+    });
+    expect(noQuestions).toEqual(state());
 
     const closed = state({
       phase: 'closed',
       openedAt: OPENED_AT,
       closedAt: CLOSED_AT,
     });
-    open(closed, 1, '2026-11-12T08:06:00.000Z');
+    open(closed, 1, 1, '2026-11-12T08:06:00.000Z');
     expect(closed).toEqual(
       state({ phase: 'closed', openedAt: OPENED_AT, closedAt: CLOSED_AT }),
     );
@@ -133,7 +167,7 @@ describe('open', () => {
 
   it('成功時也不修改輸入，回傳新的狀態物件', () => {
     const current = state();
-    const result = open(current, 1, OPENED_AT);
+    const result = open(current, 1, 1, OPENED_AT);
 
     expect(current).toEqual(state());
     if (result.ok) {

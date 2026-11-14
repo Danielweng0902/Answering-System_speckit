@@ -22,6 +22,32 @@ const SCHEMA = `
     group_id TEXT REFERENCES groups(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS guided_notes (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    source_kind TEXT NOT NULL CHECK (source_kind IN ('link', 'file')),
+    source_url TEXT,
+    file_name TEXT,
+    file BLOB NOT NULL,
+    sheet_name TEXT NOT NULL,
+    imported_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS questions (
+    id TEXT PRIMARY KEY,
+    number INTEGER NOT NULL UNIQUE,
+    kind TEXT NOT NULL CHECK (kind IN ('single', 'group')),
+    prompt TEXT NOT NULL,
+    position INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS blanks (
+    question_id TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    prefix TEXT NOT NULL,
+    cell TEXT NOT NULL,
+    PRIMARY KEY (question_id, position)
+  );
 `;
 
 /** Apply the idempotent schema and singleton seed to an open database. */

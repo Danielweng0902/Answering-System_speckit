@@ -1,43 +1,156 @@
 @startuml
-title 002 時序圖：匯入 Guided Notes 與確認
+title 002 Guided Notes 匯入：時序圖（技術層）
 
-actor 老師
-participant "老師端畫面" as T
-participant "匯入入口" as G
-participant "試算表取得" as F
-participant "學習單解析" as P
-participant "匯入驗證" as V
-participant "題目庫" as B
+actor "老師" as Teacher
+participant "QuestionImport.tsx\nweb/src/features/teacher/" as QuestionImportUI
+participant "api.ts\nweb/src/lib/" as WebApi
+participant "questionRoutes.ts\nserver/src/infra/http/" as QuestionRoutes
+participant "importService.ts\nserver/src/app/" as ImportService
+participant "googleSheetsFetcher.ts\nserver/src/infra/sheets/" as GoogleSheetsFetcher
+participant "workbookReader.ts\nserver/src/infra/xlsx/" as WorkbookReader
+participant "guidedNotesParser.ts\nserver/src/domain/" as GuidedNotesParser
+participant "importValidator.ts\nserver/src/domain/" as ImportValidator
+participant "questionBank.ts\nserver/src/app/" as QuestionBank
+participant "index.ts + commandRouter.ts\nserver/src/、infra/socket/" as CommandRouter
+participant "questionRepo.ts\nserver/src/infra/db/" as QuestionRepo
+participant "activityRepo.ts\nserver/src/infra/db/" as ActivityRepo
+participant "SQLite\nguided_notes / questions / blanks / activity" as SQLite
+participant "broadcaster.ts\nserver/src/infra/socket/" as StateBroadcaster
+participant "TeacherPage.tsx + QuestionList.tsx\nweb/src/features/teacher/" as TeacherQuestionView
 
-老師 -> T : 貼上連結或選擇 xlsx 檔
-T -> G : 讀取(來源)
-G -> G : 檢查：老師身分、階段為準備中
-alt 來源是連結
-  G -> F : 取得試算表(連結)
-  alt 連結無效或未開放檢視
-    F --> G : 無法取得
-    G --> T : 錯誤說明與替代做法
-  else 取得成功
-    F --> G : 試算表內容
+Teacher -> QuestionImportUI : 貼上連結或選擇 xlsx
+alt 連結匯入
+  QuestionImportUI -> WebApi : importFromLink(url)
+  WebApi -> QuestionRoutes : POST /api/questions/import/link\nAuthorization: Bearer token\n{ url }
+else 檔案匯入
+  QuestionImportUI -> WebApi : importFromFile(file)
+  WebApi -> QuestionRoutes : POST /api/questions/import/file\nAuthorization: Bearer token\nContent-Type: application/octet-stream\nX-File-Name: URL 編碼檔名\nxlsx bytes
+end
+
+QuestionRoutes -> QuestionRoutes : authorizeTeacher()\nresolveIdentity() + getActivity()
+alt 身分或階段檢查失敗
+  QuestionRoutes --> WebApi : 401 UNAUTHORIZED / 403 FORBIDDEN\n或 409 INVALID_PHASE
+  WebApi --> QuestionImportUI : { ok: false, error: { code, message } }
+  QuestionImportUI -> QuestionImportUI : 顯示錯誤；資料不變
+else 老師且 phase = preparing
+  alt 連結匯入
+    QuestionRoutes -> QuestionRoutes : importLinkRequestSchema.safeParse(body)
+    alt 缺少欄位或格式不符
+      QuestionRoutes --> WebApi : 400 INVALID_INPUT
+    else 請求有效
+      QuestionRoutes -> ImportService : previewFromLink(url)
+      ImportService -> GoogleSheetsFetcher : parseSheetLink(url)
+      alt 不是允許的 Google Sheets 連結
+        ImportService --> QuestionRoutes : PreviewFailure { code: LINK_INVALID }
+        QuestionRoutes --> WebApi : 400 LINK_INVALID
+      else 連結有效
+        ImportService -> GoogleSheetsFetcher : fetchSheetXlsx(id)\nnormalizeSheetUrl() + export?format=xlsx
+        GoogleSheetsFetcher -> GoogleSheetsFetcher : HTTPS；手動轉址檢查\n10 秒逾時；5 MB 串流上限；檢查 PK magic
+        alt 下載失敗
+          GoogleSheetsFetcher --> ImportService : SheetFetchError\nLINK_NOT_SHARED / LINK_UNREACHABLE
+          ImportService --> QuestionRoutes : PreviewFailure { code, message }
+          QuestionRoutes --> WebApi : 422 LINK_NOT_SHARED / 502 LINK_UNREACHABLE
+        else 下載成功
+          GoogleSheetsFetcher -> WorkbookReader : assertWorkbookSize(bytes)
+          alt 壓縮檔或大小檢查失敗
+            WorkbookReader --> GoogleSheetsFetcher : WorkbookReadError\nFILE_INVALID / FILE_TOO_LARGE
+            GoogleSheetsFetcher --> ImportService : SheetFetchError(error.code)
+            ImportService --> QuestionRoutes : PreviewFailure { code, message }
+            QuestionRoutes --> WebApi : 400 FILE_INVALID / 413 FILE_TOO_LARGE
+          else 檔案檢查通過
+            WorkbookReader --> GoogleSheetsFetcher : void
+            GoogleSheetsFetcher --> ImportService : Uint8Array
+          end
+        end
+      end
+    end
+  else 檔案匯入
+    QuestionRoutes -> QuestionRoutes : Content-Type 與非空 bytes 檢查
+    alt 格式或本體不符
+      QuestionRoutes --> WebApi : 400 FILE_INVALID
+    else 本體有效
+      QuestionRoutes -> WorkbookReader : assertWorkbookSize(bytes)
+      alt ZIP 中央目錄或大小檢查失敗
+        WorkbookReader --> QuestionRoutes : WorkbookReadError\nFILE_INVALID / FILE_TOO_LARGE
+        QuestionRoutes --> WebApi : 400 FILE_INVALID / 413 FILE_TOO_LARGE
+      else 前置檢查通過
+        QuestionRoutes -> ImportService : previewFromFile(fileName, bytes)
+      end
+    end
   end
-else 來源是檔案
-  G -> G : 檢查格式與大小
+
+  ImportService -> WorkbookReader : readWorkbook(bytes)
+  alt xlsx 讀取失敗
+    WorkbookReader --> ImportService : WorkbookReadError(FILE_INVALID)
+    ImportService --> QuestionRoutes : PreviewFailure { code: FILE_INVALID }
+    QuestionRoutes --> WebApi : 400 FILE_INVALID
+  else 讀取成功
+    WorkbookReader --> ImportService : SheetGrid[]
+    ImportService -> GuidedNotesParser : parseGuidedNotes(grids)
+    GuidedNotesParser -> GuidedNotesParser : findHeader()\n依合併範圍與逐列資料建立\nParsedQuestion[] / ParsedBlank[]
+    alt 找不到表頭或沒有題目
+      GuidedNotesParser --> ImportService : ParseFailure\nHEADER_NOT_FOUND / NO_QUESTIONS
+      ImportService --> QuestionRoutes : PreviewFailure { code, message }
+      QuestionRoutes --> WebApi : 422 HEADER_NOT_FOUND / NO_QUESTIONS
+    else 解析成功
+      GuidedNotesParser --> ImportService : ParseResult { ok: true }
+      ImportService -> ImportValidator : validateImport(parsed)
+      alt 題號重複
+        ImportValidator --> ImportService : ImportValidationFailure\nDUPLICATE_QUESTION_NUMBER
+        ImportService --> QuestionRoutes : PreviewFailure { code, message }
+        QuestionRoutes --> WebApi : 422 DUPLICATE_QUESTION_NUMBER
+      else 驗證成功
+        ImportValidator --> ImportService : ParsedQuestion[] + ImportWarning[]
+        ImportService -> QuestionBank : hasQuestions()
+        QuestionBank --> ImportService : replacesExisting : boolean
+        ImportService -> ImportService : buildPreview()\nrandomUUID() 產生 importId\n只保留最近一次 15 分鐘
+        ImportService --> QuestionRoutes : PreviewSuccess { summary: ImportSummary }
+        QuestionRoutes --> WebApi : 200 ImportSummary
+        WebApi --> QuestionImportUI : { ok: true, summary }
+        QuestionImportUI -> QuestionImportUI : 顯示題數、空格數、題目、\nwarnings 與 replacesExisting 提示
+      end
+    end
+  end
 end
-G -> P : 解析(試算表內容)
-P -> P : 找出含「題號／題目／作答」的表頭列
-P -> P : 逐列讀題號；\n題號合併多列視為題組；\n記錄每個空格的位置與前綴
-P -> V : 題目與空格
-V -> V : 檢查：有表頭、有題目、題號不重複
-alt 驗證失敗
-  V --> G : 匯入錯誤（原因、位置、修正方式）
-  G --> T : 顯示錯誤，活動題目不變
-else 驗證通過
-  V --> G : 匯入摘要
-  G --> T : 顯示摘要（題數、空格數、每題類型、提醒）
-  老師 -> T : 核對後按「確認匯入」
-  T -> G : 確認
-  G -> B : 取代(學習單, 題目清單)
-  B --> G : 完成
-  G --> T : 顯示題號清單
+
+Teacher -> QuestionImportUI : 以有效摘要按「確認匯入」
+QuestionImportUI -> CommandRouter : questions:confirm\n{ importId: summary.importId }
+CommandRouter -> CommandRouter : questionsConfirmSchema.safeParse(payload)\ngetSocketIdentity() 必須為 teacher
+alt schema 或身分不符
+  CommandRouter --> QuestionImportUI : ack { ok: false }\nINVALID_INPUT / FORBIDDEN
+else 指令有效
+  CommandRouter -> ImportService : confirm(importId)
+  ImportService -> ActivityRepo : getActivity()
+  ActivityRepo --> ImportService : activity（含 revision）
+  alt phase 不是 preparing
+    ImportService --> CommandRouter : ack { ok: false, error: INVALID_PHASE }
+  else importId 不存在、被取代或滿 15 分鐘
+    ImportService --> CommandRouter : ack { ok: false, error: IMPORT_EXPIRED }
+  else phase 與 importId 都有效
+    ImportService -> ImportService : transaction BEGIN\n組成 GuidedNotesRecord + QuestionInput[]
+    ImportService -> QuestionBank : replace(guidedNotes, questions)
+    QuestionBank -> QuestionRepo : replaceAll(guidedNotes, questions)
+    QuestionRepo -> SQLite : SAVEPOINT；刪舊寫新\nblanks ON DELETE CASCADE
+    ImportService -> ActivityRepo : updateActivity({ revision: activity.revision + 1 })
+    ActivityRepo -> SQLite : 更新 activity.revision
+    ImportService -> ImportService : transaction COMMIT\n失敗則 ROLLBACK
+    ImportService --> CommandRouter : ack { ok: true }
+    CommandRouter -> StateBroadcaster : broadcastState()
+    StateBroadcaster -> StateBroadcaster : createSnapshot()\n以新 revision 產生各角色快照
+    StateBroadcaster --> QuestionImportUI : state : TeacherSnapshot
+    StateBroadcaster --> TeacherQuestionView : state : TeacherSnapshot\nquestions + guidedNotes
+    TeacherQuestionView -> TeacherQuestionView : 以新 questions 顯示題號清單
+    CommandRouter --> QuestionImportUI : ack { ok: true }
+  end
 end
+
+note over QuestionImportUI, QuestionRoutes
+  兩個 HTTP 端點都只讀取；
+  任何讀取錯誤都不改 guided_notes、questions、blanks 或 revision。
+end note
+
+note over CommandRouter, SQLite
+  確認成功才寫入；取代題目與 revision +1 在同一個 transaction。
+  取消只清除畫面，不送 socket 指令。
+end note
 @enduml
