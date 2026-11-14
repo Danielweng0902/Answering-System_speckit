@@ -84,4 +84,13 @@ describe('CSV Builder（004 US3；T017）', () => {
     const output = text(buildCsv([row({ answer: '=1,"x"' })]));
     expect(output.split('\r\n')[1]).toContain(`"'=1,""x"""`);
   });
+
+  it('T027：組別名稱等所有自由文字欄也防公式注入', () => {
+    expect(
+      text(buildCsv([row({ groupName: '=SUM(1)' })])).split('\r\n')[1],
+    ).toContain(",'=SUM(1),");
+    expect(
+      text(buildCsv([row({ groupName: '@危險組' })])).split('\r\n')[1],
+    ).toContain(",'@危險組,");
+  });
 });

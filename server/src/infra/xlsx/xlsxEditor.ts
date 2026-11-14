@@ -3,18 +3,46 @@ import JSZip from 'jszip';
 /**
  * 004 匯出（T004）：以 jszip 在位元組層替換 xlsx 的目標儲存格 XML。
  *
- * 匯出只修改答案儲存格；其他 entry 一律保持原 byte，使原檔的合併範圍、
- * 欄寬、列高、框線、字型與對齊完整保留（FR-003、research R1）。
+ * 匯出只修改答案儲存格；其餘 zip entry 的**解壓縮內容**保持 byte-identical，
+ * 讓原檔的合併範圍、欄寬、列高、框線、字型與對齊完整保留
+ * （重新 DEFLATE 的 ZIP 封裝位元組不在驗證範圍，FR-003、research R1）。
  */
 export type SheetPathResult = {
   /** 例如 xl/worksheets/sheet2.xml */
   path: string;
 };
 
-/** 從一個完整 XML 標籤取出指定屬性；不仰賴屬性出現順序。 */
+const XML_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&apos;': "'",
+};
+
+/** XML 屬性值先解 entity；與 002 由 parser 取得的 sheetName 對比。 */
+function xmlUnescape(value: string): string {
+  return value.replace(
+    /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g,
+    (entity) => {
+      const mapped = XML_ENTITIES[entity];
+      if (mapped !== undefined) {
+        return mapped;
+      }
+      return String.fromCodePoint(
+        entity.startsWith('&#x')
+          ? Number.parseInt(entity.slice(3, -1), 16)
+          : Number.parseInt(entity.slice(2, -1), 10),
+      );
+    },
+  );
+}
+
+/** 從一個完整 XML 標籤取出屬性並解 entity；不仰賴排列順序。 */
 function attribute(tag: string, name: string): string | null {
   const match = new RegExp(`${name}="([^"]*)"`).exec(tag);
-  return match?.[1] ?? null;
+  const value = match?.[1];
+  return value === undefined ? null : xmlUnescape(value);
 }
 
 /**
@@ -61,8 +89,25 @@ export function resolveSheetPathFromXml(
   return target;
 }
 
+/** XML 1.0 禁用控制字元；tab、LF、CR 合法（T027）。 */
+function isForbiddenXmlCharacter(text: string): boolean {
+  const code = text.codePointAt(0)!;
+  return code <= 0x08 || code === 0x0b || code === 0x0c || (code >= 0x0e && code <= 0x1f);
+}
+
 function xmlEscape(value: string): string {
-  return value
+  const withoutOoxmlMarkers = value.replace(
+    /_x([0-9a-fA-F]{4})_/g,
+    '_x005F_x$1_',
+  );
+  const withControlsEscaped = Array.from(
+    withoutOoxmlMarkers,
+    (character) =>
+      isForbiddenXmlCharacter(character)
+        ? `_x${character.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}_`
+        : character,
+  ).join('');
+  return withControlsEscaped
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');

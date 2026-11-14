@@ -29,7 +29,7 @@ function serialize(row: ResultRow): string {
   return [
     row.questionNumber,
     row.blankPosition,
-    escapeCsvField(row.groupName),
+    escapeCsvField(safeFormulaGuard(row.groupName)),
     escapeCsvField(safeFormulaGuard(row.answer)),
     row.rank,
     row.isWinner ? '是' : '否',

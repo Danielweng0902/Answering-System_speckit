@@ -96,6 +96,17 @@ describe('xlsxEditor（004 Foundational；T002～T005）', () => {
     expect(
       resolveSheetPathFromXml(workbookXml, relsXml, '學習單'),
     ).toBe('xl/worksheets/sheet2.xml');
+
+    expect(
+      resolveSheetPathFromXml(
+        workbookXml.replace(
+          'name="學習單"',
+          'name="Q&amp;A &#38; 學習單"',
+        ),
+        relsXml,
+        'Q&A & 學習單',
+      ),
+    ).toBe('xl/worksheets/sheet2.xml');
   });
 
   it('替換空殼 cell 時保留樣式索引，且產出是合法 xlsx（02）', async () => {
@@ -157,7 +168,30 @@ describe('xlsxEditor（004 Foundational；T002～T005）', () => {
     ).not.toContain('<f>');
   });
 
-  it('替換後只改目標 sheet XML，其餘 zip entry 一律 byte-identical（research R1）', async () => {
+  it('T027：XML 1.0 禁用控制字元以 OOXML 編碼，literal _xHHHH_ 不誤解碼', async () => {
+    const original = await fixtureBytes('01-official-single.xlsx');
+    const changed = await replaceCellText(
+      original,
+      '學習單',
+      'G5',
+      '\u0000\u0001x_x0001_y',
+    );
+
+    await expect(readCell(changed, '學習單', 'G5')).resolves.toBeDefined();
+    const rewritten = setCellText(
+      '<c r="G5" s="15"/>',
+      'G5',
+      '\u0000\u0001x_x0001_y',
+    );
+    const hasDisallowedControl = Array.from(rewritten).some((character) => {
+      const code = character.codePointAt(0)!;
+      return code <= 0x08 || code === 0x0b || code === 0x0c || (code >= 0x0e && code <= 0x1f);
+    });
+    expect(hasDisallowedControl).toBe(false);
+    expect(rewritten).toContain('_x0000__x0001_x_x005F_x0001_y');
+  });
+
+  it('替換後只改目標 sheet XML，其餘解壓縮 zip entry 保持 byte-identical（research R1）', async () => {
     const original = await fixtureBytes('05-two-sheets.xlsx');
     const changed = await replaceCellText(
       original,
