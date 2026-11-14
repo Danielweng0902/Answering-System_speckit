@@ -13,8 +13,13 @@ import {
   createImportService,
   type ImportService,
 } from '../../app/importService.js';
+import {
+  exportGuidedNotes,
+  exportResultCsv,
+} from '../../app/exportCommands.js';
 import { createAuthRouter } from './authRoutes.js';
 import { createQuestionRouter } from './questionRoutes.js';
+import { createExportRouter } from './exportRoutes.js';
 
 export type HttpAppOptions = {
   /** Database used by the authentication routes. */
@@ -79,6 +84,15 @@ export function createApp(options: HttpAppOptions): Express {
   const importService =
     options.importService ?? createImportService({ db: options.database });
   app.use(createQuestionRouter({ database: options.database, importService }));
+
+  // 004 匯出入口：只在 activity closed 且匯入過學習單後提供。
+  app.use(
+    createExportRouter({
+      database: options.database,
+      exportGuidedNotes: (database) => exportGuidedNotes(database, new Date()),
+      exportResultCsv: (database) => exportResultCsv(database, new Date()),
+    }),
+  );
 
   // A missing development build must not prevent server startup.
   if (existsSync(webDistPath)) {

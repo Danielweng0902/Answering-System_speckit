@@ -20,6 +20,16 @@ export type NewSubmission = {
   answers: readonly string[];
 };
 
+export type ValidSubmissionAnswer = {
+  questionNumber: number;
+  blankPosition: number;
+  groupId: string;
+  groupName: string;
+  answer: string;
+  rank: number;
+  receivedAt: string;
+};
+
 type SubmissionRow = Omit<SubmissionRecord, 'answers'>;
 
 function readAnswers(database: DatabaseSync): SubmissionRecord[] {
@@ -195,4 +205,28 @@ export function listValidByGroup(
     (submission) =>
       submission.groupId === groupId && submission.voidedAt === null,
   );
+}
+
+/**
+ * 004 US3（T019）：每個有效答案一列；作廢歷史完全不送進 CSV。
+ * 是否搶答成功仍由 app 的 003 result projection 判定，不在 SQL 重算。
+ */
+export function listValidSubmissionsWithAnswers(
+  database: DatabaseSync,
+): ValidSubmissionAnswer[] {
+  return database.prepare(
+    `SELECT q.number AS questionNumber,
+            a.blank_position AS blankPosition,
+            s.group_id AS groupId,
+            g.name AS groupName,
+            a.answer_text AS answer,
+            s.rank,
+            s.received_at AS receivedAt
+     FROM submissions s
+     JOIN questions q ON q.id = s.question_id
+     JOIN groups g ON g.id = s.group_id
+     JOIN submission_answers a ON a.submission_id = s.id
+     WHERE s.voided_at IS NULL
+     ORDER BY q.number, s.rank, a.blank_position`,
+  ).all() as ValidSubmissionAnswer[];
 }

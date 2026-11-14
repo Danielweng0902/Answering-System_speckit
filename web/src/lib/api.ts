@@ -11,6 +11,7 @@ import { getToken } from './session';
 const GENERIC_LOGIN_ERROR = '目前無法登入，請稍後再試';
 const GENERIC_JOIN_ERROR = '目前無法進場，請稍後再試';
 const GENERIC_IMPORT_ERROR = '目前無法讀取學習單，請稍後再試';
+const GENERIC_EXPORT_ERROR = '目前無法匯出結果，請稍後再試';
 
 export type LoginTeacherResult =
   | { ok: true; token: string }
@@ -28,6 +29,13 @@ export type JoinStudentResult =
 
 export type ImportQuestionsResult =
   | { ok: true; summary: ImportSummary }
+  | {
+      ok: false;
+      error: { code: ErrorCode | null; message: string };
+    };
+
+export type DownloadExportResult =
+  | { ok: true; blob: Blob; fileName: string }
   | {
       ok: false;
       error: { code: ErrorCode | null; message: string };
@@ -245,4 +253,78 @@ export async function importFromLink(
       body: JSON.stringify({ url }),
     }),
   );
+}
+
+function exportFileName(
+  contentDisposition: string | null,
+  fallback: string,
+): string {
+  if (contentDisposition === null) {
+    return fallback;
+  }
+
+  const encodedName = /filename\*=UTF-8''([^;]+)/i.exec(
+    contentDisposition,
+  )?.[1];
+  if (encodedName !== undefined) {
+    try {
+      return decodeURIComponent(encodedName);
+    } catch {
+      // 亂碼的擴展檔名拿不到時退回 ASCII fallback，不影響下載內容。
+    }
+  }
+  return /filename="([^"]+)"/i.exec(contentDisposition)?.[1] ?? fallback;
+}
+
+/**
+ * 004（T012）：以目前分頁的老師身分下載檔案；錯誤 JSON 是 API 回應，
+ * 不得被當成可下載的 blob。實際觸發瀏覽器下載放在 TeacherPage。
+ */
+async function downloadExport(
+  path: string,
+  fallbackFileName: string,
+): Promise<DownloadExportResult> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      headers: { authorization: `Bearer ${getToken() ?? ''}` },
+    });
+  } catch {
+    return {
+      ok: false,
+      error: { code: null, message: GENERIC_EXPORT_ERROR },
+    };
+  }
+
+  if (!response.ok) {
+    let body: unknown = null;
+    try {
+      body = (await response.json()) as unknown;
+    } catch {
+      // 共用下方的通用錯誤；伺服器的 4xx JSON 應優先保留。
+    }
+    return {
+      ok: false,
+      error: isApiErrorResponse(body)
+        ? body.error
+        : { code: null, message: GENERIC_EXPORT_ERROR },
+    };
+  }
+
+  return {
+    ok: true,
+    blob: await response.blob(),
+    fileName: exportFileName(
+      response.headers.get('content-disposition'),
+      fallbackFileName,
+    ),
+  };
+}
+
+export function downloadGuidedNotes(): Promise<DownloadExportResult> {
+  return downloadExport('/api/export/guided-notes', '搶答結果.xlsx');
+}
+
+export function downloadResultCsv(): Promise<DownloadExportResult> {
+  return downloadExport('/api/export/results.csv', '搶答結果.csv');
 }
