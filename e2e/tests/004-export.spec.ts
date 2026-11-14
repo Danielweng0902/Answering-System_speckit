@@ -1,7 +1,17 @@
-import { readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
 import { importQuestions } from './helpers.js';
+
+const verificationDirectory = join(
+  fileURLToPath(new URL('../..', import.meta.url)),
+  'docs',
+  'verification',
+  '004-screenshots',
+);
+const downloadDirectory = join(verificationDirectory, 'downloads');
 
 function requireTeacherPassword(): string {
   const value = process.env.E2E_TEACHER_PASSWORD;
@@ -34,7 +44,7 @@ async function addGroup(page: Page, name: string): Promise<void> {
   );
 }
 
-test('US1／US3：老師 closed 下載 Guided Notes 與 CSV，學生沒有按鈕（T013、T024）', async ({
+test('US1／US3：老師 closed 下載 Guided Notes 與 CSV，學生沒有按鈕（T013、T024、T030）', async ({
   browser,
 }, testInfo) => {
   const teacherContext = await browser.newContext();
@@ -79,6 +89,18 @@ test('US1／US3：老師 closed 下載 Guided Notes 與 CSV，學生沒有按鈕
       studentPage.getByRole('button', { name: '匯出 Guided Notes', exact: true }),
     ).toHaveCount(0);
 
+    // T030：保存可由同一測試重現的 closed 老師端視覺證據。
+    await mkdir(downloadDirectory, { recursive: true });
+    const exportSection = teacherPage.getByRole('region', { name: '匯出結果' });
+    await exportSection.scrollIntoViewIfNeeded();
+    await teacherPage.screenshot({
+      path: join(verificationDirectory, 'teacher-closed-full-page.png'),
+      fullPage: true,
+    });
+    await exportSection.screenshot({
+      path: join(verificationDirectory, 'teacher-closed-export-buttons.png'),
+    });
+
     const exportedPath = testInfo.outputPath('guided-notes.xlsx');
     const downloadPromise = teacherPage.waitForEvent('download');
     await teacherPage
@@ -99,6 +121,10 @@ test('US1／US3：老師 closed 下載 Guided Notes 與 CSV，學生沒有按鈕
     expect(worksheet?.getCell('G5').text).toBe(answer);
     expect(worksheet?.getCell('G7').text).toBe('');
     expect(bytes.length).toBeGreaterThan(2_000);
+    await copyFile(
+      exportedPath,
+      join(downloadDirectory, 'guided-notes.xlsx'),
+    );
 
     const csvPath = testInfo.outputPath('results.csv');
     const csvDownloadPromise = teacherPage.waitForEvent('download');
@@ -109,6 +135,7 @@ test('US1／US3：老師 closed 下載 Guided Notes 與 CSV，學生沒有按鈕
     );
     await csvDownload.saveAs(csvPath);
     const csvBytes = await readFile(csvPath);
+    await copyFile(csvPath, join(downloadDirectory, 'results.csv'));
     expect([...csvBytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const csvLines = csvBytes.subarray(3).toString('utf8').split('\r\n');
     expect(csvLines).toHaveLength(2);
