@@ -41,7 +41,7 @@
 | `NO_QUESTIONS` | 有表頭但沒有題目 | 表頭下方沒有找到任何題號，請確認題號欄填的是數字 |
 | `DUPLICATE_QUESTION_NUMBER` | 題號重複 | 題號 3 重複（第 9、11 列），請修正後重新匯入 |
 | `LINK_INVALID` | 不是 Google Sheets 連結 | 這不是 Google 試算表連結，請貼上 docs.google.com/spreadsheets 開頭的網址 |
-| `LINK_NOT_SHARED` | 未開放檢視 | 無法讀取這份試算表。請把共用設定改成「知道連結者可檢視」，或下載成 xlsx 後上傳 |
+| `LINK_NOT_SHARED` | 未開放檢視 | 無法讀取這份試算表，可以改用以下方式：（替代做法由前端清單顯示） |
 | `LINK_UNREACHABLE` | 無法連線 | 無法連線到 Google 試算表，請檢查網路，或下載成 xlsx 後上傳 |
 
 `DUPLICATE_QUESTION_NUMBER` 與 `NO_QUESTIONS`、`HEADER_NOT_FOUND` 的訊息由伺服器依實際內容組出（題號、列號、工作表名稱），滿足 FR-018。
