@@ -139,7 +139,7 @@ description: "Task list for 004 匯出結果（export）"
 - [ ] T027b **另一位組員審查（憲法要求的合併關卡）**：由非實作者的組員在 PR 上留下 review，審查重點為匯出檔的內容正確性（答案是否落在正確的空格）、權限與階段檢查、CSV 轉義；審查結果與待辦記錄在 `docs/verification/004-security-review.md` 或 PR 的 review 中。**此項完成前不得合併**（憲法「合併前 MUST 通過：另一位組員的審查」）
 - [x] T028 **圖與程式一致性檢查（原則 VII）**：依 plan.md「圖表與模組對應」逐列核對 `diagrams/004-export-*.puml` 的元件與型別在程式中存在、名稱與關係一致；有差異時修正 `.puml` 並重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`（優先），或修正程式（若程式真的偏離契約——先停下回報）。結果寫入 `docs/verification/004-diagram-consistency.md`
 - [x] T029 執行 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/004-automated.md`（含 SC-001～SC-005 各由哪個測試涵蓋的對照表）
-- [ ] T030 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取老師端「已結束」時的兩個匯出按鈕、以及下載後開啟的檔案畫面，存到 `docs/verification/004-screenshots/`，交設計負責人驗收
+- [x] T030 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取老師端「已結束」時的兩個匯出按鈕、以及下載後開啟的檔案畫面，存到 `docs/verification/004-screenshots/`，交設計負責人驗收
 - [ ] T031 **人工驗證**：依 `specs/004-export/quickstart.md` 的 18 個步驟操作，結果記錄在 `docs/verification/004-manual.md`；問題另開 GitHub issue。由設計與驗證負責人執行，**不可用自動測試或截圖替代**
 
 ---

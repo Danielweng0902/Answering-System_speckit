@@ -1,4 +1,4 @@
-# 004 T030 截圖產物與未完成項
+# 004 T030 截圖產物與驗證狀態
 
 日期：2026-11-14。
 
@@ -20,21 +20,10 @@
 
 這些不是以 HTML 或手寫檔案偽造的匯出物。檔案格式也已驗證：xlsx 是 Microsoft Excel 2007+，CSV 為含 BOM 的 UTF-8 CRLF 文字。
 
-## T030 尚未完成的部分
+## 2026-11-15 更新
 
-那份 `downloads/guided-notes.xlsx` 已實際透過 Microsoft Excel 開啟，Excel 視窗標題為 `guided-notes`，可見 `學習單` 工作表；此過程沒有修改原檔。然而目前不能將 Excel 視窗畫面保存到本目錄：
+設計／驗證負責人已實際開啟 `downloads/guided-notes.xlsx`，並把 Excel 畫面存成 `excel-guided-notes-open.png`。該檔與對應 manual 記錄已於 2026-11-15 進入 004-export 分支。
 
-- T3 device access 未被啟用。
-- 新增 Swift／shell 的視窗或螢幕截圖被 macOS TCC 拒絕。
-- 沒有要求或修改使用者的安全設定，也沒有把 HTML 重排版本冒充 Excel 的視覺驗收截圖。
+**T030 的需求產物已齊。** 這只表示老師與檔案的畫面備妥，不代表 T027b 已通過、T031 已全數通過，也不代表題組答案位置的版型問題已得到確認。T031 中發現的 A～D 問題仍依該文件與後續澄清處理。
 
-因此 **`excel-guided-notes-open.png` 目前不存在，T030 不勾完成**。
-
-### 設計／驗證負責人續辦
-
-1. 用 Excel 或 LibreOffice 打開 `downloads/guided-notes.xlsx`。
-2. 人工比對答案位置、未作答標記與原始格式。
-3. 擷取開啟檔案的畫面存成 `excel-guided-notes-open.png`。
-4. 在 PR 回報後才完成 T030。這不取代 T027b peer review、T031 人工 quickstart，也不證明 SC-005 的 Google Sheets 匯回已通過。
-
-> 此清單只記資產與限制，不記錄 macOS app 內其他使用者的文件或視窗內容。
+> 本檔只記錄截圖資產與驗證狀態，不使用外部 HTML 預覽冒充 Excel/LibreOffice 原始檔面，也不記錄本機其他使用者的文件或視窗內容。
