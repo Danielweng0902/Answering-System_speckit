@@ -67,7 +67,7 @@ Phase 1 設計完成後重新檢查：結果相同，沒有違反項目。補充
 | 組件圖（`diagrams/004-export-component.puml`） | 模組 |
 |---|---|
 | 匯出入口（Export Gateway） | `server/src/app/exportCommands.ts`（身分與階段檢查）；`server/src/infra/http/exportRoutes.ts`（HTTP 下載端點） |
-| Guided Notes 寫入（Guided Notes Writer） | `server/src/app/guidedNotesExporter.ts`（組合「前綴＋答案」、決定哪些空格要寫）＋ `server/src/infra/xlsx/xlsxEditor.ts`（jszip 位元組層替換 cell XML） |
+| Guided Notes 寫入（Guided Notes Writer） | `server/src/app/guidedNotesExporter.ts`（依 blanks 與 merge range 決定最終答案格與內容）＋ `server/src/infra/xlsx/xlsxEditor.ts`（jszip 讀取工作表 XML／merge range、位元組層替換 cell XML） |
 | CSV 產生（CSV Builder） | `server/src/app/csvBuilder.ts`（欄位、排序、引用轉義、公式字元防護、BOM） |
 | 結果彙整（003） | `server/src/app/answerProjections.ts` 的 `buildResults`（各題搶答成功組別）與 `server/src/infra/db/answerRepo.ts`（所有有效作答與順位，明確排除 `voided_at IS NOT NULL`） |
 | 題目庫（002） | `server/src/infra/db/questionRepo.ts` 的 `getStoredGuidedNotes()`（原檔 BLOB 與 `sheetName`）、`blanks` 表（`cell`、`prefix`） |
@@ -77,7 +77,7 @@ Phase 1 設計完成後重新檢查：結果相同，沒有違反項目。補充
 | 類別圖（`diagrams/004-export-class.puml`） | 程式中的型別 |
 |---|---|
 | 匯出服務 | `server/src/app/exportCommands.ts` 的 `exportGuidedNotes()`、`exportResultCsv()` |
-| 學習單寫入器 | `server/src/app/guidedNotesExporter.ts` 的 `buildBlankContent()`（前綴＋答案）與 `server/src/infra/xlsx/xlsxEditor.ts` 的 `setCellText()` |
+| 學習單寫入器 | `server/src/app/guidedNotesExporter.ts` 的 `buildBlankWrites()`（依 merge range 判定分離答案格／合併填答區）與 `server/src/infra/xlsx/xlsxEditor.ts` 的 `setCellText()` |
 | 匯出的學習單 | `server/src/app/exportCommands.ts` 的 `ExportFile`（檔名、位元組、mime type；xlsx 與 CSV 共用） |
 | 結果紀錄列 | `server/src/app/csvBuilder.ts` 的 `ResultRow`（題號、空格序、組別、答案、順位、是否搶答成功、送出時間） |
 | CSV 產生器 | `server/src/app/csvBuilder.ts` 的 `buildCsv()`、`escapeCsvField()`、`safeFormulaGuard()` |
@@ -114,7 +114,7 @@ specs/004-export/
 server/src/
 ├── app/
 │   ├── exportCommands.ts        # 新增：匯出用例（身分／階段檢查、組裝輸出）
-│   ├── guidedNotesExporter.ts   # 新增：前綴＋答案組合、決定要寫哪些空格
+│   ├── guidedNotesExporter.ts   # 新增：依 merge range 決定答案位置與前綴處理
 │   └── csvBuilder.ts            # 新增：CSV 欄位、排序、轉義、公式防護、BOM
 ├── infra/
 │   ├── http/

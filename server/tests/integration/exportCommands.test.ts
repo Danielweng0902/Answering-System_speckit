@@ -10,23 +10,17 @@ import {
   buildExportFileName,
   exportGuidedNotes,
   exportResultCsv,
+  formatLocalTimestamp,
 } from '../../src/app/exportCommands.js';
 import { getActivity, updateActivity } from '../../src/infra/db/activityRepo.js';
-import {
-  insertSubmission,
-  voidSubmission,
-} from '../../src/infra/db/answerRepo.js';
+import { insertSubmission, voidSubmission } from '../../src/infra/db/answerRepo.js';
 import { openDatabase } from '../../src/infra/db/database.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
-import {
-  list as listQuestions,
-  replaceAll,
-} from '../../src/infra/db/questionRepo.js';
+import { list as listQuestions, replaceAll } from '../../src/infra/db/questionRepo.js';
 
 const FIXTURES = new URL('../../../fixtures/guided-notes/', import.meta.url);
 const NOW = new Date('2026-11-14T09:08:07.123Z');
-const XLSX_TYPE =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 type ExpectedBlank = { cell: string; prefix: string };
 type ExpectedQuestion = { number: number; blanks: ExpectedBlank[] };
@@ -46,14 +40,10 @@ async function fixtureBytes(fileName: string): Promise<Uint8Array> {
 }
 
 async function expectedFiles(): Promise<ExpectedFile[]> {
-  return JSON.parse(
-    await readFile(fixturePath('expected.json'), 'utf8'),
-  ) as ExpectedFile[];
+  return JSON.parse(await readFile(fixturePath('expected.json'), 'utf8')) as ExpectedFile[];
 }
 
-async function withDatabase<T>(
-  run: (database: DatabaseSync) => Promise<T>,
-): Promise<T> {
+async function withDatabase<T>(run: (database: DatabaseSync) => Promise<T>): Promise<T> {
   const database = openDatabase(':memory:');
   try {
     return await run(database);
@@ -62,10 +52,7 @@ async function withDatabase<T>(
   }
 }
 
-async function seedFixture(
-  database: DatabaseSync,
-  entry: ExpectedFile,
-): Promise<Uint8Array> {
+async function seedFixture(database: DatabaseSync, entry: ExpectedFile): Promise<Uint8Array> {
   const bytes = await fixtureBytes(entry.file);
   replaceAll(
     database,
@@ -109,9 +96,7 @@ function answer(
     questionId: `q-${questionNumber}`,
     groupId,
     rank,
-    receivedAt: new Date(
-      NOW.getTime() + questionNumber * 1_000,
-    ).toISOString(),
+    receivedAt: new Date(NOW.getTime() + questionNumber * 1_000).toISOString(),
     answers,
   });
   return `q-${questionNumber}`;
@@ -127,10 +112,7 @@ function closeActivity(database: DatabaseSync): void {
   });
 }
 
-async function worksheet(
-  bytes: Uint8Array,
-  sheetName: string,
-): Promise<ExcelJS.Worksheet> {
+async function worksheet(bytes: Uint8Array, sheetName: string): Promise<ExcelJS.Worksheet> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.load(
     Buffer.from(bytes) as unknown as Parameters<typeof workbook.xlsx.load>[0],
@@ -140,18 +122,13 @@ async function worksheet(
   return result!;
 }
 
-async function zipEntries(
-  bytes: Uint8Array,
-): Promise<Map<string, Uint8Array>> {
+async function zipEntries(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
   const zip = await JSZip.loadAsync(bytes);
   return new Map(
     await Promise.all(
       Object.entries(zip.files)
         .filter(([, entry]) => !entry.dir)
-        .map(async ([path, entry]) => [
-          path,
-          await entry.async('uint8array'),
-        ] as const),
+        .map(async ([path, entry]) => [path, await entry.async('uint8array')] as const),
     ),
   );
 }
@@ -159,6 +136,19 @@ async function zipEntries(
 function csvText(bytes: Uint8Array): string {
   expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   return Buffer.from(bytes.subarray(3)).toString('utf8');
+}
+
+function expectedAnswerCell(entry: ExpectedFile, blank: ExpectedBlank): string {
+  if (blank.prefix === '' || entry.file === '04-mixed-groups.xlsx') {
+    return blank.cell;
+  }
+  // 02 的前綴格在 G 欄，右側 H 欄是獨立答案格。
+  const match = /^([A-Z]+)([0-9]+)$/.exec(blank.cell)!;
+  return `${String.fromCharCode(match[1]!.charCodeAt(0) + 1)}${match[2]}`;
+}
+
+function keepsPrefixInsideMergedAnswerArea(entry: ExpectedFile, blank: ExpectedBlank): boolean {
+  return blank.prefix !== '' && expectedAnswerCell(entry, blank) === blank.cell;
 }
 
 function databaseSnapshot(database: DatabaseSync): string {
@@ -179,6 +169,17 @@ function databaseSnapshot(database: DatabaseSync): string {
     ]),
   );
 }
+
+describe('formatLocalTimestamp（004 人工驗證 B，2026-11-16）', () => {
+  it('UTC 原值轉成台北本地時間，格式無 Z／時區後綴且保留毫秒', () => {
+    expect(formatLocalTimestamp('2026-11-14T14:17:33.100Z', 'Asia/Taipei')).toBe(
+      '2026-11-14 22:17:33.100',
+    );
+    expect(formatLocalTimestamp('2026-11-14T23:59:59.999Z', 'Asia/Taipei')).toBe(
+      '2026-11-15 07:59:59.999',
+    );
+  });
+});
 
 describe('004 US1 匯出 Guided Notes（T008）', () => {
   it('單題勝出答案寫入結構解析所得的位置，檔名與 MIME 符合契約', async () => {
@@ -211,9 +212,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
           answer(
             database,
             question.number,
-            question.blanks.map(
-              (_, index) => `題${question.number}第${index + 1}格答案`,
-            ),
+            question.blanks.map((_, index) => `題${question.number}第${index + 1}格答案`),
           );
         }
         closeActivity(database);
@@ -222,9 +221,18 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
 
         for (const question of entry.questions) {
           for (const [index, blank] of question.blanks.entries()) {
-            expect(output.getCell(blank.cell).text).toBe(
-              `${blank.prefix}題${question.number}第${index + 1}格答案`,
-            );
+            const answerText = `題${question.number}第${index + 1}格答案`;
+            const mergedPrefix = keepsPrefixInsideMergedAnswerArea(entry, blank);
+            expect(
+              output.getCell(expectedAnswerCell(entry, blank)).text,
+              `${entry.file} 第 ${question.number} 題 ${blank.cell} 的答案格`,
+            ).toBe(mergedPrefix ? `${blank.prefix}${answerText}` : answerText);
+            if (blank.prefix !== '' && !mergedPrefix) {
+              expect(
+                output.getCell(blank.cell).text,
+                `${entry.file} 第 ${question.number} 題 ${blank.cell} 的前綴格`,
+              ).toBe(blank.prefix);
+            }
           }
         }
 
@@ -234,8 +242,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
           const changedPaths = [...after.entries()]
             .filter(
               ([path, bytes]) =>
-                !before.has(path) ||
-                !Buffer.from(before.get(path)!).equals(Buffer.from(bytes)),
+                !before.has(path) || !Buffer.from(before.get(path)!).equals(Buffer.from(bytes)),
             )
             .map(([path]) => path);
           expect(changedPaths).toEqual(['xl/worksheets/sheet2.xml']);
@@ -251,29 +258,19 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
       seedGroup(database);
       answer(database, 1, ['保留這一題']);
       const voidedQuestionId = answer(database, 2, ['不能出現在匯出']);
-      voidSubmission(
-        database,
-        voidedQuestionId,
-        'group-1',
-        '2026-11-14T09:09:00.000Z',
-      );
+      voidSubmission(database, voidedQuestionId, 'group-1', '2026-11-14T09:09:00.000Z');
       closeActivity(database);
       const before = databaseSnapshot(database);
       const revisionBefore = getActivity(database)!.revision;
 
       const first = await exportGuidedNotes(database, NOW);
-      const second = await exportGuidedNotes(
-        database,
-        new Date('2026-11-14T09:10:00.000Z'),
-      );
+      const second = await exportGuidedNotes(database, new Date('2026-11-14T09:10:00.000Z'));
 
       const output = await worksheet(first.bytes, entry.sheet);
       expect(output.getCell('G5').text).toBe('保留這一題');
       expect(output.getCell('G7').text).toBe('');
       expect(output.getCell('G9').text).toBe('');
-      expect(Buffer.from(first.bytes).equals(Buffer.from(second.bytes))).toBe(
-        true,
-      );
+      expect(Buffer.from(first.bytes).equals(Buffer.from(second.bytes))).toBe(true);
       expect(databaseSnapshot(database)).toBe(before);
       expect(getActivity(database)!.revision).toBe(revisionBefore);
 
@@ -299,7 +296,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
     });
   });
 
-  it('題組每格保留原前綴，未作答維持原內容，單題不加額外符號（T014）', async () => {
+  it('題組前綴保持原格，答案寫右側獨立答案格；未作答維持原內容（T014，2026-11-16）', async () => {
     await withDatabase(async (database) => {
       const entry = (await expectedFiles())[1]!;
       await seedFixture(database, entry);
@@ -310,17 +307,19 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
       const file = await exportGuidedNotes(database, NOW);
       const output = await worksheet(file.bytes, entry.sheet);
 
-      expect(output.getCell('G5').text).toBe('（1）CPU');
-      expect(output.getCell('G6').text).toBe('（2）作業系統');
+      expect(output.getCell('G5').text).toBe('（1）');
+      expect(output.getCell('H5').text).toBe('CPU');
+      expect(output.getCell('G6').text).toBe('（2）');
+      expect(output.getCell('H6').text).toBe('作業系統');
       expect(output.getCell('G8').text).toBe('（1）');
+      expect(output.getCell('H8').text).toBe('');
       expect(output.getCell('G9').text).toBe('（2）');
-      expect(output.getCell('G5').address).toBe('G5');
-      expect(output.getCell('G6').address).toBe('G6');
+      expect(output.getCell('H9').text).toBe('');
       expect(output.getCell('G11').text).toBe('');
     });
   });
 
-  it('CSV 與看板有效作答、順位、勝出旗標、空格序與 ISO 時間一致；作廢不列（T018）', async () => {
+  it('CSV 與看板有效作答、順位、勝出旗標、空格序一致；時間轉本地可讀格式，作廢不列（T018，2026-11-16）', async () => {
     await withDatabase(async (database) => {
       const entry = (await expectedFiles())[1]!;
       await seedFixture(database, entry);
@@ -336,10 +335,10 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
       closeActivity(database);
       const before = databaseSnapshot(database);
 
-      const file = await exportResultCsv(database, NOW);
+      const file = await exportResultCsv(database, NOW, 'Asia/Taipei');
       const rows = csvText(file.bytes).split('\r\n');
-      const questionOneTime = '2026-11-14T09:08:08.123Z';
-      const questionThreeTime = '2026-11-14T09:08:10.123Z';
+      const questionOneTime = formatLocalTimestamp('2026-11-14T09:08:08.123Z', 'Asia/Taipei');
+      const questionThreeTime = formatLocalTimestamp('2026-11-14T09:08:10.123Z', 'Asia/Taipei');
 
       expect(rows).toEqual([
         '題號,空格序,組別,答案,順位,是否搶答成功,送出時間',
@@ -364,9 +363,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
       closeActivity(database);
 
       const file = await exportResultCsv(database, NOW);
-      expect(csvText(file.bytes)).toBe(
-        '題號,空格序,組別,答案,順位,是否搶答成功,送出時間',
-      );
+      expect(csvText(file.bytes)).toBe('題號,空格序,組別,答案,順位,是否搶答成功,送出時間');
     });
   });
 

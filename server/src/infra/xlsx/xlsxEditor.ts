@@ -22,20 +22,17 @@ const XML_ENTITIES: Record<string, string> = {
 
 /** XML 屬性值先解 entity；與 002 由 parser 取得的 sheetName 對比。 */
 function xmlUnescape(value: string): string {
-  return value.replace(
-    /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g,
-    (entity) => {
-      const mapped = XML_ENTITIES[entity];
-      if (mapped !== undefined) {
-        return mapped;
-      }
-      return String.fromCodePoint(
-        entity.startsWith('&#x')
-          ? Number.parseInt(entity.slice(3, -1), 16)
-          : Number.parseInt(entity.slice(2, -1), 10),
-      );
-    },
-  );
+  return value.replace(/&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g, (entity) => {
+    const mapped = XML_ENTITIES[entity];
+    if (mapped !== undefined) {
+      return mapped;
+    }
+    return String.fromCodePoint(
+      entity.startsWith('&#x')
+        ? Number.parseInt(entity.slice(3, -1), 16)
+        : Number.parseInt(entity.slice(2, -1), 10),
+    );
+  });
 }
 
 /** 從一個完整 XML 標籤取出屬性並解 entity；不仰賴排列順序。 */
@@ -66,8 +63,7 @@ export function resolveSheetPathFromXml(
     throw new Error(`工作表不存在：${sheetName}`);
   }
 
-  const relationships =
-    relationshipsXml.match(/<Relationship\b[^>]*\/>/g) ?? [];
+  const relationships = relationshipsXml.match(/<Relationship\b[^>]*\/>/g) ?? [];
   let target: string | null = null;
   for (const relationship of relationships) {
     if (attribute(relationship, 'Id') !== relationshipId) {
@@ -96,21 +92,13 @@ function isForbiddenXmlCharacter(text: string): boolean {
 }
 
 function xmlEscape(value: string): string {
-  const withoutOoxmlMarkers = value.replace(
-    /_x([0-9a-fA-F]{4})_/g,
-    '_x005F_x$1_',
-  );
-  const withControlsEscaped = Array.from(
-    withoutOoxmlMarkers,
-    (character) =>
-      isForbiddenXmlCharacter(character)
-        ? `_x${character.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}_`
-        : character,
+  const withoutOoxmlMarkers = value.replace(/_x([0-9a-fA-F]{4})_/g, '_x005F_x$1_');
+  const withControlsEscaped = Array.from(withoutOoxmlMarkers, (character) =>
+    isForbiddenXmlCharacter(character)
+      ? `_x${character.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}_`
+      : character,
   ).join('');
-  return withControlsEscaped
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return withControlsEscaped.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** 根據前後空白決定是否加 xml:space="preserve"。 */
@@ -125,17 +113,9 @@ function inlineStringValue(text: string): string {
  * 支援 self-closing 與 paired cell；替換前一定移除原 t 屬性，否則原本
  * 有 t="s" 的 cell 會產生重複屬性（research R4）。
  */
-export function setCellText(
-  sheetXml: string,
-  cellCoordinate: string,
-  text: string,
-): string {
-  const selfClosing = new RegExp(
-    `<c\\s*r="${escapeRegex(cellCoordinate)}"([^>]*)\\/>`,
-  );
-  const paired = new RegExp(
-    `(<c\\s*r="${escapeRegex(cellCoordinate)}"[^>]*)(>[\\s\\S]*?)(</c>)`,
-  );
+export function setCellText(sheetXml: string, cellCoordinate: string, text: string): string {
+  const selfClosing = new RegExp(`<c\\s*r="${escapeRegex(cellCoordinate)}"([^>]*)\\/>`);
+  const paired = new RegExp(`(<c\\s*r="${escapeRegex(cellCoordinate)}"[^>]*)(>[\\s\\S]*?)(</c>)`);
   const value = inlineStringValue(text);
 
   if (selfClosing.test(sheetXml)) {
@@ -146,13 +126,10 @@ export function setCellText(
   }
 
   if (paired.test(sheetXml)) {
-    return sheetXml.replace(
-      paired,
-      (_match, open: string, _body: string, close: string) => {
-        const cleanAttributes = String(open).replace(/\s+t="[^"]*"/g, '');
-        return `${cleanAttributes} t="inlineStr">${value}${close}`;
-      },
-    );
+    return sheetXml.replace(paired, (_match, open: string, _body: string, close: string) => {
+      const cleanAttributes = String(open).replace(/\s+t="[^"]*"/g, '');
+      return `${cleanAttributes} t="inlineStr">${value}${close}`;
+    });
   }
 
   throw new Error(`找不到儲存格：${cellCoordinate}`);
@@ -162,13 +139,13 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** replaceCellText：只改一個目標 cell，回傳新的 xlsx 位元組。 */
-export async function replaceCellText(
-  xlsxBytes: Uint8Array,
-  sheetName: string,
-  cellCoordinate: string,
-  text: string,
-): Promise<Uint8Array> {
+type WorksheetHandle = {
+  zip: JSZip;
+  path: string;
+  xml: string;
+};
+
+async function openWorksheet(xlsxBytes: Uint8Array, sheetName: string): Promise<WorksheetHandle> {
   const zip = await JSZip.loadAsync(xlsxBytes);
   const workbook = zip.file('xl/workbook.xml');
   const relationships = zip.file('xl/_rels/workbook.xml.rels');
@@ -176,20 +153,76 @@ export async function replaceCellText(
     throw new Error('不是有效的 xlsx：找不到 workbook 定義');
   }
 
-  const sheetPath = resolveSheetPathFromXml(
+  const path = resolveSheetPathFromXml(
     await workbook.async('string'),
     await relationships.async('string'),
     sheetName,
   );
-  const sheet = zip.file(sheetPath);
+  const sheet = zip.file(path);
   if (!sheet) {
-    throw new Error(`找不到工作表檔案：${sheetPath}`);
+    throw new Error(`找不到工作表檔案：${path}`);
   }
+  return { zip, path, xml: await sheet.async('string') };
+}
 
-  zip.file(
-    sheetPath,
-    setCellText(await sheet.async('string'), cellCoordinate, text),
+/** 供匯出流程一次讀取原檔的 merge range，用來判定右側是否為獨立答案格。 */
+export async function getWorksheetXml(xlsxBytes: Uint8Array, sheetName: string): Promise<string> {
+  return (await openWorksheet(xlsxBytes, sheetName)).xml;
+}
+
+function parseA1Cell(cellCoordinate: string): { column: number; row: number } {
+  const match = /^([A-Z]+)([1-9][0-9]*)$/.exec(cellCoordinate);
+  if (match === null) {
+    throw new Error(`不是有效的 A1 儲存格：${cellCoordinate}`);
+  }
+  let column = 0;
+  for (const character of match[1]!) {
+    column = column * 26 + character.charCodeAt(0) - 64;
+  }
+  return { column, row: Number(match[2]) };
+}
+
+function mergeRangeContains(
+  start: { column: number; row: number },
+  end: { column: number; row: number },
+  cell: { column: number; row: number },
+): boolean {
+  return (
+    cell.column >= start.column &&
+    cell.column <= end.column &&
+    cell.row >= start.row &&
+    cell.row <= end.row
   );
+}
+
+/** 指定 cell 是否與右側 cell 屬於同一個合併儲存格。 */
+export function isMergedWithRightCell(sheetXml: string, cellCoordinate: string): boolean {
+  const cell = parseA1Cell(cellCoordinate);
+  const rightCell = { column: cell.column + 1, row: cell.row };
+  const mergeReferences = [...sheetXml.matchAll(/<mergeCell\b[^>]*\bref="([^"]+)"[^>]*\/>/g)].map(
+    (match) => match[1]!,
+  );
+
+  return mergeReferences.some((reference) => {
+    const [startReference, endReference] = reference.split(':');
+    if (startReference === undefined || endReference === undefined) {
+      return false;
+    }
+    const start = parseA1Cell(startReference);
+    const end = parseA1Cell(endReference);
+    return mergeRangeContains(start, end, cell) && mergeRangeContains(start, end, rightCell);
+  });
+}
+
+/** replaceCellText：只改一個目標 cell，回傳新的 xlsx 位元組。 */
+export async function replaceCellText(
+  xlsxBytes: Uint8Array,
+  sheetName: string,
+  cellCoordinate: string,
+  text: string,
+): Promise<Uint8Array> {
+  const { zip, path, xml } = await openWorksheet(xlsxBytes, sheetName);
+  zip.file(path, setCellText(xml, cellCoordinate, text));
   const result = await zip.generateAsync({
     type: 'nodebuffer',
     compression: 'DEFLATE',

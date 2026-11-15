@@ -17,16 +17,16 @@
 
 （實體定義見 `specs/002-guided-notes-import/data-model.md`；資料表 `guided_notes` 在 `server/src/infra/db/database.ts`。）
 
-### Blank（002）——寫入位置的唯一來源
+### Blank（002）——定位起點；最終答案格再由 merge range 判定
 
 | 欄位 | 型別 | 匯出時的用途 |
 |---|---|---|
 | `question_id` | 字串 | 對應題目 |
 | `position` | 整數 | 該題的第幾個空格；同時是 CSV 的「空格序」 |
-| `prefix` | 字串 | **前綴文字**（例如「（1）」）；與答案組合後寫入（FR-005） |
-| `cell` | 字串（A1 座標，例如 `G5`） | **寫入位置**；由 002 依結構解析取得，非寫死（原則 V、FR-002） |
+| `prefix` | 字串 | **前綴文字**（例如「（1）」）；分離版面時前綴格保持原樣，合併填答區則在文字中保留前綴（FR-005） |
+| `cell` | 字串（A1 座標，例如 `G5`） | 002 依結構取得的**前綴或填空位置**；單題時即答案寫入位置。前綴非空時還要讀取原檔 merge range 判斷是否有右側獨立答案格（2026-11-16 修訂） |
 
-> 關鍵：前綴是**儲存格文字的一部分**，不是獨立欄位（research R5）。匯出時寫入的是「前綴＋答案」組成的單一儲存格文字。
+> 人工驗證修正：`02` 前綴在 G 欄、H 欄才是獨立答案格；`04` 的 `G7:I7` 是整塊合併填答區，沒有可右移的獨立格。因此 `blanks.cell` 提供定位起點，匯出另依 merge range 解析：分離時只把答案寫到右側格；合併時在此格寫「前綴＋答案」；單題仍寫原 cell。
 
 ### Question（002）
 
@@ -90,7 +90,7 @@
 | `answer` | 字串 | `submission_answers.answer_text` | 原始答案（不含前綴） |
 | `rank` | 正整數 | `submissions.rank` | |
 | `isWinner` | 布林 | 該組是否為該題的搶答成功組別 | 輸出為「是／否」 |
-| `receivedAt` | 字串 | `submissions.received_at` | ISO 8601 字串（含時區與毫秒），直接對應 |
+| `receivedAt` | 字串 | `submissions.received_at` | CSV 匯出時從 UTC 原值轉為伺服器本地 `YYYY-MM-DD HH:mm:ss.SSS`，不輸出 `Z` 或時區後綴 |
 
 **規則**：
 - 一筆作答的**每個空格各一列**（FR-011）。

@@ -1,23 +1,20 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { ErrorCode } from '@classroom/shared';
-import {
-  resolveIdentity,
-  type TeacherIdentity,
-} from './access.js';
+import { resolveIdentity, type TeacherIdentity } from './access.js';
 import { getActivity } from '../infra/db/activityRepo.js';
 import { listValidSubmissionsWithAnswers } from '../infra/db/answerRepo.js';
-import {
-  getStoredGuidedNotes,
-  list as listQuestions,
-} from '../infra/db/questionRepo.js';
+import { getStoredGuidedNotes, list as listQuestions } from '../infra/db/questionRepo.js';
 import { buildResults } from './answerProjections.js';
 import { buildCsv } from './csvBuilder.js';
-import { buildBlankContent } from './guidedNotesExporter.js';
-import { replaceCellText } from '../infra/xlsx/xlsxEditor.js';
+import { buildBlankWrites } from './guidedNotesExporter.js';
+import {
+  getWorksheetXml,
+  isMergedWithRightCell,
+  replaceCellText,
+} from '../infra/xlsx/xlsxEditor.js';
 
 export type ExportAuthorization =
-  | { ok: true; teacher: TeacherIdentity }
-  | { ok: false; code: ErrorCode };
+  { ok: true; teacher: TeacherIdentity } | { ok: false; code: ErrorCode };
 
 export type ExportFile = {
   fileName: string;
@@ -52,6 +49,39 @@ export function buildExportFileName(
 }
 
 /**
+ * CSV「送出時間」：資料庫維持 UTC；匯出時以教室／伺服器本地時區呈現。
+ * 老師直接閱讀的格式不附 `Z` 或 `+08:00`，但保留毫秒（2026-11-16 兩組同意）。
+ */
+export function formatLocalTimestamp(
+  receivedAt: string,
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): string {
+  const instant = new Date(receivedAt);
+  if (Number.isNaN(instant.getTime())) {
+    throw new Error('作答送出時間不是有效的日期時間');
+  }
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  })
+    .formatToParts(instant)
+    .reduce<Record<string, string>>((accumulator, part) => {
+      if (part.type !== 'literal') {
+        accumulator[part.type] = part.value;
+      }
+      return accumulator;
+    }, {});
+  const milliseconds = String(instant.getUTCMilliseconds()).padStart(3, '0');
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}.${milliseconds}`;
+}
+
+/**
  * 004 兩個匯出入口共用：只有老師、活動已結束、已匯入 Guided Notes 才允許。
  * 不回傳 token；HTTP 層只在回應放錯誤代碼與使用者訊息。
  */
@@ -83,10 +113,7 @@ export function authorizeExport(
  * winners 由 003 的 buildResults／decideWinner 單一入口判定；此方法本身唯讀，
  * 不更新任何資料列、不產生 Socket 事件、不遞增 revision（FR-008）。
  */
-export async function exportGuidedNotes(
-  database: DatabaseSync,
-  now: Date,
-): Promise<ExportFile> {
+export async function exportGuidedNotes(database: DatabaseSync, now: Date): Promise<ExportFile> {
   const stored = getStoredGuidedNotes(database);
   if (stored === null) {
     throw new Error('Cannot export Guided Notes: no imported file');
@@ -96,34 +123,30 @@ export async function exportGuidedNotes(
   const resultByNumber = new Map(
     buildResults(database).map((result) => [result.questionNumber, result]),
   );
+  const originalSheetXml = await getWorksheetXml(stored.file, stored.sheetName);
   let bytes = stored.file;
 
   for (const question of questions) {
     const result = resultByNumber.get(question.number);
-    const prefixes = question.blanks.map((blank) => blank.prefix);
-    const contents = buildBlankContent(
-      result?.winner?.answers ?? null,
-      prefixes,
-    );
-    if (contents === null) {
+    const blanks = question.blanks.map((blank) => ({
+      ...blank,
+      hasSeparateRightAnswerCell:
+        blank.prefix !== '' && !isMergedWithRightCell(originalSheetXml, blank.cell),
+    }));
+    const writes = buildBlankWrites(result?.winner?.answers ?? null, blanks);
+    if (writes === null) {
       continue;
     }
 
-    for (const [index, blank] of question.blanks.entries()) {
-      bytes = await replaceCellText(
-        bytes,
-        stored.sheetName,
-        blank.cell,
-        contents[index]!,
-      );
+    for (const write of writes) {
+      bytes = await replaceCellText(bytes, stored.sheetName, write.cell, write.content);
     }
   }
 
   return {
     fileName: buildExportFileName(now, 'xlsx'),
     bytes,
-    contentType:
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   };
 }
 
@@ -131,12 +154,10 @@ export async function exportGuidedNotes(
 export async function exportResultCsv(
   database: DatabaseSync,
   now: Date,
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Promise<ExportFile> {
   const winners = new Map(
-    buildResults(database).map((result) => [
-      result.questionNumber,
-      result.winner?.groupId ?? null,
-    ]),
+    buildResults(database).map((result) => [result.questionNumber, result.winner?.groupId ?? null]),
   );
   const rows = listValidSubmissionsWithAnswers(database).map((row) => ({
     questionNumber: row.questionNumber,
@@ -145,11 +166,11 @@ export async function exportResultCsv(
     answer: row.answer,
     rank: row.rank,
     isWinner: winners.get(row.questionNumber) === row.groupId,
-    receivedAt: row.receivedAt,
+    receivedAt: formatLocalTimestamp(row.receivedAt, timeZone),
   }));
 
   return {
-    fileName: buildExportFileName(now, 'csv'),
+    fileName: buildExportFileName(now, 'csv', timeZone),
     bytes: buildCsv(rows),
     contentType: 'text/csv; charset=utf-8',
   };

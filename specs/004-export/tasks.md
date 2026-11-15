@@ -68,16 +68,16 @@ description: "Task list for 004 匯出結果（export）"
 
 **Goal**: 活動結束後，老師下載到一份與原檔同格式、已在各題填空格寫入搶答成功組別答案的 xlsx。
 
-**Independent Test**: 整合測試匯入官方單題範本、兩組作答、結束、匯出，讀回產出檔確認每個答案都落在 `expected.json` 所列的空格位置，且填空格以外的內容與原檔相同。
+**Independent Test**: 整合測試匯入官方單題範本、兩組作答、結束、匯出，讀回產出檔確認每個答案都落在依 `expected.json` 與原檔 merge range 判定的正確答案格，且填空格以外的內容與原檔相同。
 
 ### Tests for User Story 1 ⚠️ 先寫、先失敗
 
-- [x] T008 [P] [US1] 寫 `server/tests/integration/exportCommands.test.ts` 的匯出內容案例（以 002 的 helpers 匯入 fixture、以 003 的 helpers 讓組別作答並結束）：(a) 單題搶答成功的答案寫入該題填空格（AC-004-01）；(b) 無人作答的題目填空格維持原內容（AC-004-02）；(c) 匯出檔除填空格外，文字內容、合併範圍、欄寬、列高、框線、字型、對齊與原檔相同（AC-004-03、FR-003、SC-002）；(d) 版面不同的 5 份 fixture（01～05）每個答案都落在 `expected.json` 所列位置，沒有寫到其他儲存格（AC-004-04、SC-001）；(e) 同一場活動匯出兩次，內容相同（AC-004-07、FR-008）；(f) 匯出後資料庫的 `guided_notes.file` BLOB 與 `submissions`、`questions`、`blanks` 完全未變（FR-008）；(g) 檔名為「搶答結果_日期時間.xlsx」（FR-007）；(h) 該題的作答被老師作廢且該組未再送出 → 該題填空格維持原內容（AC-004-16、003 D24）；(i) **量測匯出耗時**：以最多 50 組 × 30 題的作答規模，從呼叫匯出到取得完整位元組在 **5 秒內**完成（SC-003）
+- [x] T008 [P] [US1] 寫 `server/tests/integration/exportCommands.test.ts` 的匯出內容案例（以 002 的 helpers 匯入 fixture、以 003 的 helpers 讓組別作答並結束）：(a) 單題搶答成功的答案寫入該題填空格（AC-004-01）；(b) 無人作答的題目填空格維持原內容（AC-004-02）；(c) 匯出檔除填空格外，文字內容、合併範圍、欄寬、列高、框線、字型、對齊與原檔相同（AC-004-03、FR-003、SC-002）；(d) 版面不同的 5 份 fixture（01～05）每個答案都落在依 `expected.json` 與原檔 merge range 判定的正確位置，沒有寫到其他儲存格（AC-004-04、SC-001；2026-11-16 修訂）；(e) 同一場活動匯出兩次，內容相同（AC-004-07、FR-008）；(f) 匯出後資料庫的 `guided_notes.file` BLOB 與 `submissions`、`questions`、`blanks` 完全未變（FR-008）；(g) 檔名為「搶答結果_日期時間.xlsx」（FR-007）；(h) 該題的作答被老師作廢且該組未再送出 → 該題填空格維持原內容（AC-004-16、003 D24）；(i) **量測匯出耗時**：以最多 50 組 × 30 題的作答規模，從呼叫匯出到取得完整位元組在 **5 秒內**完成（SC-003）
 
 ### Implementation for User Story 1
 
-- [x] T009 [P] [US1] 新增 `server/src/app/guidedNotesExporter.ts` 的 `buildBlankContent()`：輸入該題的搶答成功答案陣列與該題各空格的 `prefix`，回傳每個空格的寫入內容——「前綴＋答案」；該題無人作答時回傳 `null` 表示不寫入、保持原內容（FR-004、FR-005、AC-004-08、research R5）。前綴是 cell 文字的一部分，不是獨立欄位
-- [x] T010 [US1] 在 `server/src/app/exportCommands.ts` 實作 `exportGuidedNotes(database, now)`：取原檔（`getStoredGuidedNotes()` 回傳的 `file` 位元組與 `sheetName`）、取每題的搶答成功組別與答案（沿用 003 的 `buildResults`／`answerRanks.decideWinner`，**只取有效作答**）、逐空格用 T009 的結果呼叫 T004 的 `replaceCellText()`、回傳 `{ fileName, bytes, contentType }`（FR-001、FR-002、FR-008；research R2）
+- [x] T009 [P] [US1] 新增 `server/src/app/guidedNotesExporter.ts` 的 `buildBlankWrites()`：輸入該題的搶答成功答案陣列與該題各空格的定位／結構資訊，回傳每個空格的最終寫入位置與內容；該題無人作答時回傳 `null` 表示不寫入、保持原內容（FR-004、FR-005、AC-004-08、research R5，2026-11-16 修訂）。前綴格與答案格分離時答案只寫右側獨立格；前綴位於合併填答區時保留「前綴＋答案」
+- [x] T010 [US1] 在 `server/src/app/exportCommands.ts` 實作 `exportGuidedNotes(database, now)`：取原檔（`getStoredGuidedNotes()` 回傳的 `file` 位元組與 `sheetName`）、一次讀取原工作表 XML 的 merge range 供 T009 判定題組版面、取每題的搶答成功組別與答案（沿用 003 的 `buildResults`／`answerRanks.decideWinner`，**只取有效作答**）、逐空格用 T009 的結果呼叫 T004 的 `replaceCellText()`、回傳 `{ fileName, bytes, contentType }`（FR-001、FR-002、FR-008；research R2／R5，2026-11-16 修訂）
 - [x] T011 [US1] 在 `server/src/infra/http/exportRoutes.ts` 完成 `/api/export/guided-notes` 的成功回應：200 + xlsx 的 `Content-Type` + `Content-Disposition` + 檔案位元組（contracts/http-api.md）
 - [x] T012 [US1] 在 `web/src/features/teacher/TeacherPage.tsx` 加「匯出 Guided Notes」按鈕：只在老師身分且 `phase === 'closed'` 時顯示；點擊後透過 `web/src/lib/api.ts` 帶 token 下載檔案（瀏覽器下載，不開新視窗）；失敗時顯示伺服器的中文訊息。按鈕樣式只引用 `tokens.css` 的變數，不做視覺定稿（原則 IX）
 - [x] T013 [US1] 寫 `e2e/tests/004-export.spec.ts`：老師匯入 fixture → 兩組作答 → 結束 → 按匯出 → 攔截下載並驗證檔案內容（答案位置正確、其他儲存格未變）；學生身分看不到匯出按鈕（AC-004-01、02、03、06；FR-016）
@@ -86,20 +86,20 @@ description: "Task list for 004 匯出結果（export）"
 
 ---
 
-## Phase 4: User Story 2 - 題組答案保留前綴（Priority: P2）
+## Phase 4: User Story 2 - 題組答案依原版面寫入正確填答格（Priority: P2）
 
-**Goal**: 匯出時，題組的每個填空格是「（1）答案」「（2）答案」，而非只有答案。
+**Goal**: 匯出時，02 這類左右分離的題組保持前綴格、答案寫右側獨立格；04 這類前綴位於合併填答區的題組維持原結構，不盲目右移。
 
-**Independent Test**: 匯入官方題組範本，某組搶答成功後匯出，確認兩個填空格分別是「（1）＋答案」與「（2）＋答案」；該題無人作答時維持原前綴。
+**Independent Test**: 匯入官方題組範本與 mixed fixture，某組搶答成功後匯出，確認 02 的前綴格不變且右側是答案、04 的合併填答區保留前綴並含答案；該題無人作答時維持原前綴與原內容。
 
 ### Tests for User Story 2 ⚠️ 先寫、先失敗
 
-- [x] T014 [P] [US2] 寫 `server/tests/integration/exportCommands.test.ts` 的題組案例（以 `fixtures/guided-notes/02-official-group.xlsx`）：(a) 第 1 題搶答成功時，兩個填空格分別是「（1）CPU」「（2）作業系統」（AC-004-08、FR-005）；(b) 該題無人作答時，兩個填空格維持原前綴「（1）」「（2）」（AC-004-09）；(c) 前綴與答案在同一個儲存格內、不是寫進兩個儲存格（research R5）；(d) 前綴為空字串的單題只寫答案，不多寫任何符號（AC-004-01）
+- [x] T014 [P] [US2] 寫 `server/tests/integration/exportCommands.test.ts` 的題組案例：(a) `02-official-group.xlsx` 第 1 題搶答成功時，G5／G6 保持「（1）」「（2）」，H5／H6 分別是「CPU」「作業系統」（AC-004-08、FR-005，2026-11-16 修訂）；(b) 該題無人作答時，前綴與獨立答案格維持原檔（AC-004-09）；(c) `04-mixed-groups.xlsx` 前綴位於合併填答區時，答案落在原合併格而非右移（research R5）；(d) 前綴為空字串的單題只寫答案，不多寫任何符號（AC-004-01）
 
 ### Implementation for User Story 2
 
-- [x] T015 [US2] 在 `server/src/app/guidedNotesExporter.ts` 補上前綴的邊界處理：單題空格 `prefix` 為空字串時只寫答案；題組空格 `prefix` 為「（1）」這類文字時寫「前綴＋答案」；前綴以 002 存入 `blanks.prefix` 的值為準，不重新解析原檔、不寫死（FR-005、principle V；research R5）
-- [x] T016 [US2] 在 `server/tests/unit/guidedNotesExporter.test.ts` 補單元案例：`buildBlankContent()` 在前綴為空、有前綴、該題無人作答（回傳 `null`）三種情況的輸出；答案本身以 `=` 開頭時輸出仍是「前綴＋=開頭的答案」的純文字（FR-006、FR-014）
+- [x] T015 [US2] 在 `server/src/app/guidedNotesExporter.ts` 補上前綴與 merge range 的邊界處理：單題空格 `prefix` 為空字串時只寫答案；題組前綴格與右側獨立答案格分離時，保持前綴格、答案右移；前綴位於合併填答區時在該格保留「前綴＋答案」。前綴與定位以 002 存入的 `blanks.prefix`／`blanks.cell` 為起點，merge range 由原檔 XML 判定，不寫死（FR-005、principle V；research R5，2026-11-16 修訂）
+- [x] T016 [US2] 在 `server/tests/unit/guidedNotesExporter.test.ts` 補單元案例：`buildBlankWrites()` 在前綴為空、前綴與答案格分離、前綴位於合併填答區、該題無人作答（回傳 `null`）四種情況的輸出；答案本身以 `=` 開頭時仍輸出原始純文字（FR-006、FR-014）
 
 **Checkpoint**: US1 與 US2 都可獨立驗收；題組匯出保留前綴。
 
@@ -114,12 +114,12 @@ description: "Task list for 004 匯出結果（export）"
 ### Tests for User Story 3 ⚠️ 先寫、先失敗
 
 - [x] T017 [P] [US3] 寫 `server/tests/unit/csvBuilder.test.ts`：(a) 欄位名稱列依序為 `題號,空格序,組別,答案,順位,是否搶答成功,送出時間`（FR-010、D13）；(b) 一筆作答的每個空格各一列（FR-011）；(c) 排序為題號 → 順位 → 空格序（FR-011）；(d) 內容含逗號時用雙引號包住、含雙引號時雙引號加倍、含換行時用雙引號包住（FR-013、AC-004-13）；(e) 內容以 `=`、`+`、`-`、`@` 開頭時前面加單引號（FR-014、AC-004-14）；(f) 檔案開頭是 UTF-8 BOM（FR-012、AC-004-12）；(g) 空資料時只有欄位名稱列（AC-004-15）；(h) 「是否搶答成功」為「是」或「否」
-- [x] T018 [P] [US3] 寫 `server/tests/integration/exportCommands.test.ts` 的 CSV 案例：(a) 匯出內容與老師看板的每題每組答案、順位、搶答成功標示完全一致（AC-004-11、FR-015、SC-004）；(b) 被作廢的作答不產生任何列（AC-004-17、FR-009、003 D24）；(c) 沒有任何有效作答時只有欄位名稱列（AC-004-15）；(d) CSV 的「空格序」與 002 匯入時存入 `blanks.position` 的順序一致（兩者是不同的來源，必須對齊）；(e) CSV 的「送出時間」輸出為 ISO 8601 字串（含時區與毫秒，例如 `2026-11-14T09:30:00.123Z`），可直接對照 `submissions.received_at`
+- [x] T018 [P] [US3] 寫 `server/tests/integration/exportCommands.test.ts` 的 CSV 案例：(a) 匯出內容與老師看板的每題每組答案、順位、搶答成功標示完全一致（AC-004-11、FR-015、SC-004）；(b) 被作廢的作答不產生任何列（AC-004-17、FR-009、003 D24）；(c) 沒有任何有效作答時只有欄位名稱列（AC-004-15）；(d) CSV 的「空格序」與 002 匯入時存入 `blanks.position` 的順序一致（兩者是不同的來源，必須對齊）；(e) CSV 的「送出時間」由 `submissions.received_at` UTC 原值轉為伺服器本地 `YYYY-MM-DD HH:mm:ss.SSS`，無 `Z` 或時區後綴，並驗證跨日與毫秒（2026-11-16 修訂）
 
 ### Implementation for User Story 3
 
 - [x] T019 [P] [US3] 在 `server/src/infra/db/answerRepo.ts` 新增 `listValidSubmissionsWithAnswers()`：回傳所有**有效**作答（`voided_at IS NULL`）連同每個空格的答案、組別名稱、順位與送出時間，依題號 → 順位 → 空格序排序；**不得**包含已作廢的作答（FR-009、FR-011；003 D24）
-- [x] T020 [US3] 新增 `server/src/app/csvBuilder.ts`：`ResultRow` 型別（題號、空格序、組別、答案、順位、是否搶答成功、送出時間）、`escapeCsvField()`（逗號／引號／換行）、`safeFormulaGuard()`（`=`、`+`、`-`、`@` 開頭加前導單引號）、`buildCsv()`（欄位名稱列＋資料列＋UTF-8 BOM）；「送出時間」輸出為 ISO 8601 字串（`submissions.received_at` 已是 ISO 格式，直接輸出即可）（FR-010～FR-014；contracts/http-api.md「轉義規則」）
+- [x] T020 [US3] 新增 `server/src/app/csvBuilder.ts`：`ResultRow` 型別（題號、空格序、組別、答案、順位、是否搶答成功、送出時間）、`escapeCsvField()`（逗號／引號／換行）、`safeFormulaGuard()`（`=`、`+`、`-`、`@` 開頭加前導單引號）、`buildCsv()`（欄位名稱列＋資料列＋UTF-8 BOM）；「送出時間」由 `submissions.received_at` UTC 原值轉為本地 `YYYY-MM-DD HH:mm:ss.SSS`（2026-11-16 修訂）（FR-010～FR-014；contracts/http-api.md「轉義規則」）
 - [x] T021 [US3] 在 `server/src/app/exportCommands.ts` 實作 `exportResultCsv(database, now)`：呼叫 T019 取得有效作答、呼叫 T020 組裝 CSV、回傳 `{ fileName, bytes, contentType }`（FR-009、FR-015）
 - [x] T022 [US3] 在 `server/src/infra/http/exportRoutes.ts` 完成 `/api/export/results.csv` 的成功回應：200 + `text/csv; charset=utf-8` + `Content-Disposition` + 含 BOM 的位元組（contracts/http-api.md）
 - [x] T023 [US3] 在 `web/src/features/teacher/TeacherPage.tsx` 加「匯出 CSV」按鈕：只在老師身分且 `phase === 'closed'` 時顯示；點擊後帶 token 下載；失敗時顯示伺服器的中文訊息（原則 IX）
@@ -164,7 +164,7 @@ description: "Task list for 004 匯出結果（export）"
 ### Within Each User Story
 
 - 測試 MUST 先寫並確認失敗，再實作
-- 純函式（`buildBlankContent()`、`buildCsv()`）before 端點
+- 純函式（`buildBlankWrites()`、`buildCsv()`）before 端點
 - 端點 before 前端按鈕
 - 核心實作 before 整合測試
 

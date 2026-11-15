@@ -48,9 +48,9 @@
 
 **結論**：除目標 sheet 外，其餘 zip entry **byte-identical**（`+xl/`、`+xl/worksheets/` 只是 zip 目錄項，無內容差異）；目標 cell 的樣式索引 `s=` 保留，因此框線、字型、對齊、欄寬、列高、合併範圍全部原封不動。
 
-## R2：目標 cell 的定位資訊（不需重新解析檔案）
+## R2：目標 cell 的定位資訊（002 定位＋原檔 merge range）
 
-**Decision**: 直接使用 002 匯入時已存進資料庫的 `guided_notes.sheet_name` 與 `blanks.cell`；**不重新解析原檔**。
+**Decision**: 以 002 匯入時已存進資料庫的 `guided_notes.sheet_name` 與 `blanks.cell` 定位，不重新猜測題目／作答欄；但 2026-11-16 修訂後，前綴非空時必須額外讀取原檔工作表的 merge range，才能判定右側是否存在獨立答案格（見 R5）。
 
 **Rationale**:
 - `server/src/infra/db/questionRepo.ts` 的 `getStoredGuidedNotes(database)` 回傳含 `file: Uint8Array`（原檔 BLOB）、`sheetName`、`sourceKind`、`fileName`。
@@ -71,14 +71,15 @@
 
 **Rationale**（主控複驗時親自踩到）：02 題組的前綴 cell 原本是 `<c r="G5" s="15" t="s"><v>5</v></c>`，若直接補屬性會變成 `t="s" ... t="inlineStr"`，產生**重複屬性**，XML 不合法，`exceljs` 讀回時直接拋 `duplicate attribute: t`，檔案打不開。這個陷阱在空殼 cell（`<c r="G5" s="15"/>`）不會發生，只在原本有內容的 cell 發生，因此**必須兩種型態都測**。
 
-## R5：前綴是 cell 文字的一部分，不是獨立欄位
+## R5：前綴格與答案格是否分離，必須依原檔 merge range 判定（2026-11-16 修訂）
 
-**Decision**: 匯出時寫入的內容是「前綴 + 答案」組成的**單一儲存格文字**。
+**Decision**: 匯出時不能把所有題組一律寫成同一格，也不能把有前綴的格子一律右移。以 `blanks.cell` 定位後，再讀原檔的 `<mergeCell>`：若前綴格沒有與右側合併（02 的 G5／H5），前綴格保持原樣、答案只寫右側獨立格；若前綴已在合併填答區內（04 的 `G7:I7`），此合併格就是答案格，維持原前綴並寫入答案。單題仍使用原 `blanks.cell`。
 
 **Rationale**:
-- 002 的 `guidedNotesParser.ts` 以 `BLANK_PREFIX_PATTERN.exec(text)?.[0]` 從 cell 文字切出前綴，證實前綴本來就在 cell 裡。
-- 實測原檔 XML：02 的 `G5` 是 `<c r="G5" s="15" t="s"><v>5</v></c>`（sharedString 內容為「（1）」）；04 的 `G7` 是 `<is><t>（1）</t></is>`。兩者都是「文字含前綴」。
-- 主控複驗：寫入 `（1）CPU` 後讀回為字串 `"（1）CPU"`。
+- 人工驗證（2026-11-15 A）發現 02 的「（1）」與作答格是左右分開的兩格；兩組在 2026-11-16 同意按原檔結構修正，不把「前綴＋答案」擠進分離的前綴格。
+- 002 的 `guidedNotesParser.ts` 以 `BLANK_PREFIX_PATTERN.exec(text)?.[0]` 從 cell 文字切出前綴；`blanks.cell` 是定位起點，但**不是**在每一種版面都等價於最後寫答案的格。
+- 主控回歸比對 5 份 fixture 時發現 04 的 `G7:I7` 是合併格；若只依「有前綴就右移」會錯寫 H7。最終規則以 XML 的 merge range 判定，沒有寫死 `G→H`。
+- 單元／整合測試同時覆蓋：02 的 G5 保持「（1）」、H5 寫答案；04 的 G7 寫「（1）答案」；單題 G5 寫答案。
 
 ## R6：答案必須是純文字，不得被當成公式
 

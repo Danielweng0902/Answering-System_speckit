@@ -13,14 +13,25 @@
 
 完整 run 原始 log 暫存於本機 `/private/var/folders/k5/vlsbp10n1fxcsjwj3hfl1jy40000gp/T/opencode/004-polish/`；上表已直接抄錄測試數量與錯誤摘要。Audit 修正若要動依賴主版本，需另開維護工作並另跑一次全回歸，不能冒充已完成。
 
+## 2026-11-16 人工驗證修正後回歸
+
+| 指令 | 結果 | 本次重點 |
+|---|---|---|
+| 針對性 server regression | PASS | 34 tests 全過：題組答案格與 merge range（`guidedNotesExporter`、`xlsxEditor`）、匯出指令與 HTTP 路由、本地時間格式化 |
+| `npm test` | PASS | server：41 files／**340 tests** 全過；web：15 files／81 tests 全過 |
+| `npm run check` | PASS | shared／server／web／e2e typecheck、ESLint、`scripts/check-diagrams.sh`（3 張 004 圖已重出 PNG）全過 |
+| `npm run test:e2e` | PASS | Playwright 16 tests：**14 passed、2 skipped**；skipped 仍是需 `SCREENSHOTS=1` 的 002／003 截圖測試 |
+
+本輪沒有改相依，因此未重跑 `npm audit`；上表 2026-11-14 的 7 筆開發鍊 moderate findings 狀態不變，不可冒充已修正。
+
 ## Success Criteria 對照
 
 | 驗收 | 負責的自動測試 | 結果／限制 |
 |---|---|---|
-| SC-001：5 份 fixture 答案 100% 落在 expected.json 空格 | `server/tests/integration/exportCommands.test.ts`「五種版面所有空格都寫在 expected.json 位置」，實際重新解析匯出的 xlsx 並逐題逐格檢查；另有 E2E 讀回 `G5` | PASS，5 份共 36 空格皆有覆蓋 |
+| SC-001：5 份 fixture 答案 100% 落在正確結構答案格 | `server/tests/integration/exportCommands.test.ts` 重新解析匯出的 xlsx 並逐題逐格檢查：02 前綴格保留、答案寫 H 欄獨立格；04 寫原合併填答區；單題寫原 `blanks.cell`。`xlsxEditor.test.ts` 另驗證 merge range 判斷 | PASS，5 份共 36 空格皆有覆蓋；另有 E2E 讀回單題 `G5` |
 | SC-002：格式與未修改內容保留 | `server/tests/unit/xlsxEditor.test.ts` 驗證樣式保留與其他**解壓縮 zip entry 內容** byte-identical；整合測試驗證 05 只有 `xl/worksheets/sheet2.xml` 改動；`exportRoutes` 驗證資料庫不變 | PASS（結構與位元組層驗證） |
 | SC-003：5 秒內 | `exportCommands.test.ts` 直接以 **50 組 × 30 題** 建立 1,500 筆有效作答，以 `performance.now()` 檢查 `exportGuidedNotes()` 回傳完整位元組小於 5 秒 | PASS；實際 E2E 下載流程另由 004 測試涵蓋 |
-| SC-004：CSV 與看板一致 | `exportCommands.test.ts` 檢查兩組所有有效答案／rank／勝出旗標／空格序／ISO 時間與作廢排除；`csvBuilder.test.ts` 檢查排序與轉義；HTTP 與 E2E 再驗證 BOM、header 和真實下載 | PASS；看板內容與匯出共用 003 `listByQuestion()`／`buildResults()`，沒有另一套 winner 邏輯 |
+| SC-004：CSV 與看板一致 | `exportCommands.test.ts` 檢查兩組所有有效答案／rank／勝出旗標／空格序與作廢排除；`formatLocalTimestamp()` 另以 Asia/Taipei 驗證跨日、毫秒與無時區後綴；`csvBuilder.test.ts` 檢查排序與轉義；HTTP 與 E2E 再驗證 BOM、header 和真實下載 | PASS；看板內容與匯出共用 003 `listByQuestion()`／`buildResults()`，沒有另一套 winner 邏輯 |
 | SC-005：可匯回 Google Sheets 並保版面 | **不由自動測試取代** | **待人工／設計驗證**，對應 `quickstart.md` 與 T030／T031；本表不冒稱已驗證 |
 
 ## 唯讀與安全案例

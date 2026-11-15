@@ -43,4 +43,11 @@
 
 新增 regression 之後再次執行：`npm test`（server 334/334、web 81/81）、`npm run test:e2e`（14 passed、2 skipped）與 `npm run check` 均通過。這只是檔名時區修正，沒有改資料內容、權限或欄位結構。T027b 是否完整通過仍待同位 reviewer 在最終 diff 上重新確認。
 
-結論：T027 完成。**沒有發現未處理的 Medium／High 安全議題留在本次修正範圍。** 這不包括 T027b 人工 peer review、T030 設計截圖或 T031 的完整 quickstart／Google Sheets 匯回驗收；那些仍待完成。
+## 2026-11-16 行為修正後的安全／邊界複查
+
+- `getWorksheetXml()` 只讀取已授權活動的原檔 BLOB 內含工作表 XML；不新增外部請求、不寫 DB、不改 token／log 內容。
+- `isMergedWithRightCell()` 只解析 `<mergeCell ref>` 用於定位；`setCellText()` 的既有 XML escape、禁用控制字元編碼與 formula-free inline string 行為不變。
+- CSV 的 formula guard **依組員決議保留**，此次沒有為了看不到 `'` 而降低 FR-014 防護。新增的 `formatLocalTimestamp()` 只轉換 `received_at` 字串顯示，不改資料庫 UTC 原值，也不影響排序／winner 判定。
+- 50 組 × 30 題效能與不變量測試仍在全回歸通過：server 41 files／340 tests、web 15 files／81 tests；E2E 14 passed／2 skipped；typecheck、lint、PlantUML 檢查均通過。
+
+結論：T027 完成。**沒有發現未處理的 Medium／High 安全議題留在本次修正範圍。** 這次 A（題組答案格）與 B（CSV 本地時間）的程式修正已以自動 regression 覆核；T027b 最終 diff review 與 T031 修正版人工複測仍待完成。

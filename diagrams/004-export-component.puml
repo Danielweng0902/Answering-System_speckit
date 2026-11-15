@@ -27,8 +27,8 @@ Csv --> Gateway : CSV 檔
 Gateway --> TeacherUI : 下載檔案
 
 note right of Writer
-  只改填空格；
-  位置來自匯入時的紀錄，
+  只改正確答案格；
+  位置來自匯入紀錄與原檔 merge range；
   不使用固定儲存格位置
 end note
 @enduml
