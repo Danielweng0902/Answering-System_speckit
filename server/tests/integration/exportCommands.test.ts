@@ -7,6 +7,7 @@ import JSZip from 'jszip';
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 import {
+  buildExportFileName,
   exportGuidedNotes,
   exportResultCsv,
 } from '../../src/app/exportCommands.js';
@@ -193,7 +194,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
 
       expect(output.getCell('G5').text).toBe('直接寫入的答案');
       expect(output.getCell('G7').text).toBe('');
-      expect(file.fileName).toBe('搶答結果_20261114_0908.xlsx');
+      expect(file.fileName).toBe(buildExportFileName(NOW, 'xlsx'));
       expect(file.contentType).toBe(XLSX_TYPE);
     });
   });
@@ -349,7 +350,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
         `3,1,第二組,單題答案,1,是,${questionThreeTime}`,
       ]);
       expect(rows).toHaveLength(6);
-      expect(file.fileName).toBe('搶答結果_20261114_0908.csv');
+      expect(file.fileName).toBe(buildExportFileName(NOW, 'csv'));
       expect(file.contentType).toBe('text/csv; charset=utf-8');
       expect(databaseSnapshot(database)).toBe(before);
     });

@@ -25,20 +25,30 @@ export type ExportFile = {
   contentType: string;
 };
 
-function twoDigits(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-/** FR-007：統一使用固定命名，不沿用原檔名。 */
+/** FR-007：統一固定命名，時間取教室／伺服器的本地時區（PR review 修正）。 */
 export function buildExportFileName(
   now: Date,
   extension: 'xlsx' | 'csv',
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): string {
-  const date =
-    `${now.getUTCFullYear()}${twoDigits(now.getUTCMonth() + 1)}` +
-    twoDigits(now.getUTCDate());
-  const time = `${twoDigits(now.getUTCHours())}${twoDigits(now.getUTCMinutes())}`;
-  return `搶答結果_${date}_${time}.${extension}`;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+    .formatToParts(now)
+    .reduce<Record<string, string>>((accumulator, part) => {
+      if (part.type !== 'literal') {
+        accumulator[part.type] = part.value;
+      }
+      return accumulator;
+    }, {});
+  const date = `${parts.year}${parts.month}${parts.day}`;
+  return `搶答結果_${date}_${parts.hour}${parts.minute}.${extension}`;
 }
 
 /**

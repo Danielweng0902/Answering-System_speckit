@@ -98,11 +98,12 @@ describe('exportCommands（004 Foundational；T003）', () => {
     });
   });
 
-  it('檔名使用固定的「搶答結果_YYYYMMDD_HHmm」格式', () => {
-    const build = (extension: 'xlsx' | 'csv') =>
-      buildExportFileName(new Date('2026-11-14T09:08:07.123Z'), extension);
-
-    expect(build('xlsx')).toBe('搶答結果_20261114_0908.xlsx');
-    expect(build('csv')).toBe('搶答結果_20261114_0908.csv');
+  it('檔名使用「搶答結果_YYYYMMDD_HHmm」，按伺服器本地時區產生（PR review）', () => {
+    expect(
+      buildExportFileName(new Date('2026-11-14T15:00:00.123Z'), 'xlsx', 'Asia/Taipei'),
+    ).toBe('搶答結果_20261114_2300.xlsx');
+    expect(
+      buildExportFileName(new Date('2026-11-14T23:00:30.000Z'), 'csv', 'Asia/Taipei'),
+    ).toBe('搶答結果_20261115_0700.csv');
   });
 });
