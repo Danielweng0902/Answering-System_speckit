@@ -32,4 +32,15 @@
 | `npm run test:e2e` | **14 passed、2 skipped**；skipped 為既有需 `SCREENSHOTS=1` 的 002／003 截圖測試 |
 | `npm run check` | shared／server／web／e2e typecheck、ESLint、`scripts/check-diagrams.sh` 全過，最後顯示 `PASS 圖表檢查通過` |
 
+## T027b 後續修正（2026-11-15）
+
+非實作者指出 `buildExportFileName()` 使用 `getUTC*`，使檔案名稱比台灣本地時間早 8 小時，早上 8 點前的日期也會落到前一天。主代理接受這項 finding：FR-007 未要求 UTC，在教室使用上本地時間比 UTC 更容易辨識。
+
+修正：`buildExportFileName()` 改用 `Intl.DateTimeFormat` 與伺服器預設 IANA time zone 取本地年月日／時分，測試用 `Asia/Taipei` 固定驗證：
+
+- `2026-11-14T15:00:00Z` → 檔名 `搶答結果_20261114_2300.xlsx`
+- `2026-11-14T23:00:30Z` → 檔名 `搶答結果_20261115_0700.csv`
+
+新增 regression 之後再次執行：`npm test`（server 334/334、web 81/81）、`npm run test:e2e`（14 passed、2 skipped）與 `npm run check` 均通過。這只是檔名時區修正，沒有改資料內容、權限或欄位結構。T027b 是否完整通過仍待同位 reviewer 在最終 diff 上重新確認。
+
 結論：T027 完成。**沒有發現未處理的 Medium／High 安全議題留在本次修正範圍。** 這不包括 T027b 人工 peer review、T030 設計截圖或 T031 的完整 quickstart／Google Sheets 匯回驗收；那些仍待完成。
