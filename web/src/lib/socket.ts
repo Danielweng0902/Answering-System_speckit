@@ -35,13 +35,15 @@ export function getSocket(): Socket {
  */
 export function connectSocket(
   token?: string | null,
-  view: SocketView = 'normal',
+  view?: SocketView,
 ): Socket {
   const nextToken = token === undefined ? getToken() : token;
+  // 不指定檢視模式時沿用目前模式：投影頁登入後仍維持投影快照（005）。
+  const nextView = view ?? currentView;
 
-  if (nextToken !== currentToken || view !== currentView) {
+  if (nextToken !== currentToken || nextView !== currentView) {
     currentToken = nextToken;
-    currentView = view;
+    currentView = nextView;
     socket.disconnect();
     socket.connect();
     connectRequested = true;

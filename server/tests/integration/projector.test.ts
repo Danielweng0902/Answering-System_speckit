@@ -48,8 +48,8 @@ async function startFixture(): Promise<Fixture> {
   const projector = target.connect({
     token: teacherToken,
     autoConnect: false,
+    view: 'projector',
   });
-  (projector.io.opts.auth as { view?: string }).view = 'projector';
   const projectorInitial = waitForState(projector);
   projector.connect();
   await projectorInitial;
@@ -153,8 +153,11 @@ describe('005 投影看板（US3；T023）', () => {
       role: 'student',
       groupId: 'group-1',
     });
-    const socket = target.connect({ token: studentToken, autoConnect: false });
-    (socket.io.opts.auth as { view?: string }).view = 'projector';
+    const socket = target.connect({
+      token: studentToken,
+      autoConnect: false,
+      view: 'projector',
+    });
     const initial = waitForState(socket);
     socket.connect();
     const state = await initial;

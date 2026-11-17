@@ -4,38 +4,47 @@ title 005 公平順位與投影看板：組件圖（概念層）
 
 actor 老師
 component "老師端畫面" as TeacherUI
-component "投影看板畫面" as Projector
+component "投影看板畫面\n(/projector)" as Projector
 
 package "搶答系統（伺服器）" {
   component "活動設定\n(Activity Settings)" as Settings
-  component "順位判定（003）" as Rank
-  component "公平順位規則\n(Fair Ranking Rule)" as Fair
-  component "題目判定排程\n(Settlement Scheduler)" as Sched
-  component "投影內容產生\n(Projector View Builder)" as PV
-  component "揭曉進度\n(Reveal Progress)" as Reveal
+  component "順位規則\n(RankingRule)" as Rank
+  component "公平順位規則\n(fairnessRule)" as Fair
+  component "判定計算\n(settleAll，衍生不保存)" as Settle
+  component "判定完成提醒\n(fairnessSettler)" as Sched
+  component "投影快照產生\n(createProjectorSnapshot)" as PV
+  component "揭曉指令\n(reveal:next / reveal:all)" as Reveal
   component "結果彙整（003）" as Result
+  component "CSV 產生（004）" as Csv
   component "狀態同步（001）" as Sync
   component "活動階段管理（001）" as Phase
 }
 
 老師 --> TeacherUI
-老師 --> Projector : 揭曉下一題／全部揭曉
+老師 --> Projector : 登入後開啟；揭曉下一題／全部揭曉
 TeacherUI --> Settings : 啟用／不啟用公平順位（僅準備中）
-Settings --> Rank : 選擇判定規則
+Settings --> Rank : 選擇順位規則（arrivalRule / fairnessRule）
 Rank --> Fair : 啟用時使用
-Fair --> Sched : 某題第一個答案送達，3 秒後判定
-Sched --> Fair : 判定該題
-Phase --> Sched : 活動結束，立即判定未完成的題目
-Fair --> Result : 各題搶答成功
-Projector --> Reveal
+Fair --> Settle : 同一批依成功題數排序
+Settle --> Sched : 某題第一個答案送達 → 3 秒後提醒一次廣播
+Phase --> Settle : 活動結束 → 所有題目立即判定
+Settle --> Result : 各題搶答成功組別與順位
+Settle --> Csv : 「順位」欄與第 8 欄「公平順位」
 Reveal --> PV
 Result --> PV
 Phase --> PV : 階段與倒數
-PV --> Sync
+PV --> Sync : 伺服器端過濾後的投影快照
 Sync --> Projector : 搶答中不含作答資訊；\n結束後只含已揭曉的題目
 
 note bottom of PV
   搶答中：階段、倒數、各組是否在線
   已結束：已揭曉題目的結果
+  （作答資料在伺服器就沒有送出，不是前端隱藏）
+end note
+
+note bottom of Settle
+  判定不保存：只依已保存的送達資料推導
+  老師作廢成功組 → 該題與後面已判定的題目
+  依新的成功題數一併重算（D25）
 end note
 @enduml

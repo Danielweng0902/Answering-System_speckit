@@ -131,6 +131,8 @@ describe('005 投影看板頁面（US3；T024）', () => {
     );
 
     expect(screen.getByRole('status').textContent).toContain('老師身分');
-    expect(screen.getByRole('link', { name: '前往老師端登入' })).toBeDefined();
+    expect(screen.getByRole('link', { name: '前往老師端' })).toBeDefined();
+    // 投影頁也可直接登入，不必切到老師端。
+    expect(screen.getByRole('region', { name: '老師登入' })).toBeDefined();
   });
 });

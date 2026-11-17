@@ -1,6 +1,7 @@
 import type { Phase, ProjectorSnapshot, Snapshot } from '@classroom/shared';
 import { Link } from 'react-router';
 import { Countdown } from '../shared/Countdown';
+import { TeacherLogin } from '../teacher/TeacherLogin';
 import styles from './ProjectorPage.module.css';
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -41,9 +42,12 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
         <p className={styles.hint} role="status">
           請先以老師身分登入，才能使用投影看板。
         </p>
-        <Link className={styles.link} to="/teacher">
-          前往老師端登入
-        </Link>
+        <TeacherLogin />
+        <p className={styles.hint}>
+          <Link className={styles.link} to="/teacher">
+            前往老師端
+          </Link>
+        </p>
       </section>
     );
   }

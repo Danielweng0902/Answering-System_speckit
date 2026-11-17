@@ -77,6 +77,8 @@ export function seedQuestion(database: DatabaseSync): void {
 export type TestClientOptions = {
   token?: string;
   autoConnect?: boolean;
+  /** 005：投影檢視模式；伺服器改送不含作答資訊的投影快照。 */
+  view?: 'projector';
 };
 
 export type TestServerOptions = Omit<
@@ -143,10 +145,14 @@ export async function startTestServer(
     dataDir,
     connect(clientOptions: TestClientOptions = {}): Socket {
       const client = createSocketIOClient(server.url, {
-        auth:
-          clientOptions.token === undefined
+        auth: {
+          ...(clientOptions.token === undefined
             ? {}
-            : { token: clientOptions.token },
+            : { token: clientOptions.token }),
+          ...(clientOptions.view === undefined
+            ? {}
+            : { view: clientOptions.view }),
+        },
         autoConnect: clientOptions.autoConnect ?? true,
         forceNew: true,
         reconnection: false,
