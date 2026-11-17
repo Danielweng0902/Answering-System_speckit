@@ -2,6 +2,30 @@
 
 ## 前置
 
+### 一次性設定：Google 服務帳號（老師做一次）
+
+寫回需要對那份線上試算表有**編輯權限**；「知道連結者可檢視」只能讀、不能寫。
+
+1. **建立專案**：開 <https://console.cloud.google.com/> → 新增專案（例如 `classroom-quiz`）。
+2. **啟用 API**：APIs & Services → Library → 搜尋 `Google Sheets API` → Enable。
+3. **建立服務帳號**：IAM & Admin → Service Accounts → Create service account
+   （名稱例如 `classroom-quiz-bot`）。**角色可以留空**——對試算表的權限來自檔案的「共用」，不是專案 IAM 角色。
+4. **建立金鑰**：服務帳號 → Keys → Add key → Create new key → 選 JSON → 下載。
+   這個 JSON 檔等同密碼，**不要丟到群組、issue 或版本控制**。
+5. **填 `.env`**（把 JSON 裡的 `client_email` 與 `private_key` 填進去；`private_key` 貼成單行、把換行寫成 `\n`）：
+
+   ```bash
+   GOOGLE_SERVICE_ACCOUNT_EMAIL=classroom-quiz-bot@classroom-quiz.iam.gserviceaccount.com
+   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBg...\n-----END PRIVATE KEY-----\n"
+   ```
+
+6. **把試算表共用給服務帳號**：開那份線上試算表 → 右上角「共用」→ 加入上面那個信箱 → 權限選「**編輯者**」。
+   （讀取仍建議保留「知道連結者可檢視」，匯入流程會用到。）
+
+> 常見問題：若「共用」時跳出「無法新增共用者」，多半是試算表還在別人的「共用雲端硬碟」→ 先用「移至我的雲端硬碟」再共用一次。
+
+### 每次測試前
+
 - `.env` 已有服務帳號設定（**只放本機、不進版控**）：
 
   ```
