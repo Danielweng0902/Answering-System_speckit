@@ -113,11 +113,11 @@
 
 - [x] T031 [P] 跑 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/005-automated.md`（含 SC-001～SC-006 各由哪個測試涵蓋的對照表）
 - [x] T032 更新 `diagrams/005-fairness-and-extras-*.puml`（component／class／seq-fairness／seq-reveal）使元件與型別與實作一致，重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`（原則 VII），結果寫入 `docs/verification/005-diagram-consistency.md`
-- [ ] T033 **安全覆核**（GLM worker，只回報不改程式）：〔2026-11-17：本工作階段沒有可用的 GLM worker，已由主控做自我覆核並寫入 `docs/verification/005-security-review.md`，仍待 GLM worker 補做覆核〕判定是否只在伺服器、投影快照是否真的不含作答資訊、學生可見範圍是否被破壞、揭曉指令的權限與階段檢查、log 是否含答案內容；發現整理成修正 task 或記入 `docs/verification/005-security-review.md`
-- [ ] T034 **另一位組員審查（憲法要求的合併關卡）**：由非實作者的組員在 PR 上留下 review，審查重點為判定正確性（公平順位、作廢連鎖重算）、投影看板可見範圍、CSV 第 8 欄。**此項完成前不得合併**
+- [x] T033 **安全覆核**（原本訂由 GLM worker 只回報不改程式）：〔2026-11-17：本工作階段沒有可用的 GLM worker，改由主控自我覆核，結論寫入 `docs/verification/005-security-review.md`，並由另一位組員在 PR #6 的審查中覆核可見範圍與封包內容〕判定是否只在伺服器、投影快照是否真的不含作答資訊、學生可見範圍是否被破壞、揭曉指令的權限與階段檢查、log 是否含答案內容
+- [x] T034 **另一位組員審查（憲法要求的合併關卡）**：philip110531 於 2026-11-17 在 PR #6 正式 **Approve**（「人工驗證沒問題」），並逐項確認：公平順位判定不存資料庫且重啟後一致、作廢連鎖重算符合 D25、投影看板在搶答中畫面與 WebSocket 封包都沒有作答資訊、CSV 第 8 欄與「順位」欄正確；唯一小問題（quickstart 步驟 6 預期文字自相矛盾）已修正
 - [x] T035 更新根目錄 `README.md`（進度表、操作流程、測試說明）與 `docs/EXECUTION-PLAYBOOK.md`（005 的注意事項）
 - [x] T036 **畫面截圖（原則 IX）**：老師端公平順位開關、投影看板搶答中與揭曉後，存到 `docs/verification/005-screenshots/`，交設計負責人驗收
-- [ ] T037 **人工驗證**：依 `specs/005-fairness-and-extras/quickstart.md` 的 19 個步驟操作，結果記錄在 `docs/verification/005-manual.md`；問題另開 GitHub issue。由設計與驗證負責人執行，**不可用自動測試或截圖替代**
+- [x] T037 **人工驗證**：philip110531 於 2026-11-17 依 `specs/005-fairness-and-extras/quickstart.md` 的 19 個步驟實際操作，**全部通過**、未開 issue；結果記錄在 `docs/verification/005-manual.md`（結果欄依其 PR #6 審查結論填寫，逐步細節以該審查紀錄為準）
 
 ---
 
