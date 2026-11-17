@@ -26,6 +26,15 @@ textarea {
   font: inherit;
 }
 
+/*
+ * 表單控制項沿用設計 token 的強調色（Modern Web Guidance：accent-color
+ * 讓原生控制項與品牌一致，不用自製元件取代原生行為）。
+ */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--color-focus);
+}
+
 #root,
 .app-shell {
   min-height: var(--page-min-height);

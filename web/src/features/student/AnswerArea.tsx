@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type {
   StudentOpenAnswer,
   StudentOpenSnapshot,
@@ -15,6 +15,9 @@ import styles from './AnswerArea.module.css';
 export type AnswerAreaProps = {
   snapshot: StudentOpenSnapshot;
 };
+
+/** 答案字數上限，與伺服器驗證一致（003 FR-023：每格 1–200 字）。 */
+const MAX_ANSWER_LENGTH = 200;
 
 type AnswerStateByQuestion = Map<number, StudentOpenAnswer>;
 
@@ -62,7 +65,26 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
   const [submittingQuestion, setSubmittingQuestion] = useState<number | null>(
     null,
   );
+  const inputRefs = useRef(new Map<string, HTMLInputElement>());
   const states = answerStates(snapshot);
+
+  /** 聚焦該題第一個還沒填的欄位（送出失敗時使用）。 */
+  function focusFirstEmptyBlank(
+    question: StudentQuestion,
+    answers: readonly string[],
+  ): void {
+    const emptyIndex = answers.findIndex((answer) => answer.trim() === '');
+    if (emptyIndex < 0) {
+      return;
+    }
+    const blank = question.blanks[emptyIndex];
+    if (blank === undefined) {
+      return;
+    }
+    inputRefs.current
+      .get(`${question.number}-${blank.position}`)
+      ?.focus();
+  }
 
 
   function persistDrafts(
@@ -118,6 +140,9 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
         ...current,
         [question.number]: `每個空格都要填寫答案；尚未填寫的空格：${missingBlanks.join('、')}`,
       }));
+      // 送出失敗後把焦點移到第一個沒填的欄位，讓鍵盤與螢幕閱讀器使用者
+      // 不用自己找（Modern Web Guidance：送出失敗後聚焦第一個無效欄位）。
+      focusFirstEmptyBlank(question, draftAnswers);
       return;
     }
 
@@ -201,6 +226,23 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                       value={answers[index] ?? ''}
                       disabled={isSubmitted || isSubmitting}
                       readOnly={isSubmitted}
+                      // 答案上限與伺服器一致（003 FR-023：每格 1–200 字），
+                      // 先在輸入端擋住超長，伺服器仍會再驗一次。
+                      maxLength={MAX_ANSWER_LENGTH}
+                      // 學生的答案是簡答（多為中文），關閉拼字檢查避免紅線。
+                      spellCheck={false}
+                      ref={(element) => {
+                        if (element === null) {
+                          inputRefs.current.delete(
+                            `${question.number}-${blank.position}`,
+                          );
+                          return;
+                        }
+                        inputRefs.current.set(
+                          `${question.number}-${blank.position}`,
+                          element,
+                        );
+                      }}
                       onChange={(event) => {
                         updateAnswer(question, index, event.currentTarget.value);
                       }}

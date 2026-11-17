@@ -88,6 +88,11 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             name="enable-countdown"
             checked={countdownEnabled}
             disabled={controlsDisabled}
+            // 開／關語意（Modern Web Guidance 的 switch 模式）：原生
+            // checkbox 加 role="switch"，螢幕閱讀器會讀成「開／關」而不是
+            // 「已勾選／未勾選」；原生 switch 屬性目前只有 Safari 支援，
+            // 因此不引入 polyfill。
+            role="switch"
             onChange={(event) => {
               setCountdownEnabled(event.target.checked);
             }}
@@ -143,6 +148,8 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             name="enable-fair-ranking"
             checked={snapshot.fairRankingEnabled}
             disabled={isSending || !isPreparing}
+            // 同「設定倒數」：以 role="switch" 表達開／關語意。
+            role="switch"
             onChange={(event) => {
               void send('activity:fair-ranking', {
                 enabled: event.target.checked,
