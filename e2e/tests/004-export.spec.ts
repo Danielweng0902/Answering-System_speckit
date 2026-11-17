@@ -140,7 +140,7 @@ test('US1／US3：老師 closed 下載 Guided Notes 與 CSV，學生沒有按鈕
     const csvLines = csvBytes.subarray(3).toString('utf8').split('\r\n');
     expect(csvLines).toHaveLength(2);
     expect(csvLines[0]).toBe(
-      '題號,空格序,組別,答案,順位,是否搶答成功,送出時間',
+      '題號,空格序,組別,答案,順位,是否搶答成功,送出時間,公平順位',
     );
     expect(csvLines[1]).toContain(`1,1,${groupName},${answer},1,是,`);
   } finally {

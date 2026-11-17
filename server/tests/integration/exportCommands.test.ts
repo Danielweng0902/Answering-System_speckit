@@ -341,12 +341,12 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
       const questionThreeTime = formatLocalTimestamp('2026-11-14T09:08:10.123Z', 'Asia/Taipei');
 
       expect(rows).toEqual([
-        '題號,空格序,組別,答案,順位,是否搶答成功,送出時間',
-        `1,1,第一組,CPU,1,是,${questionOneTime}`,
-        `1,2,第一組,作業系統,1,是,${questionOneTime}`,
-        `1,1,第二組,CPU二,2,否,${questionOneTime}`,
-        `1,2,第二組,作業系統二,2,否,${questionOneTime}`,
-        `3,1,第二組,單題答案,1,是,${questionThreeTime}`,
+        '題號,空格序,組別,答案,順位,是否搶答成功,送出時間,公平順位',
+        `1,1,第一組,CPU,1,是,${questionOneTime},否`,
+        `1,2,第一組,作業系統,1,是,${questionOneTime},否`,
+        `1,1,第二組,CPU二,2,否,${questionOneTime},否`,
+        `1,2,第二組,作業系統二,2,否,${questionOneTime},否`,
+        `3,1,第二組,單題答案,1,是,${questionThreeTime},否`,
       ]);
       expect(rows).toHaveLength(6);
       expect(file.fileName).toBe(buildExportFileName(NOW, 'csv'));
@@ -363,7 +363,7 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
       closeActivity(database);
 
       const file = await exportResultCsv(database, NOW);
-      expect(csvText(file.bytes)).toBe('題號,空格序,組別,答案,順位,是否搶答成功,送出時間');
+      expect(csvText(file.bytes)).toBe('題號,空格序,組別,答案,順位,是否搶答成功,送出時間,公平順位');
     });
   });
 

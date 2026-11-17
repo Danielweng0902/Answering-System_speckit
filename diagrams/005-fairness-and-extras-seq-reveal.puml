@@ -2,35 +2,36 @@
 title 005 時序圖：投影看板與逐題揭曉
 
 actor 老師
-participant "投影看板畫面" as P
-participant "投影內容產生" as V
-participant "揭曉進度" as R
-participant "結果彙整（003）" as RB
+participant "投影看板畫面\n(/projector)" as P
+participant "投影快照產生\n(createProjectorSnapshot)" as V
+participant "揭曉指令\n(reveal:next / reveal:all)" as R
 participant "狀態同步（001）" as B
 
-老師 -> P : 開啟投影看板（需老師身分）
-P -> V : 取得投影內容
-V --> P : 階段、倒數、各組是否在線
+老師 -> P : 開啟投影看板（以 view=projector 連線）
+P -> V : 請求投影快照
+V -> V : 只組階段、倒數、各組是否在線
+V --> P : 投影快照（沒有作答資訊）
 
 == 搶答中 ==
-B --> P : 階段＝搶答中、剩餘時間
-note over P : 不顯示任何答案、送出狀態或送出數量
+B --> P : 階段＝搶答中、剩餘時間、各組在線狀態
+note over P : 不顯示任何答案、送出狀態或送出數量\n（伺服器就沒有送出這些欄位）
 
 == 已結束 ==
 B --> P : 階段＝已結束
 P --> 老師 : 顯示「揭曉下一題」「全部揭曉」
 老師 -> P : 按「揭曉下一題」
 P -> R : 揭曉下一題()
-R -> V : 已揭曉題數 +1
-V -> RB : 取得已揭曉題目的結果
-RB --> V : 搶答成功組別與答案
+R -> V : 已揭曉題數 +1（依題號順序）
+V -> V : 只取已揭曉題目的結果
 V -> B : 更新投影內容
 B --> P : 顯示該題結果（2 秒內）
 
 老師 -> P : 按「全部揭曉」
 P -> R : 全部揭曉()
-R -> V : 全部題目
-V -> RB : 取得所有結果與各組成功題數
+R -> V : 已揭曉題數 = 全部題數
+V -> V : 取所有結果與各組成功題數
 V -> B : 更新投影內容
 B --> P : 顯示所有結果與各組成功題數
+
+note over V, P : 非老師身分只取得訪客級內容；\n揭曉進度只存在 activity 表，重設活動後清空。
 @enduml

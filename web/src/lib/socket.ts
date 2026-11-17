@@ -3,6 +3,9 @@ import { io, type Socket } from 'socket.io-client';
 import { getToken } from './session';
 
 let currentToken: string | null = getToken();
+/** 005：投影頁以 view='projector' 連線，伺服器改送不含作答資訊的投影快照。 */
+export type SocketView = 'normal' | 'projector';
+let currentView: SocketView = 'normal';
 let connectRequested = false;
 
 /** 同源 Socket.IO 連線；path 使用伺服器預設的 /socket.io。 */
@@ -12,7 +15,10 @@ const socket: Socket = io({
   // sessionStorage 目前的 token，而不是沿用建立 client 時的舊值。
   auth: (sendAuth) => {
     currentToken = getToken();
-    sendAuth({ token: currentToken ?? undefined });
+    sendAuth({
+      token: currentToken ?? undefined,
+      view: currentView === 'projector' ? 'projector' : undefined,
+    });
   },
   reconnection: true,
 });
@@ -27,11 +33,17 @@ export function getSocket(): Socket {
  * token 改變時會重新建立 handshake；相同 token 的每次自動重連都會
  * 透過 auth callback 重新讀取 sessionStorage。
  */
-export function connectSocket(token?: string | null): Socket {
+export function connectSocket(
+  token?: string | null,
+  view?: SocketView,
+): Socket {
   const nextToken = token === undefined ? getToken() : token;
+  // 不指定檢視模式時沿用目前模式：投影頁登入後仍維持投影快照（005）。
+  const nextView = view ?? currentView;
 
-  if (nextToken !== currentToken) {
+  if (nextToken !== currentToken || nextView !== currentView) {
     currentToken = nextToken;
+    currentView = nextView;
     socket.disconnect();
     socket.connect();
     connectRequested = true;

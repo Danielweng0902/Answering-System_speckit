@@ -224,8 +224,8 @@ describe('004 匯出 HTTP 路由 Foundational（T007）', () => {
       expect(disposition).toMatch(/^attachment; filename="results\.csv"; filename\*=UTF-8''\S+$/);
       expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
       expect(bytes.subarray(3).toString('utf8')).toBe(
-        '題號,空格序,組別,答案,順位,是否搶答成功,送出時間\r\n' +
-          `1,1,第一組,中文答案,1,是,${formatLocalTimestamp('2026-11-14T09:01:00.000Z')}`,
+        '題號,空格序,組別,答案,順位,是否搶答成功,送出時間,公平順位\r\n' +
+          `1,1,第一組,中文答案,1,是,${formatLocalTimestamp('2026-11-14T09:01:00.000Z')},否`,
       );
       expect(getActivity(server.db)!.revision).toBe(revisionBefore);
       expect(emitSpy).not.toHaveBeenCalled();

@@ -13,11 +13,16 @@ import { loadConfig } from './config.js';
 import { repositoryRoot, resolveFromRepositoryRoot } from './paths.js';
 import { createActivityCommands } from './app/activityCommands.js';
 import { createAnswerCommands } from './app/answerCommands.js';
+import { createFairnessSettler } from './app/fairnessSettler.js';
+import { createProjectorCommands } from './app/projectorCommands.js';
+import { FAIR_BATCH_WINDOW_MS } from './domain/answerSettlement.js';
 import { createCountdown, type CountdownScheduler } from './app/countdown.js';
 import { createGroupCommands } from './app/groupCommands.js';
 import { createImportService } from './app/importService.js';
 import { leaveGroup } from './app/studentCommands.js';
 import { getActivity } from './infra/db/activityRepo.js';
+import { countValidForQuestion } from './infra/db/answerRepo.js';
+import { list as listQuestions } from './infra/db/questionRepo.js';
 import { openDatabase } from './infra/db/database.js';
 import { createApp } from './infra/http/app.js';
 import { createSocketBroadcaster, type StateBroadcaster } from './infra/socket/broadcaster.js';
@@ -140,6 +145,17 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
       }
     },
   });
+  // 005（T014）：公平順位「判定完成」提醒；只廣播，不保存判定結果。
+  const fairnessSettler = createFairnessSettler({
+    scheduler,
+    onSettled: () => {
+      try {
+        broadcaster.broadcastState();
+      } catch {
+        console.error('Fairness settlement reminder failed.');
+      }
+    },
+  });
   const activityCommands = createActivityCommands(database, {
     // 指令時間戳與倒數排程使用同一個時鐘，手動時鐘的測試才能對齊。
     now: scheduler
@@ -158,11 +174,32 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     // 重設時取消倒數；後續子功能可在此掛上各自的資料清理（T069）。
     onReset: () => {
       countdown.cancel();
+      fairnessSettler.cancelAll();
     },
   });
-  const answerCommands = createAnswerCommands(database);
+  const answerCommands = createAnswerCommands(database, {
+    // 005（T014、FR-010）：啟用公平順位時，某題第一個答案送達後 3 秒安排
+    // 一次提醒，讓老師看板從「判定中」翻成已判定；判定本身不保存結果。
+    onAnswerAccepted: (questionNumber) => {
+      const activity = getActivity(database);
+      if (!activity?.fairRankingEnabled) {
+        return;
+      }
+      const question = listQuestions(database).find(
+        (candidate) => candidate.number === questionNumber,
+      );
+      if (question === undefined) {
+        return;
+      }
+      if (countValidForQuestion(database, question.id) !== 1) {
+        return;
+      }
+      fairnessSettler.schedule(questionNumber, FAIR_BATCH_WINDOW_MS);
+    },
+  });
   const teacherOnly = ['teacher'] as const;
   const studentOnly = ['student'] as const;
+  const projectorCommands = createProjectorCommands(database);
   io.on('connection', (socket) => {
     commandRouter.register(socket, 'group:create', teacherOnly, groupCommands.createGroup);
     commandRouter.register(socket, 'group:rename', teacherOnly, groupCommands.renameGroup);
@@ -170,6 +207,14 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     commandRouter.register(socket, 'activity:open', teacherOnly, activityCommands.openActivity);
     commandRouter.register(socket, 'activity:close', teacherOnly, activityCommands.closeActivity);
     commandRouter.register(socket, 'activity:reset', teacherOnly, activityCommands.resetActivity);
+    // 005（FR-001）：只有老師、只有準備中能切換公平順位；成功後所有角色
+    // 都會收到帶有 fairRankingEnabled 的新快照。
+    commandRouter.register(
+      socket,
+      'activity:fair-ranking',
+      teacherOnly,
+      activityCommands.setFairRanking,
+    );
     // 002（T024）：questions:confirm 只有老師、只在準備中；ack.ok 由路由
     // 決定是否廣播，所有老師分頁同步收到新的題目摘要（research R6）。
     commandRouter.register(
@@ -205,6 +250,19 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
           (payload as AnswerVoidPayload).groupId,
         );
       },
+    );
+    // 005（FR-017）：只有老師、只有在已結束能揭曉；成功後廣播讓投影頁更新。
+    commandRouter.register(
+      socket,
+      'reveal:next',
+      teacherOnly,
+      projectorCommands.revealNext,
+    );
+    commandRouter.register(
+      socket,
+      'reveal:all',
+      teacherOnly,
+      projectorCommands.revealAll,
     );
     commandRouter.register(socket, 'student:leave', studentOnly, () => {
       const token: unknown = socket.handshake.auth.token;

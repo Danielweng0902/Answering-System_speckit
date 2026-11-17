@@ -1,5 +1,6 @@
-import { Link, Route, Routes } from 'react-router';
+import { Link, Route, Routes, useLocation } from 'react-router';
 import { ConnectionStatus } from '../features/shared/ConnectionStatus';
+import { ProjectorPage } from '../features/projector/ProjectorPage';
 import { StudentPage } from '../features/student/StudentPage';
 import { TeacherPage } from '../features/teacher/TeacherPage';
 import styles from './App.module.css';
@@ -27,7 +28,11 @@ function HomePage() {
 }
 
 export function AppRoutes() {
-  const snapshotState = useSnapshot();
+  // 005：投影看板以 view='projector' 連線，伺服器改送不含作答資訊的快照；
+  // 其他頁面維持一般檢視模式。
+  const location = useLocation();
+  const view = location.pathname === '/projector' ? 'projector' : 'normal';
+  const snapshotState = useSnapshot({ view });
 
   return (
     <>
@@ -41,6 +46,11 @@ export function AppRoutes() {
           element={<TeacherPage snapshot={snapshotState.snapshot} />}
         />
         <Route path="/student" element={<StudentPage {...snapshotState} />} />
+        {/* 005：投影看板是獨立頁面，內容來自不含作答資訊的投影快照。 */}
+        <Route
+          path="/projector"
+          element={<ProjectorPage snapshot={snapshotState.snapshot} />}
+        />
       </Routes>
     </>
   );

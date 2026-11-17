@@ -340,6 +340,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       {
         questionNumber: 1,
         winnerGroupId: null,
+        settling: false,
+        fairnessApplied: false,
         cells: [
           notSubmittedCell(1, 'group-a', '甲組'),
           notSubmittedCell(1, 'group-b', '乙組'),
@@ -348,6 +350,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       {
         questionNumber: 2,
         winnerGroupId: null,
+        settling: false,
+        fairnessApplied: false,
         cells: [
           notSubmittedCell(2, 'group-a', '甲組'),
           notSubmittedCell(2, 'group-b', '乙組'),
@@ -386,6 +390,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       {
         questionNumber: 1,
         winnerGroupId: 'group-a',
+        settling: false,
+        fairnessApplied: false,
         cells: [
           {
             questionNumber: 1,
@@ -401,6 +407,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       {
         questionNumber: 2,
         winnerGroupId: null,
+        settling: false,
+        fairnessApplied: false,
         cells: [
           notSubmittedCell(2, 'group-a', '甲組'),
           notSubmittedCell(2, 'group-b', '乙組'),
@@ -433,6 +441,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       {
         questionNumber: 1,
         winnerGroupId: 'group-a',
+        settling: false,
+        fairnessApplied: false,
         cells: [
           expectedAfterA[0]!.cells[0]!,
           {
@@ -464,6 +474,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       {
         questionNumber: 2,
         winnerGroupId: 'group-b',
+        settling: false,
+        fairnessApplied: false,
         cells: [
           notSubmittedCell(2, 'group-a', '甲組'),
           {

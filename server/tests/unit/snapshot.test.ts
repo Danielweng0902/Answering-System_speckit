@@ -60,6 +60,7 @@ describe('createSnapshot', () => {
 
     expect(snapshot).toEqual({
       role: 'guest',
+      fairRankingEnabled: false,
       revision: 7,
       serverNow: fixedNow.toISOString(),
       phase: 'open',
@@ -85,6 +86,7 @@ describe('createSnapshot', () => {
 
     expect(snapshot).toEqual({
       role: 'student',
+      fairRankingEnabled: false,
       myGroupId: 'group-1',
       revision: 7,
       serverNow: fixedNow.toISOString(),
@@ -123,6 +125,7 @@ describe('createSnapshot', () => {
 
     expect(snapshot).toEqual({
       role: 'student',
+      fairRankingEnabled: false,
       myGroupId: 'group-1',
       revision: 3,
       serverNow: fixedNow.toISOString(),
@@ -309,6 +312,7 @@ describe('createSnapshot', () => {
           groupName: '第一組',
           answers: ['第一組第一題'],
         },
+        fairnessApplied: false,
       },
       {
         questionNumber: 2,
@@ -317,6 +321,7 @@ describe('createSnapshot', () => {
           groupName: '第二組',
           answers: ['第二組第二題（1）', '第二組第二題（2）'],
         },
+        fairnessApplied: false,
       },
     ];
     const groupOne = createSnapshot(
@@ -328,6 +333,7 @@ describe('createSnapshot', () => {
 
     expect(groupOne).toEqual({
       role: 'student',
+      fairRankingEnabled: false,
       myGroupId: 'group-1',
       revision: 9,
       serverNow: fixedNow.toISOString(),
@@ -452,6 +458,7 @@ describe('createSnapshot', () => {
 
     expect(snapshot).toEqual({
       role: 'teacher',
+      fairRankingEnabled: false,
       presence,
       revision: 7,
       serverNow: fixedNow.toISOString(),
@@ -624,6 +631,8 @@ describe('老師作答看板與進度（003 US3；T027；AC-003-13–16、FR-019
     {
       questionNumber: 1,
       winnerGroupId: 'group-1',
+      settling: false,
+      fairnessApplied: false,
       cells: [
         {
           questionNumber: 1,
@@ -646,6 +655,8 @@ describe('老師作答看板與進度（003 US3；T027；AC-003-13–16、FR-019
     {
       questionNumber: 2,
       winnerGroupId: 'group-2',
+      settling: false,
+      fairnessApplied: false,
       cells: [
         {
           questionNumber: 2,
@@ -709,6 +720,8 @@ describe('老師作答看板與進度（003 US3；T027；AC-003-13–16、FR-019
       {
         questionNumber: 1,
         winnerGroupId: null,
+        settling: false,
+        fairnessApplied: false,
         cells: [
           {
             questionNumber: 1,
@@ -731,6 +744,8 @@ describe('老師作答看板與進度（003 US3；T027；AC-003-13–16、FR-019
       {
         questionNumber: 2,
         winnerGroupId: null,
+        settling: false,
+        fairnessApplied: false,
         cells: [
           {
             questionNumber: 2,

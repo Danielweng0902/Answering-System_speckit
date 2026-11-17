@@ -33,6 +33,11 @@ export type AnswerCommandUseCases = {
 export type AnswerCommandDependencies = {
   /** Server-side receive timestamp; tests can inject a fixed clock. */
   now?: (() => string) | undefined;
+  /**
+   * 005（T014）：作答被接受後呼叫（在 transaction COMMIT 之後），讓伺服器
+   * 安排「判定完成」的提醒；只在啟用公平順位時需要。
+   */
+  onAnswerAccepted?: ((questionNumber: number) => void) | undefined;
 };
 
 function readActivity(database: DatabaseSync): Activity {
@@ -139,6 +144,9 @@ export function createAnswerCommands(
 
         // 失敗一律 ROLLBACK：不保存作答、rank 或 revision 變化（原則 III）。
         database.exec(ack.ok ? 'COMMIT' : 'ROLLBACK');
+        if (ack.ok) {
+          dependencies.onAnswerAccepted?.(input.questionNumber);
+        }
         return ack;
       } catch (error) {
         database.exec('ROLLBACK');

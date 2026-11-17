@@ -6,10 +6,16 @@ export type ResultRow = {
   rank: number;
   isWinner: boolean;
   receivedAt: string;
+  /**
+   * 005（D13 v0.5）：第 8 欄「公平順位」。
+   * `否`＝本場未啟用；`是`＝已啟用且本題依公平規則判定；
+   * `是（改判）`＝已啟用且本題的搶答成功者不是最先送達者。
+   */
+  fairness: string;
 };
 
 const HEADER =
-  '題號,空格序,組別,答案,順位,是否搶答成功,送出時間';
+  '題號,空格序,組別,答案,順位,是否搶答成功,送出時間,公平順位';
 
 /** 試算表公式注入保護（FR-014）：只有欄位的原始第一個字元需要判斷。 */
 export function safeFormulaGuard(value: string): string {
@@ -34,6 +40,7 @@ function serialize(row: ResultRow): string {
     row.rank,
     row.isWinner ? '是' : '否',
     row.receivedAt,
+    escapeCsvField(row.fairness),
   ].join(',');
 }
 

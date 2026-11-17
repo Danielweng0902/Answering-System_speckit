@@ -8,11 +8,13 @@ import {
 import type { AccessIdentity } from '../../app/access.js';
 import { resolveIdentity } from '../../app/access.js';
 import { recordPresenceChange } from '../../app/presence.js';
-import { createSnapshot } from '../../app/snapshot.js';
+import { createProjectorSnapshot, createSnapshot } from '../../app/snapshot.js';
 import { getGroupById, listGroups } from '../db/groupRepo.js';
 
 export type SocketDataWithIdentity = {
   identity?: AccessIdentity;
+  /** 005：投影檢視模式；只有老師身分會取得投影快照。 */
+  view?: 'projector' | undefined;
 };
 
 export type StateBroadcaster = {
@@ -50,6 +52,12 @@ function tokenFromSocket(socket: Socket): string | undefined {
   return typeof token === 'string' && token.length > 0 ? token : undefined;
 }
 
+/** 005：握手時的檢視模式；只有 'projector' 會改變快照內容。 */
+function viewFromSocket(socket: Socket): 'projector' | undefined {
+  const view: unknown = socket.handshake.auth.view;
+  return view === 'projector' ? 'projector' : undefined;
+}
+
 export function createSocketBroadcaster(
   io: Server,
   database: DatabaseSync,
@@ -64,13 +72,27 @@ export function createSocketBroadcaster(
     return presence;
   }
 
+  /**
+   * 005（FR-015、FR-022、research R6）：投影檢視模式連線只收到投影快照，
+   * 內容在伺服器端就沒有作答資訊；非老師身分則維持一般快照。
+   */
+  function snapshotForSocket(
+    socket: Socket,
+    presence: Readonly<Record<string, number>>,
+    now: Date,
+  ): Snapshot {
+    const identity = getSocketIdentity(socket);
+    if (socketData(socket).view === 'projector' && identity.role === 'teacher') {
+      return createProjectorSnapshot(database, presence, now);
+    }
+    return createSnapshot(database, identity, presence, now);
+  }
+
   function sendSnapshot(socket: Socket): void {
-    const snapshot: Snapshot = createSnapshot(
-      database,
-      getSocketIdentity(socket),
-      getPresence(),
+    socket.emit(
+      STATE_EVENT,
+      snapshotForSocket(socket, getPresence(), new Date()),
     );
-    socket.emit(STATE_EVENT, snapshot);
   }
 
   function emitSnapshotSafely(
@@ -93,12 +115,7 @@ export function createSocketBroadcaster(
 
     for (const socket of io.sockets.sockets.values()) {
       emitSnapshotSafely(socket, () =>
-        createSnapshot(
-          database,
-          getSocketIdentity(socket),
-          presence,
-          now,
-        ),
+        snapshotForSocket(socket, presence, now),
       );
     }
   }
@@ -143,6 +160,7 @@ export function createSocketBroadcaster(
     }
 
     socketData(socket).identity = identity;
+    socketData(socket).view = viewFromSocket(socket);
 
     if (identity.role === 'student') {
       addStudent(identity.groupId);

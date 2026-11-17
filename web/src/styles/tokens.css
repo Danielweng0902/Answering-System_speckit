@@ -16,6 +16,9 @@
   --font-size-small: 0.875rem;
   --font-size-base: 1rem;
   --font-size-large: 1.25rem;
+  /* 005 投影看板：教室後排也要看得清楚的大字。 */
+  --font-size-headline: 2rem;
+  --font-size-display: 3rem;
   --line-height-base: 1.5;
 
   /* 間距 */

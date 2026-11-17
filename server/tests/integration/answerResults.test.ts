@@ -132,6 +132,7 @@ function closedStudent(
 ): StudentClosedSnapshot {
   expect(snapshot).toMatchObject({
     role: 'student',
+    fairRankingEnabled: false,
     phase: 'closed',
     myGroupId: groupId,
   });
@@ -183,6 +184,7 @@ describe('US4 搶答結束後檢視結果（AC-003-17–21、FR-013、FR-023–F
           groupName: '第一組',
           answers: ['第一組第一題答案'],
         },
+        fairnessApplied: false,
       },
       {
         questionNumber: 2,
@@ -191,9 +193,10 @@ describe('US4 搶答結束後檢視結果（AC-003-17–21、FR-013、FR-023–F
           groupName: '第二組',
           answers: ['<script>alert(1)</script>'],
         },
+        fairnessApplied: false,
       },
       // 無有效作答的題目 winner 為 null，前端顯示無人作答（FR-025）。
-      { questionNumber: 3, winner: null },
+      { questionNumber: 3, winner: null, fairnessApplied: false },
     ]);
     expect(groupOne.myAnswers).toEqual([
       {

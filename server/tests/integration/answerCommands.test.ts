@@ -702,6 +702,7 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
 
     expect(closedStudent).toMatchObject({
       role: 'student',
+      fairRankingEnabled: false,
       phase: 'closed',
       myGroupId: 'group-1',
       results: [
@@ -712,6 +713,7 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
             groupName: '第一組',
             answers: ['前綴一的答案', '前綴二的答案'],
           },
+          fairnessApplied: false,
         },
         { questionNumber: 2, winner: null },
       ],

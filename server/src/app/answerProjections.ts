@@ -8,7 +8,7 @@ import type {
   StudentOpenAnswer,
   StudentQuestion,
 } from '@classroom/shared';
-import { decideWinner } from '../domain/answerRanks.js';
+import { computeSettlement } from './answerSettlementService.js';
 import {
   findLatest,
   listByQuestion,
@@ -62,35 +62,51 @@ export function buildMyAnswers(
 
 /**
  * 結束後每題的搶答結果（003 US4；FR-023、FR-025）。winner 一律只由
- * decideWinner 判定（FR-014 唯一入口）；無有效作答為 null。
+ * 判定服務決定（005 FR-009、原則 VI）；無有效作答為 null。
  */
-export function buildResults(database: DatabaseSync): QuestionResult[] {
+export function buildResults(
+  database: DatabaseSync,
+  now: Date = new Date(),
+): QuestionResult[] {
   const groupNames = new Map(
     listGroups(database).map((group) => [group.id, group.name]),
   );
+  const settlement = computeSettlement(database, now);
   return listQuestions(database).map((question) => {
-    const winner = decideWinner(listByQuestion(database, question.id));
+    const result = settlement.get(question.number);
+    const winnerGroupId = result?.winnerGroupId ?? null;
+    const winnerSubmission =
+      winnerGroupId === null
+        ? null
+        : (listByQuestion(database, question.id).find(
+            (submission) =>
+              submission.groupId === winnerGroupId &&
+              submission.voidedAt === null,
+          ) ?? null);
     return {
       questionNumber: question.number,
       winner:
-        winner === null
+        winnerGroupId === null || winnerSubmission === null
           ? null
           : {
-              groupId: winner.groupId,
-              groupName: groupNames.get(winner.groupId) ?? '',
-              answers: [...winner.answers],
+              groupId: winnerGroupId,
+              groupName: groupNames.get(winnerGroupId) ?? '',
+              answers: [...winnerSubmission.answers],
             },
+      fairnessApplied: result?.fairnessApplied ?? false,
     };
   });
 }
 
 /**
- * 結束後本組每題的答案與順位（003 US4；FR-024）。有有效作答時為其 rank；
- * 未送出或只有作廢作答時 rank 為 null；作廢保留最新一筆答案供標示。
+ * 結束後本組每題的答案與順位（003 US4；FR-024）。有有效作答時為其順位
+ * （啟用公平順位時為公平順位，005 FR-021）；未送出或只有作廢作答時 rank
+ * 為 null；作廢保留最新一筆答案供標示。
  */
 export function buildClosedMyAnswers(
   database: DatabaseSync,
   groupId: string,
+  now: Date = new Date(),
 ): StudentClosedAnswer[] {
   const submittedByQuestionNumber = new Map(
     listValidByGroup(database, groupId).map((submission) => [
@@ -98,15 +114,20 @@ export function buildClosedMyAnswers(
       submission,
     ]),
   );
+  const settlement = computeSettlement(database, now);
 
   return listQuestions(database).map((question) => {
     const submission = submittedByQuestionNumber.get(question.number);
     if (submission !== undefined) {
+      const rank =
+        settlement
+          .get(question.number)
+          ?.ranks.find((entry) => entry.groupId === groupId)?.rank ?? null;
       return {
         questionNumber: question.number,
         state: 'submitted',
         answers: [...submission.answers],
-        rank: submission.rank,
+        rank,
       };
     }
     // listByQuestion 依 position、rank 排序；最後一筆作廢即最新作廢。
@@ -135,18 +156,25 @@ export function buildClosedMyAnswers(
 
 /**
  * 老師看板（003 US3；T029；FR-019、FR-022）：題 × 組完整矩陣，每題每組固
- * 定一筆 cell。winnerGroupId 只由 decideWinner 判定（FR-014 唯一入口）。
+ * 定一筆 cell。winnerGroupId 只由判定服務決定（005 FR-009、原則 VI）。
  * cell 取該組該題最新 Submission（rank 最大＝最新，語意同 findLatest）：
- * 有有效作答顯示 submitted 與其 rank；只有已作廢作答顯示最新一筆 voided
- * 並保留答案與原順位；未送出為 not_submitted、[] 與 null。
+ * 有有效作答顯示 submitted 與其順位（啟用公平順位時為公平順位，005 FR-021）；
+ * 只有已作廢作答顯示最新一筆 voided 並保留答案與原順位；未送出為
+ * not_submitted、[] 與 null。
  */
 export function buildBoard(
   database: DatabaseSync,
+  now: Date = new Date(),
 ): AnswerBoardQuestion[] {
   const groups = listGroups(database);
+  const settlement = computeSettlement(database, now);
   return listQuestions(database).map((question) => {
     const submissions = listByQuestion(database, question.id);
-    const winner = decideWinner(submissions);
+    const result = settlement.get(question.number);
+    const winnerGroupId = result?.winnerGroupId ?? null;
+    const rankByGroup = new Map(
+      (result?.ranks ?? []).map((entry) => [entry.groupId, entry.rank]),
+    );
     const cells: AnswerBoardCell[] = groups.map((group) => {
       const valid = submissions.find(
         (submission) =>
@@ -168,13 +196,20 @@ export function buildBoard(
               ? 'voided'
               : 'not_submitted',
         answers: latest === undefined ? [] : [...latest.answers],
-        rank: latest === undefined ? null : latest.rank,
+        rank:
+          valid !== undefined
+            ? (rankByGroup.get(group.id) ?? null)
+            : latest === undefined
+              ? null
+              : latest.rank,
       };
     });
     return {
       questionNumber: question.number,
       cells,
-      winnerGroupId: winner === null ? null : winner.groupId,
+      winnerGroupId,
+      settling: result?.settling ?? false,
+      fairnessApplied: result?.fairnessApplied ?? false,
     };
   });
 }
