@@ -17,6 +17,15 @@ export type ExportRoutesDependencies = {
   exportGuidedNotes?: (database: DatabaseSync) => Promise<ExportFile>;
   /** US3 完成前不存在；完成後由 app.ts 注入。 */
   exportResultCsv?: (database: DatabaseSync) => Promise<ExportFile>;
+  /** 006：把答案寫回老師的線上 Google 試算表；未設定服務帳號時為 undefined。 */
+  writeBackGuidedNotes?:
+    | ((
+        database: DatabaseSync,
+      ) => Promise<
+        | { ok: true; writtenCells: number }
+        | { ok: false; code: ErrorCode; message: string }
+      >)
+    | undefined;
 };
 
 const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
@@ -24,6 +33,11 @@ const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
   FORBIDDEN: 403,
   INVALID_PHASE: 409,
   NO_GUIDED_NOTES: 422,
+  GUIDED_NOTES_NOT_LINK: 422,
+  SHEET_NOT_CONFIGURED: 503,
+  SHEET_NOT_FOUND: 422,
+  SHEET_NOT_EDITABLE: 422,
+  SHEET_UNAVAILABLE: 502,
 };
 
 function bearerToken(request: Request): string | null {
@@ -117,6 +131,39 @@ export function createExportRouter(
       try {
         const file = await dependencies.exportResultCsv(database);
         sendExportFile('results.csv', response, file);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  router.post(
+    '/api/export/guided-notes/writeback',
+    async (request: Request, response: Response, next: NextFunction) => {
+      const authorization = authorizeExport(
+        database,
+        bearerToken(request),
+      );
+      if (!authorization.ok) {
+        sendExportError(response, authorization.code);
+        return;
+      }
+      if (dependencies.writeBackGuidedNotes === undefined) {
+        sendExportError(response, 'SHEET_NOT_CONFIGURED');
+        return;
+      }
+
+      try {
+        const result = await dependencies.writeBackGuidedNotes(database);
+        if (!result.ok) {
+          response.status(ERROR_STATUS[result.code] ?? 500).json({
+            error: { code: result.code, message: result.message },
+          });
+          return;
+        }
+        response.json({ writtenCells: result.writtenCells });
+        // 原則IV：只記事件與寫入格數；不記答案、token 或金鑰。
+        console.info(`export:writeback cells=${result.writtenCells}`);
       } catch (error) {
         next(error);
       }

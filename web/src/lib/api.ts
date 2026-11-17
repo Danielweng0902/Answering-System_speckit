@@ -328,3 +328,61 @@ export function downloadGuidedNotes(): Promise<DownloadExportResult> {
 export function downloadResultCsv(): Promise<DownloadExportResult> {
   return downloadExport('/api/export/results.csv', '搶答結果.csv');
 }
+
+export type WriteBackResult =
+  | { ok: true; writtenCells: number }
+  | {
+      ok: false;
+      error: { code: ErrorCode | null; message: string };
+    };
+
+const GENERIC_WRITEBACK_ERROR = '目前無法寫回 Google 試算表，請稍後再試';
+
+/**
+ * 006：把答案寫回老師的線上 Google 試算表（助教 2026-11-17 說明的
+ * 「直接串接線上試算表讀寫」）。失敗時保留伺服器的中文訊息，讓老師知道
+ * 要不要改用下載 xlsx。
+ */
+export async function writeBackGuidedNotes(): Promise<WriteBackResult> {
+  let response: Response;
+
+  try {
+    response = await fetch('/api/export/guided-notes/writeback', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${getToken() ?? ''}` },
+    });
+  } catch {
+    return {
+      ok: false,
+      error: { code: null, message: GENERIC_WRITEBACK_ERROR },
+    };
+  }
+
+  let body: unknown = null;
+  try {
+    body = (await response.json()) as unknown;
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      error: isApiErrorResponse(body)
+        ? body.error
+        : { code: null, message: GENERIC_WRITEBACK_ERROR },
+    };
+  }
+
+  if (
+    !isRecord(body) ||
+    typeof body.writtenCells !== 'number'
+  ) {
+    return {
+      ok: false,
+      error: { code: null, message: GENERIC_WRITEBACK_ERROR },
+    };
+  }
+
+  return { ok: true, writtenCells: body.writtenCells };
+}

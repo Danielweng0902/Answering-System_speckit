@@ -272,6 +272,11 @@ export const ERROR_CODES = [
   'ANSWER_TOO_LONG',
   'ALREADY_SUBMITTED',
   'SUBMISSION_NOT_FOUND',
+  'GUIDED_NOTES_NOT_LINK',
+  'SHEET_NOT_CONFIGURED',
+  'SHEET_NOT_FOUND',
+  'SHEET_NOT_EDITABLE',
+  'SHEET_UNAVAILABLE',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -310,6 +315,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   ANSWER_TOO_LONG: '每個空格最多 200 個字',
   ALREADY_SUBMITTED: '本組已經送出這一題，不能再送出',
   SUBMISSION_NOT_FOUND: '找不到可以作廢的作答，請重新整理後再試',
+  GUIDED_NOTES_NOT_LINK: '這份學習單是上傳的 xlsx，沒有雲端試算表可以寫回；請改用下載 xlsx',
+  SHEET_NOT_CONFIGURED: '伺服器尚未設定 Google 服務帳號，無法寫回試算表；請改用下載 xlsx',
+  SHEET_NOT_FOUND: '找不到這份 Google 試算表，可能已被改名或刪除；請改用下載 xlsx',
+  SHEET_NOT_EDITABLE: '沒有這份試算表的編輯權限；請把試算表共用給服務帳號，或改用下載 xlsx',
+  SHEET_UNAVAILABLE: 'Google 試算表暫時無法寫入，請稍後再試或改用下載 xlsx',
 };
 
 /* ------------------------------------------------------------------ */

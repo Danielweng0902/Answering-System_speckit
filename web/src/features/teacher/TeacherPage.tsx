@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   downloadGuidedNotes,
   downloadResultCsv,
+  writeBackGuidedNotes,
   type DownloadExportResult,
 } from '../../lib/api';
 import { Countdown } from '../shared/Countdown';
@@ -26,6 +27,33 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   const [exportError, setExportError] = useState<string | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
+  const [isWritingBack, setIsWritingBack] = useState(false);
+  const [writeBackMessage, setWriteBackMessage] = useState<string | null>(null);
+  const [writeBackError, setWriteBackError] = useState<string | null>(null);
+
+  /**
+   * 006：把答案寫回老師的線上 Google 試算表。失敗時保留伺服器的訊息，
+   * 老師可以改用「匯出 Guided Notes」下載 xlsx。
+   */
+  async function handleWriteBack(): Promise<void> {
+    setWriteBackMessage(null);
+    setWriteBackError(null);
+    setIsWritingBack(true);
+    try {
+      const result = await writeBackGuidedNotes();
+      if (!result.ok) {
+        setWriteBackError(result.error.message);
+        return;
+      }
+      setWriteBackMessage(
+        result.writtenCells === 0
+          ? '這場沒有搶答成功的答案，沒有需要寫回的儲存格。'
+          : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。`,
+      );
+    } finally {
+      setIsWritingBack(false);
+    }
+  }
 
   /** 005（FR-017）：逐題揭曉或全部揭曉；失敗顯示伺服器的中文訊息。 */
   async function sendReveal(
@@ -117,6 +145,19 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
             <button
               className={styles.exportButton}
               type="button"
+              disabled={
+                isWritingBack ||
+                snapshot.guidedNotes?.sourceKind !== 'link'
+              }
+              onClick={() => {
+                void handleWriteBack();
+              }}
+            >
+              寫回 Google 試算表
+            </button>
+            <button
+              className={styles.exportButton}
+              type="button"
               disabled={isExporting}
               onClick={() => {
                 void handleExport(downloadGuidedNotes);
@@ -135,6 +176,21 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               匯出 CSV
             </button>
           </div>
+          {snapshot.guidedNotes?.sourceKind !== 'link' && (
+            <p className={styles.exportError}>
+              這次的學習單是上傳的 xlsx，沒有線上試算表可以寫回；請用「匯出 Guided Notes」。
+            </p>
+          )}
+          {writeBackMessage !== null && (
+            <p className={styles.exportError} role="status">
+              {writeBackMessage}
+            </p>
+          )}
+          {writeBackError !== null && (
+            <p className={styles.exportError} role="alert">
+              {writeBackError}
+            </p>
+          )}
           {exportError !== null && (
             <p className={styles.exportError} role="alert">
               {exportError}
