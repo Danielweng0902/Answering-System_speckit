@@ -50,4 +50,4 @@
 - CSV 的 formula guard **依組員決議保留**，此次沒有為了看不到 `'` 而降低 FR-014 防護。新增的 `formatLocalTimestamp()` 只轉換 `received_at` 字串顯示，不改資料庫 UTC 原值，也不影響排序／winner 判定。
 - 50 組 × 30 題效能與不變量測試仍在全回歸通過：server 41 files／340 tests、web 15 files／81 tests；E2E 14 passed／2 skipped；typecheck、lint、PlantUML 檢查均通過。
 
-結論：T027 完成。**沒有發現未處理的 Medium／High 安全議題留在本次修正範圍。** 這次 A（題組答案格）與 B（CSV 本地時間）的程式修正已以自動 regression 覆核；T027b 最終 diff review 與 T031 修正版人工複測仍待完成。
+結論：T027 完成。**沒有發現未處理的 Medium／High 安全議題留在本次修正範圍。** 這次 A（題組答案格）與 B（CSV 本地時間）的程式修正已以自動 regression 覆核；T027b 已由 philip110531 於 2026-11-17 在 PR #5 正式 Approve，T031 亦於同日複測通過（見 `004-manual.md`）。

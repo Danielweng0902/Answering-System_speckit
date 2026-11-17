@@ -136,11 +136,11 @@ description: "Task list for 004 匯出結果（export）"
 - [x] T025 [P] 在 `server/src/infra/db/answerRepo.ts` 與 `server/src/app/exportCommands.ts` 補上「匯出不改變資料、不產生 Socket.IO 事件、不遞增 `activity.revision`」的整合測試案例，斷言匯出前後資料庫與快照 revision 完全相同（FR-008、原則 VI）
 - [x] T026 [P] 更新根目錄 `README.md`：操作流程加入「活動結束後匯出 Guided Notes／匯出 CSV」步驟；測試說明加入 004
 - [x] T027 派工給 GLM 做安全覆核（只回報不改程式）：可見範圍（學生與訪客不得取得匯出檔案）、身分與階段檢查是否只在伺服器強制、log 是否含答案內容或 token、原檔 BLOB 是否可能被改壞、CSV 是否有公式注入風險；監督把發現整理成修正 task 或記入 `docs/verification/004-security-review.md`
-- [ ] T027b **另一位組員審查（憲法要求的合併關卡）**：由非實作者的組員在 PR 上留下 review，審查重點為匯出檔的內容正確性（答案是否落在正確的空格）、權限與階段檢查、CSV 轉義；審查結果與待辦記錄在 `docs/verification/004-security-review.md` 或 PR 的 review 中。**此項完成前不得合併**（憲法「合併前 MUST 通過：另一位組員的審查」）
+- [x] T027b **另一位組員審查（憲法要求的合併關卡）**：philip110531 在 PR #5 留下審查（檔名時區問題已回覆並修正），2026-11-17 對修正後最終 diff 正式 **Approve**（「人工驗證沒問題」）；紀錄亦見 `docs/verification/004-security-review.md`（憲法「合併前 MUST 通過：另一位組員的審查」）
 - [x] T028 **圖與程式一致性檢查（原則 VII）**：依 plan.md「圖表與模組對應」逐列核對 `diagrams/004-export-*.puml` 的元件與型別在程式中存在、名稱與關係一致；有差異時修正 `.puml` 並重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`（優先），或修正程式（若程式真的偏離契約——先停下回報）。結果寫入 `docs/verification/004-diagram-consistency.md`
 - [x] T029 執行 `npm test`、`npm run test:e2e`、`npm run check`、`npm audit`，把指令與輸出記錄在 `docs/verification/004-automated.md`（含 SC-001～SC-005 各由哪個測試涵蓋的對照表）
 - [x] T030 [P] **畫面截圖（constitution 原則 IX）**：以 Playwright 擷取老師端「已結束」時的兩個匯出按鈕、以及下載後開啟的檔案畫面，存到 `docs/verification/004-screenshots/`，交設計負責人驗收
-- [ ] T031 **人工驗證**：依 `specs/004-export/quickstart.md` 的 18 個步驟操作，結果記錄在 `docs/verification/004-manual.md`；問題另開 GitHub issue。由設計與驗證負責人執行，**不可用自動測試或截圖替代**
+- [x] T031 **人工驗證**：philip110531 於 2026-11-15 依 `specs/004-export/quickstart.md` 完成 18 個步驟＋SC-005；首次發現的 A（題組答案格）、B（本地時間）修正後，2026-11-17 以修正版複測對應步驟全數通過，C 經兩組決議保留 FR-014 前導 `'`，不另開 issue。結果記錄在 `docs/verification/004-manual.md`（由設計與驗證負責人執行，本次勾選為整理既有驗證紀錄，不以自動測試或截圖替代）
 
 ---
 

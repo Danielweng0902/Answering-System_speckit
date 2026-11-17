@@ -11,7 +11,7 @@ NCU SE6005 軟體工程期末專題。老師在電腦上開活動、建立組別
 | 001 活動與組別進場 | 功能全部完成，只差 T079 完整人工驗證（`docs/verification/001-manual.md` 尚未建立） |
 | 002 Guided Notes 匯入 | 已完成，含人工驗證：tasks 57/57；2026-11-13 依 quickstart 實測 13 步全部通過，無待辦問題（`docs/verification/002-manual.md`） |
 | 003 搶答作答 | 已完成，含人工驗證：tasks 63/63；2026-11-14 philip110531 依 quickstart 實測 23 步全部通過，僅介面文字建議（`docs/verification/003-manual.md`） |
-| 004 匯出 | US1～US3 已實作：closed 才能匯出寫好搶答成功答案的 Guided Notes 與含 BOM 的結果 CSV，作廢作答不匯出；PR #5 仍開著。已有審查與 18 步人工驗證，發現的 A（題組答案格）、B（本地時間）已依兩組決議修正。合併前還差：philip110531 再確認最終 diff（T027b）、依修正版複測步驟 8、11（T031） |
+| 004 匯出 | 已完成：tasks 全部勾選；closed 才能匯出寫好搶答成功答案的 Guided Notes 與含 BOM 的結果 CSV，作廢作答不匯出。philip110531 通過 PR 審查（2026-11-17 Approve）與人工驗證（11-15 完整流程＋11-17 複測通過，`docs/verification/004-manual.md`）；PR #5 已獲核准，待合併 |
 | 005 公平性與其他 | 只有 spec（spec.md 與 checklists），clarify、plan、tasks 都還沒做 |
 
 逐項進度看 [`specs/001-activity-session/tasks.md`](specs/001-activity-session/tasks.md) 的勾選狀態。
