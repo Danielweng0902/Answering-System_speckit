@@ -5,6 +5,7 @@ import { getActivity } from '../infra/db/activityRepo.js';
 import { listValidSubmissionsWithAnswers } from '../infra/db/answerRepo.js';
 import { getStoredGuidedNotes, list as listQuestions } from '../infra/db/questionRepo.js';
 import { buildResults } from './answerProjections.js';
+import { computeSettlement } from './answerSettlementService.js';
 import { buildCsv } from './csvBuilder.js';
 import { buildBlankWrites } from './guidedNotesExporter.js';
 import {
@@ -156,18 +157,37 @@ export async function exportResultCsv(
   now: Date,
   timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Promise<ExportFile> {
+  const settlement = computeSettlement(database, now);
+  const activity = getActivity(database);
+  const fairRankingEnabled = activity?.fairRankingEnabled ?? false;
   const winners = new Map(
-    buildResults(database).map((result) => [result.questionNumber, result.winner?.groupId ?? null]),
+    buildResults(database, now).map((result) => [
+      result.questionNumber,
+      result.winner?.groupId ?? null,
+    ]),
   );
-  const rows = listValidSubmissionsWithAnswers(database).map((row) => ({
-    questionNumber: row.questionNumber,
-    blankPosition: row.blankPosition,
-    groupName: row.groupName,
-    answer: row.answer,
-    rank: row.rank,
-    isWinner: winners.get(row.questionNumber) === row.groupId,
-    receivedAt: formatLocalTimestamp(row.receivedAt, timeZone),
-  }));
+  const rows = listValidSubmissionsWithAnswers(database).map((row) => {
+    const result = settlement.get(row.questionNumber);
+    // 005 FR-021：啟用公平順位時「順位」欄是公平順位；未啟用時與送達序號相同。
+    const rank =
+      result?.ranks.find((entry) => entry.groupId === row.groupId)?.rank ??
+      row.rank;
+    return {
+      questionNumber: row.questionNumber,
+      blankPosition: row.blankPosition,
+      groupName: row.groupName,
+      answer: row.answer,
+      rank,
+      isWinner: winners.get(row.questionNumber) === row.groupId,
+      receivedAt: formatLocalTimestamp(row.receivedAt, timeZone),
+      // 005 D13 v0.5：第 8 欄「公平順位」。
+      fairness: !fairRankingEnabled
+        ? '否'
+        : result?.fairnessApplied === true
+          ? '是（改判）'
+          : '是',
+    };
+  });
 
   return {
     fileName: buildExportFileName(now, 'csv', timeZone),

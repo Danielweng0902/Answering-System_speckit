@@ -40,6 +40,12 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
       <p className={styles.description}>
         搶答已結束，每一題顯示搶答成功的組別與答案，以及本組的答案與順位。
       </p>
+      {/* 005（AC-005-11、FR-011）：標示本場使用的順位規則與改判題目。 */}
+      <p className={styles.description}>
+        {snapshot.fairRankingEnabled
+          ? '本場使用公平順位：同批作答依已搶答成功題數排序。'
+          : '本場先到先得：最先送出的組別搶答成功。'}
+      </p>
       <ol className={styles.questions} aria-label="作答結果">
         {snapshot.questions.map((question) => {
           const result = resultsByNumber.get(question.number);
@@ -69,6 +75,9 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                     <p className={styles.winner}>
                       搶答成功：{winner.groupName}
                     </p>
+                    {result?.fairnessApplied === true && (
+                      <p className={styles.description}>本題因公平順位改判</p>
+                    )}
                     <p className={styles.answers}>
                       答案：{formatAnswers(question, winner.answers)}
                     </p>

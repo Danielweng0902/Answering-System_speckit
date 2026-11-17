@@ -16,7 +16,7 @@ const PHASE_LABELS: Record<Phase, string> = {
 
 type ActivityCommandEvent = Extract<
   CommandEvent,
-  'activity:open' | 'activity:close' | 'activity:reset'
+  'activity:open' | 'activity:close' | 'activity:reset' | 'activity:fair-ranking'
 >;
 
 export type PhaseControlProps = {
@@ -133,6 +133,27 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
         >
           結束搶答
         </button>
+      </div>
+
+      {/* 005（FR-001、AC-005-09）：公平順位只有準備中能切換。 */}
+      <div className={styles.countdownControls}>
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            name="enable-fair-ranking"
+            checked={snapshot.fairRankingEnabled}
+            disabled={isSending || !isPreparing}
+            onChange={(event) => {
+              void send('activity:fair-ranking', {
+                enabled: event.target.checked,
+              });
+            }}
+          />
+          啟用公平順位
+        </label>
+        <p className={styles.description}>
+          同一題 3 秒內送出的組別視為同批，批內依「已搶答成功題數」由少到多決定順位。
+        </p>
       </div>
 
       {snapshot.phase === 'closed' &&

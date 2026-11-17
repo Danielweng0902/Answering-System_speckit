@@ -23,6 +23,7 @@ function snapshot(revision: number, role: 'guest' | 'student'): Snapshot {
     phase: 'preparing' as const,
     countdownEndsAt: null,
     groups: [{ id: 'g1', name: '第一組' }],
+    fairRankingEnabled: false,
   };
   return role === 'guest'
     ? { ...base, role: 'guest' }

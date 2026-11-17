@@ -30,6 +30,7 @@ const snapshot: TeacherSnapshot = {
     importedAt: '2026-11-14T09:00:00.000Z',
   },
   role: 'teacher',
+  fairRankingEnabled: false,
   board: [],
   progress: { perQuestion: [], perGroup: [] },
 };
@@ -73,6 +74,7 @@ describe('TeacherPage 匯出（004 T012）', () => {
           countdownEndsAt: null,
           groups: [],
           role: 'student',
+          fairRankingEnabled: false,
           myGroupId: 'g1',
           sessionId: 's1',
           questions: [],

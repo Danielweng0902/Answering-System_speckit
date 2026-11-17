@@ -121,6 +121,9 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
       <p className={styles.description}>
         每一題、每一組的送出狀態、答案與順位；搶答中即時更新。
       </p>
+      {snapshot.fairRankingEnabled && (
+        <p className={styles.muted}>本場使用公平順位：同批作答依已成功題數排序。</p>
+      )}
 
       {snapshot.board.length === 0 ? (
         <p className={styles.empty}>
@@ -176,8 +179,15 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                   第 {cell.rank} 順位
                                 </span>
                               )}
-                              {question.winnerGroupId === cell.groupId && (
-                                <span className={styles.winner}>搶答成功</span>
+                              {question.settling ? (
+                                <span className={styles.muted}>判定中</span>
+                              ) : (
+                                question.winnerGroupId === cell.groupId && (
+                                  <span className={styles.winner}>搶答成功</span>
+                                )
+                              )}
+                              {question.fairnessApplied && (
+                                <span className={styles.muted}>公平順位改判</span>
                               )}
                               {snapshot.phase === 'open' &&
                                 (isCurrentConfirmation ? (

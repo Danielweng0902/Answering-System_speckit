@@ -207,6 +207,20 @@ export function listAllSubmissions(
   return readAnswers(database);
 }
 
+/** 005：某題目前的有效作答筆數（用來判斷是不是該題的第一個答案）。 */
+export function countValidForQuestion(
+  database: DatabaseSync,
+  questionId: string,
+): number {
+  const row = database
+    .prepare(
+      `SELECT COUNT(*) AS count FROM submissions
+       WHERE question_id = ? AND voided_at IS NULL`,
+    )
+    .get(questionId) as { count: number };
+  return row.count;
+}
+
 export function listValidByGroup(
   database: DatabaseSync,
   groupId: string,

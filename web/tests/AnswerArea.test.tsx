@@ -74,6 +74,7 @@ function snapshot(
     countdownEndsAt: null,
     groups: [{ id: GROUP_ID, name: '第一組' }],
     role: 'student',
+    fairRankingEnabled: false,
     phase: 'open',
     myGroupId: GROUP_ID,
     sessionId: CURRENT_SESSION,

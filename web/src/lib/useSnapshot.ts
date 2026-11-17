@@ -6,7 +6,7 @@ import {
 } from '@classroom/shared';
 import { useEffect, useRef, useState } from 'react';
 import { clearToken } from './session';
-import { connectSocket, getSocket } from './socket';
+import { connectSocket, getSocket, type SocketView } from './socket';
 
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting';
 
@@ -26,8 +26,16 @@ export type UseSnapshotResult = {
 
 let cachedSnapshot: Snapshot | null = null;
 
-/** 訂閱伺服器快照。只接受 revision 比目前接受值更新的完整快照。 */
-export function useSnapshot(): UseSnapshotResult {
+/**
+ * 訂閱伺服器快照。只接受 revision 比目前接受值更新的完整快照。
+ *
+ * 005：投影頁用 `view: 'projector'` 連線，伺服器改送投影快照（不含作答
+ * 資訊）；一般頁面維持預設的檢視模式。
+ */
+export function useSnapshot(
+  options: { view?: SocketView } = {},
+): UseSnapshotResult {
+  const view = options.view ?? 'normal';
   const [snapshot, setSnapshot] = useState<Snapshot | null>(cachedSnapshot);
   const [sessionInvalidPayload, setSessionInvalidPayload] =
     useState<SessionInvalidPayload | null>(null);
@@ -81,7 +89,7 @@ export function useSnapshot(): UseSnapshotResult {
     socket.on('disconnect', handleDisconnect);
     socket.on(STATE_EVENT, handleState);
     socket.on(SESSION_INVALID_EVENT, handleSessionInvalid);
-    connectSocket();
+    connectSocket(undefined, view);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -89,7 +97,7 @@ export function useSnapshot(): UseSnapshotResult {
       socket.off(STATE_EVENT, handleState);
       socket.off(SESSION_INVALID_EVENT, handleSessionInvalid);
     };
-  }, []);
+  }, [view]);
 
   return {
     snapshot,

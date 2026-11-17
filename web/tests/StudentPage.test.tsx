@@ -65,6 +65,7 @@ function studentSnapshot(
     serverNow: '2026-11-12T00:00:00.000Z',
     countdownEndsAt: null,
     groups,
+    fairRankingEnabled: false,
     role: 'student' as const,
     myGroupId: 'g1',
     sessionId: 'test-session',
@@ -105,6 +106,7 @@ function guestSnapshot(
     countdownEndsAt: null,
     groups: nextGroups,
     role: 'guest',
+    fairRankingEnabled: false,
   };
 }
 
@@ -215,6 +217,7 @@ describe('StudentPage', () => {
       jsonResponse(200, {
         token: 'joined-student-token',
         role: 'student',
+        fairRankingEnabled: false,
         groupId: 'g1',
       }),
     );

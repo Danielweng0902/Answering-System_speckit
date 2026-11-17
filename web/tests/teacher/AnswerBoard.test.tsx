@@ -27,6 +27,7 @@ function snapshot(
       { id: 'group-2', name: '第二組' },
     ],
     role: 'teacher',
+    fairRankingEnabled: false,
     presence: {},
     questions: [
       { number: 1, kind: 'single', prompt: '第一題題目', blankCount: 1 },
@@ -36,6 +37,8 @@ function snapshot(
       {
         questionNumber: 1,
         winnerGroupId: 'group-1',
+        settling: false,
+        fairnessApplied: false,
         cells: [
           {
             questionNumber: 1,
@@ -167,6 +170,8 @@ describe('AnswerBoard 作廢（US3；T053；FR-029）', () => {
             {
               questionNumber: 1,
               winnerGroupId: 'group-2',
+              settling: false,
+              fairnessApplied: false,
               cells: [
                 {
                   questionNumber: 1,
@@ -199,6 +204,8 @@ describe('AnswerBoard 作廢（US3；T053；FR-029）', () => {
             {
               questionNumber: 1,
               winnerGroupId: 'group-1',
+              settling: false,
+              fairnessApplied: false,
               cells: [
                 {
                   questionNumber: 1,
@@ -238,6 +245,8 @@ describe('AnswerBoard 作廢（US3；T053；FR-029）', () => {
             {
               questionNumber: 1,
               winnerGroupId: 'group-2',
+              settling: false,
+              fairnessApplied: false,
               cells: [
                 {
                   questionNumber: 1,
@@ -277,6 +286,8 @@ describe('AnswerBoard 作廢（US3；T053；FR-029）', () => {
             {
               questionNumber: 1,
               winnerGroupId: 'group-1',
+              settling: false,
+              fairnessApplied: false,
               cells: [
                 {
                   questionNumber: 1,

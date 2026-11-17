@@ -6,7 +6,8 @@ import {
   type ResultRow,
 } from '../../src/app/csvBuilder.js';
 
-const HEADER = '題號,空格序,組別,答案,順位,是否搶答成功,送出時間';
+const HEADER =
+  '題號,空格序,組別,答案,順位,是否搶答成功,送出時間,公平順位';
 const RECEIVED_AT = '2026-11-14T09:30:00.123Z';
 
 function row(overrides: Partial<ResultRow> = {}): ResultRow {
@@ -18,6 +19,7 @@ function row(overrides: Partial<ResultRow> = {}): ResultRow {
     rank: 1,
     isWinner: true,
     receivedAt: RECEIVED_AT,
+    fairness: '否',
     ...overrides,
   };
 }
@@ -42,8 +44,8 @@ describe('CSV Builder（004 US3；T017）', () => {
 
     expect(output.split('\r\n')).toEqual([
       HEADER,
-      `1,1,第一組,第一格,1,是,${RECEIVED_AT}`,
-      `1,2,第一組,第二格,1,否,${RECEIVED_AT}`,
+      `1,1,第一組,第一格,1,是,${RECEIVED_AT},否`,
+      `1,2,第一組,第二格,1,否,${RECEIVED_AT},否`,
     ]);
   });
 
@@ -83,6 +85,21 @@ describe('CSV Builder（004 US3；T017）', () => {
   it('完整 buildCsv 將公式保護與 CSV 轉義一起套用', () => {
     const output = text(buildCsv([row({ answer: '=1,"x"' })]));
     expect(output.split('\r\n')[1]).toContain(`"'=1,""x"""`);
+  });
+
+  it('005（T017）：第 8 欄標示本場是否啟用公平順位，改判的題目標為「是（改判）」', () => {
+    const output = text(
+      buildCsv([
+        row({ questionNumber: 1, fairness: '是' }),
+        row({ questionNumber: 2, fairness: '是（改判）' }),
+      ]),
+    );
+
+    expect(output.split('\r\n')).toEqual([
+      HEADER,
+      `1,1,第一組,答案,1,是,${RECEIVED_AT},是`,
+      `2,1,第一組,答案,1,是,${RECEIVED_AT},是（改判）`,
+    ]);
   });
 
   it('T027：組別名稱等所有自由文字欄也防公式注入', () => {
