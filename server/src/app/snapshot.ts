@@ -45,6 +45,8 @@ export function createSnapshot(
       id: group.id,
       name: group.name,
     })),
+    // 005 FR-001／FR-012：所有角色都知道本場用哪一種順位規則。
+    fairRankingEnabled: activity.fairRankingEnabled,
   };
 
   switch (identity.role) {
@@ -73,8 +75,8 @@ export function createSnapshot(
         ...studentBase,
         phase: 'closed' as const,
         questions: buildStudentQuestions(database),
-        results: buildResults(database),
-        myAnswers: buildClosedMyAnswers(database, identity.groupId),
+        results: buildResults(database, now),
+        myAnswers: buildClosedMyAnswers(database, identity.groupId, now),
       };
     }
     case 'teacher': {
@@ -100,7 +102,7 @@ export function createSnapshot(
             }
           : null,
         // 003 US3（T030；FR-019–FR-022）：老師快照任何階段都輸出看板與進度。
-        board: buildBoard(database),
+        board: buildBoard(database, now),
         progress: buildProgress(database),
       };
     }

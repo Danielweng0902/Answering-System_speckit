@@ -170,6 +170,14 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     commandRouter.register(socket, 'activity:open', teacherOnly, activityCommands.openActivity);
     commandRouter.register(socket, 'activity:close', teacherOnly, activityCommands.closeActivity);
     commandRouter.register(socket, 'activity:reset', teacherOnly, activityCommands.resetActivity);
+    // 005（FR-001）：只有老師、只有準備中能切換公平順位；成功後所有角色
+    // 都會收到帶有 fairRankingEnabled 的新快照。
+    commandRouter.register(
+      socket,
+      'activity:fair-ranking',
+      teacherOnly,
+      activityCommands.setFairRanking,
+    );
     // 002（T024）：questions:confirm 只有老師、只在準備中；ack.ok 由路由
     // 決定是否廣播，所有老師分頁同步收到新的題目摘要（research R6）。
     commandRouter.register(

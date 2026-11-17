@@ -197,6 +197,16 @@ export function listByQuestion(
   );
 }
 
+/**
+ * 005 判定用：一次讀出全部作答（依題目 position、rank 排序）。
+ * 判定需要跨題的送達資料，逐題呼叫 listByQuestion 會重複掃描整張表。
+ */
+export function listAllSubmissions(
+  database: DatabaseSync,
+): SubmissionRecord[] {
+  return readAnswers(database);
+}
+
 export function listValidByGroup(
   database: DatabaseSync,
   groupId: string,

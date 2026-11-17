@@ -10,7 +10,9 @@ const SCHEMA = `
     closed_at TEXT,
     revision INTEGER NOT NULL DEFAULT 0,
     session_id TEXT,
-    answer_event_count INTEGER NOT NULL DEFAULT 0
+    answer_event_count INTEGER NOT NULL DEFAULT 0,
+    fair_ranking_enabled INTEGER NOT NULL DEFAULT 0,
+    revealed_question_count INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS groups (
@@ -103,6 +105,19 @@ function migrateActivityColumns(database: DatabaseSync): void {
        ADD COLUMN answer_event_count INTEGER NOT NULL DEFAULT 0`,
     );
   }
+  // 005：公平順位旗標與投影看板揭曉進度（research R5）。
+  if (!columnNames.has('fair_ranking_enabled')) {
+    database.exec(
+      `ALTER TABLE activity
+       ADD COLUMN fair_ranking_enabled INTEGER NOT NULL DEFAULT 0`,
+    );
+  }
+  if (!columnNames.has('revealed_question_count')) {
+    database.exec(
+      `ALTER TABLE activity
+       ADD COLUMN revealed_question_count INTEGER NOT NULL DEFAULT 0`,
+    );
+  }
 }
 
 /** Apply the idempotent schema and singleton seed to an open database. */
@@ -114,8 +129,9 @@ export function initializeDatabase(database: DatabaseSync): void {
     .prepare(
       `INSERT INTO activity
         (id, phase, opened_at, countdown_ends_at, closed_at, revision,
-         session_id, answer_event_count)
-       VALUES (1, 'preparing', NULL, NULL, NULL, 0, ?, 0)
+         session_id, answer_event_count, fair_ranking_enabled,
+         revealed_question_count)
+       VALUES (1, 'preparing', NULL, NULL, NULL, 0, ?, 0, 0, 0)
        ON CONFLICT(id) DO NOTHING`,
     )
     .run(randomUUID());

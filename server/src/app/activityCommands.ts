@@ -13,7 +13,7 @@
  * 失敗或冪等不寫入時不會觸發改變類的掛載點。
  */
 import type { DatabaseSync } from 'node:sqlite';
-import type { Ack, ActivityOpenInput, ActivityResetInput } from '@classroom/shared';
+import type { Ack, ActivityFairRankingPayload, ActivityOpenInput, ActivityResetInput } from '@classroom/shared';
 import {
   close as closePhase,
   open as openPhase,
@@ -38,6 +38,8 @@ export type ActivityCommandUseCases = {
   openActivity: CommandUseCase;
   closeActivity: CommandUseCase;
   resetActivity: CommandUseCase;
+  /** 005：老師在準備中切換是否啟用公平順位。 */
+  setFairRanking: CommandUseCase;
   /**
    * 倒數到期（T064）：與 closeActivity 共用同一條 close 路徑，回傳是否
    * 真的改變狀態，由呼叫方（index.ts）決定是否廣播；對已結束的活動
@@ -82,6 +84,7 @@ export function createActivityCommands(
     result: Extract<ActivityTransition, { ok: true }>,
     current: Activity,
     withinTransaction?: () => void,
+    overrides?: Partial<Activity>,
   ): void {
     if (!result.changed) {
       return;
@@ -94,6 +97,7 @@ export function createActivityCommands(
         ...current,
         ...result.activity,
         revision: current.revision + 1,
+        ...overrides,
       });
       database.exec('COMMIT');
     } catch (error) {
@@ -145,6 +149,35 @@ export function createActivityCommands(
       return closeCurrent().ack;
     },
 
+    /**
+     * 005（FR-001、AC-005-09、AC-005-10）：只有準備中能切換公平順位。
+     * 設定成與現況相同時回成功但不寫入、不遞增 revision（冪等）。
+     */
+    setFairRanking(_identity, payload): Ack {
+      const { enabled } = payload as ActivityFairRankingPayload;
+      const current = readActivity();
+      if (current.phase !== 'preparing') {
+        return commandError('INVALID_PHASE');
+      }
+      if (current.fairRankingEnabled === enabled) {
+        return { ok: true };
+      }
+
+      database.exec('BEGIN');
+      try {
+        updateActivity(database, {
+          ...current,
+          fairRankingEnabled: enabled,
+          revision: current.revision + 1,
+        });
+        database.exec('COMMIT');
+      } catch (error) {
+        database.exec('ROLLBACK');
+        throw error;
+      }
+      return { ok: true };
+    },
+
     closeExpiredActivity(): boolean {
       return closeCurrent().changed;
     },
@@ -162,6 +195,10 @@ export function createActivityCommands(
         // 在同一 transaction 改變；兩個作答 counter 刻意保留以維持單調 revision。
         clearAllAnswers(database);
         newSessionId(database);
+      }, {
+        // 005 FR-001／FR-023：重設後公平順位回到預設（不啟用）、揭曉進度清空。
+        fairRankingEnabled: false,
+        revealedQuestionCount: 0,
       });
       if (result.changed) {
         dependencies.onReset?.();

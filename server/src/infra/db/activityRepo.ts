@@ -9,6 +9,10 @@ export type Activity = {
   countdownEndsAt: string | null;
   closedAt: string | null;
   revision: number;
+  /** 005：本場是否啟用公平順位（預設關閉，只有準備中可改）。 */
+  fairRankingEnabled: boolean;
+  /** 005：投影看板已揭曉到第幾題（依題號順序）。 */
+  revealedQuestionCount: number;
 };
 
 export function getActivity(database: DatabaseSync): Activity | null {
@@ -18,13 +22,20 @@ export function getActivity(database: DatabaseSync): Activity | null {
               opened_at AS openedAt,
               countdown_ends_at AS countdownEndsAt,
               closed_at AS closedAt,
-              revision
+              revision,
+              fair_ranking_enabled AS fairRankingEnabled,
+              revealed_question_count AS revealedQuestionCount
        FROM activity
        WHERE id = 1`,
     )
-    .get() as Activity | undefined;
+    .get() as (Omit<Activity, 'fairRankingEnabled'> & {
+    fairRankingEnabled: number;
+  }) | undefined;
 
-  return row ?? null;
+  if (row === undefined) {
+    return null;
+  }
+  return { ...row, fairRankingEnabled: row.fairRankingEnabled === 1 };
 }
 
 export function updateActivity(
@@ -35,7 +46,8 @@ export function updateActivity(
     .prepare(
       `UPDATE activity
        SET phase = ?, opened_at = ?, countdown_ends_at = ?,
-           closed_at = ?, revision = ?
+           closed_at = ?, revision = ?,
+           fair_ranking_enabled = ?, revealed_question_count = ?
        WHERE id = 1`,
     )
     .run(
@@ -44,6 +56,8 @@ export function updateActivity(
       activity.countdownEndsAt,
       activity.closedAt,
       activity.revision,
+      activity.fairRankingEnabled ? 1 : 0,
+      activity.revealedQuestionCount,
     );
 }
 

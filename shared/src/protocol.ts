@@ -17,6 +17,8 @@ export type SnapshotBase = {
   phase: Phase;
   countdownEndsAt: string | null;
   groups: GroupSummary[];
+  /** 005：本場是否啟用公平順位（FR-001、FR-012）。 */
+  fairRankingEnabled: boolean;
 };
 
 export type GuestSnapshot = SnapshotBase & { role: 'guest' };
@@ -75,7 +77,44 @@ export type TeacherSnapshot = SnapshotBase & {
   progress: AnswerProgress;
 };
 
-export type Snapshot = GuestSnapshot | StudentSnapshot | TeacherSnapshot;
+export type Snapshot = GuestSnapshot | StudentSnapshot | TeacherSnapshot | ProjectorSnapshot;
+
+/* ------------------------------------------------------------------ */
+/* 投影看板（005）                                                      */
+/* ------------------------------------------------------------------ */
+
+/** 投影看板上各組是否在線；不含任何作答資訊（FR-016）。 */
+export type ProjectorGroupStatus = {
+  id: string;
+  name: string;
+  online: boolean;
+};
+
+/** 已揭曉的一題結果；無人作答時 winnerGroupName 為 null。 */
+export type ProjectorRevealedQuestion = {
+  questionNumber: number;
+  winnerGroupName: string | null;
+  winnerAnswers: string[];
+};
+
+/**
+ * 005 投影快照：只有階段、倒數、各組是否在線與已揭曉的結果。
+ * **不含**答案（除已揭曉題目的搶答成功答案）、送出狀態與送出數量
+ * （FR-015、FR-022、research R6）。
+ */
+export type ProjectorSnapshot = SnapshotBase & {
+  role: 'projector';
+  /** 各組是否在線（與 groups 摘要並列，方便前端直接顯示）。 */
+  groupStatus: ProjectorGroupStatus[];
+  reveal: {
+    /** 已揭曉的題數（依題號順序）。 */
+    revealedQuestionCount: number;
+    /** 已揭曉的題目結果，依題號順序。 */
+    questions: ProjectorRevealedQuestion[];
+    /** 全部揭曉後才有各組搶答成功的題數（FR-018）。 */
+    groupWinCounts: { groupId: string; groupName: string; count: number }[] | null;
+  };
+};
 
 /* ------------------------------------------------------------------ */
 /* Guided Notes 匯入（002 contracts）                                  */
@@ -125,6 +164,8 @@ export type QuestionResult = {
     groupName: string;
     answers: string[];
   } | null;
+  /** 005：是否因公平順位而由非最先送達者搶答成功（FR-011）。 */
+  fairnessApplied: boolean;
 };
 
 export type AnswerBoardCell = {
@@ -141,6 +182,10 @@ export type AnswerBoardQuestion = {
   questionNumber: number;
   cells: AnswerBoardCell[];
   winnerGroupId: string | null;
+  /** 005：是否仍在判定中（FR-010）。 */
+  settling: boolean;
+  /** 005：是否因公平順位而改判（FR-011）。 */
+  fairnessApplied: boolean;
 };
 
 export type AnswerProgress = {
@@ -297,6 +342,12 @@ export type StudentLeavePayload = Record<string, never>;
 export type QuestionsConfirmPayload = { importId: string };
 export type AnswerSubmitPayload = { questionNumber: number; answers: string[] };
 export type AnswerVoidPayload = { groupId: string; questionNumber: number };
+/** 005：老師在準備中切換公平順位。 */
+export type ActivityFairRankingPayload = { enabled: boolean };
+/** 005：老師逐題揭曉。 */
+export type RevealNextPayload = Record<string, never>;
+/** 005：老師全部揭曉。 */
+export type RevealAllPayload = Record<string, never>;
 
 export type CommandPayloads = {
   'group:create': GroupCreatePayload;
@@ -305,6 +356,9 @@ export type CommandPayloads = {
   'activity:open': ActivityOpenPayload;
   'activity:close': ActivityClosePayload;
   'activity:reset': ActivityResetPayload;
+  'activity:fair-ranking': ActivityFairRankingPayload;
+  'reveal:next': RevealNextPayload;
+  'reveal:all': RevealAllPayload;
   'student:leave': StudentLeavePayload;
   'questions:confirm': QuestionsConfirmPayload;
   'answer:submit': AnswerSubmitPayload;
@@ -318,6 +372,9 @@ export const COMMAND_EVENTS = [
   'activity:open',
   'activity:close',
   'activity:reset',
+  'activity:fair-ranking',
+  'reveal:next',
+  'reveal:all',
   'student:leave',
   'questions:confirm',
   'answer:submit',

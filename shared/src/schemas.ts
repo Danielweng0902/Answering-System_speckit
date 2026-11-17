@@ -45,6 +45,16 @@ export const activityResetSchema = z.object({
   confirm: z.unknown().optional(),
 });
 
+/** 005：老師在準備中切換公平順位。 */
+export const activityFairRankingSchema = z.strictObject({
+  enabled: z.boolean(),
+});
+
+/** 005：老師逐題揭曉或全部揭曉。 */
+export const revealNextSchema = z.strictObject({});
+
+export const revealAllSchema = z.strictObject({});
+
 export const studentLeaveSchema = z.object({});
 
 export const questionsConfirmSchema = z.object({
@@ -73,6 +83,9 @@ export const commandSchemas: {
   'activity:open': activityOpenSchema,
   'activity:close': activityCloseSchema,
   'activity:reset': activityResetSchema,
+  'activity:fair-ranking': activityFairRankingSchema,
+  'reveal:next': revealNextSchema,
+  'reveal:all': revealAllSchema,
   'student:leave': studentLeaveSchema,
   'questions:confirm': questionsConfirmSchema,
   'answer:submit': answerSubmitSchema,
