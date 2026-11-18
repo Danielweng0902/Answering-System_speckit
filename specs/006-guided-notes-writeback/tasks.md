@@ -41,6 +41,8 @@
 - [x] T021 **把 Google 的失敗拆成可行動的錯誤代碼**（建議 1）：`sheetWriter.ts` 讀取回應原因分類為 `SHEET_AUTH_FAILED`（401 或取不到 token）、`SHEET_API_DISABLED`（403 + SERVICE_DISABLED）、`SHEET_NOT_EDITABLE`（403 權限不足）、`SHEET_NOT_NATIVE`（400 not supported for this document：檔案其實是 xlsx）、`SHEET_TAB_NOT_FOUND`（400 Unable to parse range：工作表改名）、`SHEET_NOT_FOUND`（404）、`SHEET_UNAVAILABLE`（429／5xx／網路錯誤）；每個代碼都有老師看得懂、也知道怎麼處理的訊息
 - [x] T022 **階段改變時清掉上一次的寫回／揭曉訊息**（建議 2）：`TeacherPage.tsx` 在階段或匯入來源變化時清除訊息，避免老師誤以為新的活動也失敗
 - [x] T023 **寫回前比對線上試算表版面**（建議 3）：寫回前讀取線上試算表並比對題號與空格結構；不一致時回 `SHEET_MODIFIED`，老師可按「仍要寫回」以 `force` 略過比對（讀不到線上試算表時不比對、不阻擋）
+- [x] T024 **說明「寫回不會清空上一場的答案」**（建議 4）：寫回只覆寫這次有答案的題目；已在老師端成功訊息、contracts 與 quickstart 寫明。清空並不安全——04 的「前綴＋答案同格」版面清空會連前綴一起刪掉，所以不自動清空
+- [ ] T025 **讓服務帳號也能讀取試算表，省掉「知道連結者可檢視」**（建議 5，**不擋合併**）：技術上可行（匯入改帶服務帳號 token 抓同一個 export 端點，解析流程不變），但會改動 **002 的契約**：002 的 FR-002 明寫「以連結匯入只需要知道連結者可檢視，不需要任何帳號授權或金鑰」，屬跨子功能的契約變更，需兩組同意；且要保留「沒有服務帳號時退回公開讀取」的雙路徑。故不放在 006 這個 PR 裡順手改，另開工作處理
 
 ## Notes
 
