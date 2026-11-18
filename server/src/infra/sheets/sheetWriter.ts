@@ -14,7 +14,11 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 
 export type SheetWriteErrorCode =
   | 'SHEET_NOT_FOUND'
+  | 'SHEET_TAB_NOT_FOUND'
   | 'SHEET_NOT_EDITABLE'
+  | 'SHEET_NOT_NATIVE'
+  | 'SHEET_API_DISABLED'
+  | 'SHEET_AUTH_FAILED'
   | 'SHEET_UNAVAILABLE';
 
 /** 可預期的寫入失敗；訊息取自共用錯誤代碼，不夾帶 API 回應內容。 */
@@ -25,6 +29,14 @@ export class SheetWriteError extends Error {
     super(ERROR_MESSAGES[code]);
     this.name = 'SheetWriteError';
     this.code = code;
+  }
+}
+
+/** 取用 access token 失敗（金鑰格式錯、金鑰被停用、授權失敗）。 */
+export class SheetAuthError extends Error {
+  constructor() {
+    super('Google access token request failed');
+    this.name = 'SheetAuthError';
   }
 }
 
@@ -62,21 +74,53 @@ export function toSheetRange(sheetName: string, cell: string): string {
   return `'${escaped}'!${cell}`;
 }
 
+/**
+ * 把 Google 的回應分類成可行動的錯誤代碼（006 T021；依 006 人工驗證建議 1）。
+ *
+ * 只讀取錯誤原因，不把回應內容寫進 log 或使用者訊息。
+ */
 async function classifyResponse(response: Response): Promise<SheetWriteErrorCode> {
-  if (response.status === 401 || response.status === 403) {
-    return 'SHEET_NOT_EDITABLE';
+  const body = await response.text().catch(() => '');
+  const reason = extractErrorReason(body);
+
+  if (response.status === 401) {
+    return 'SHEET_AUTH_FAILED';
+  }
+  if (response.status === 403) {
+    // 專案沒啟用 Sheets API 與「沒有編輯權限」都回 403，靠原因字串區分。
+    return reason === 'SERVICE_DISABLED' ? 'SHEET_API_DISABLED' : 'SHEET_NOT_EDITABLE';
   }
   if (response.status === 404) {
     return 'SHEET_NOT_FOUND';
   }
   if (response.status === 400) {
-    // Google 對「工作表不存在／範圍無法解析」回 400；其餘 400 視為暫時不可用。
-    const body = await response.text().catch(() => '');
-    return body.includes('Unable to parse range')
-      ? 'SHEET_NOT_FOUND'
-      : 'SHEET_UNAVAILABLE';
+    if (body.includes('not supported for this document')) {
+      // 這是「以 Google 試算表開啟的 xlsx」，讀得到但 API 不允許寫。
+      return 'SHEET_NOT_NATIVE';
+    }
+    if (body.includes('Unable to parse range')) {
+      return 'SHEET_TAB_NOT_FOUND';
+    }
+    return 'SHEET_UNAVAILABLE';
   }
   return 'SHEET_UNAVAILABLE';
+}
+
+/** 從 Google 的錯誤 JSON 取出狀態字串（例如 `SERVICE_DISABLED`）。 */
+function extractErrorReason(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { status?: unknown; errors?: { reason?: unknown }[] };
+    };
+    const status = parsed.error?.status;
+    if (typeof status === 'string') {
+      return status;
+    }
+    const reason = parsed.error?.errors?.[0]?.reason;
+    return typeof reason === 'string' ? reason : '';
+  } catch {
+    return '';
+  }
 }
 
 /** 建立以服務帳號呼叫 Google Sheets API 的寫入器。 */
@@ -92,7 +136,10 @@ export function createGoogleSheetWriter(
       if (request.updates.length === 0) {
         return;
       }
-      const accessToken = await options.accessTokenProvider();
+      const accessToken = await options.accessTokenProvider().catch(() => {
+        // 取不到 token 是「伺服器設定／金鑰」的問題，不是「暫時無法寫入」。
+        throw new SheetAuthError();
+      });
       const abortController = new AbortController();
       const timeout = setTimeout(() => {
         abortController.abort();
@@ -124,7 +171,7 @@ export function createGoogleSheetWriter(
           throw new SheetWriteError(await classifyResponse(response));
         }
       } catch (error) {
-        if (error instanceof SheetWriteError) {
+        if (error instanceof SheetWriteError || error instanceof SheetAuthError) {
           throw error;
         }
         // 逾時與網路問題對老師來說都一樣：暫時寫不進去。

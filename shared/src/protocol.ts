@@ -275,7 +275,12 @@ export const ERROR_CODES = [
   'GUIDED_NOTES_NOT_LINK',
   'SHEET_NOT_CONFIGURED',
   'SHEET_NOT_FOUND',
+  'SHEET_TAB_NOT_FOUND',
   'SHEET_NOT_EDITABLE',
+  'SHEET_NOT_NATIVE',
+  'SHEET_API_DISABLED',
+  'SHEET_AUTH_FAILED',
+  'SHEET_MODIFIED',
   'SHEET_UNAVAILABLE',
 ] as const;
 
@@ -317,9 +322,22 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   SUBMISSION_NOT_FOUND: '找不到可以作廢的作答，請重新整理後再試',
   GUIDED_NOTES_NOT_LINK: '這份學習單是上傳的 xlsx，沒有雲端試算表可以寫回；請改用下載 xlsx',
   SHEET_NOT_CONFIGURED: '伺服器尚未設定 Google 服務帳號，無法寫回試算表；請改用下載 xlsx',
-  SHEET_NOT_FOUND: '找不到這份 Google 試算表，可能已被改名或刪除；請改用下載 xlsx',
-  SHEET_NOT_EDITABLE: '沒有這份試算表的編輯權限；請把試算表共用給服務帳號，或改用下載 xlsx',
-  SHEET_UNAVAILABLE: 'Google 試算表暫時無法寫入，請稍後再試或改用下載 xlsx',
+  SHEET_NOT_FOUND:
+    '找不到這份 Google 試算表，可能已被刪除；請改用下載 xlsx',
+  SHEET_TAB_NOT_FOUND:
+    '找不到這份試算表裡的工作表，可能已被改名；請改回原名或重新匯入後再寫回，或改用下載 xlsx',
+  SHEET_NOT_EDITABLE:
+    '沒有這份試算表的編輯權限；請把試算表共用給服務帳號，或改用下載 xlsx',
+  SHEET_NOT_NATIVE:
+    '這份檔案還是 xlsx 格式，無法直接寫入。請在試算表選「檔案 → 儲存為 Google 試算表」，再用新的連結重新匯入。',
+  SHEET_API_DISABLED:
+    '伺服器的 Google 專案尚未啟用 Google Sheets API，請通知系統管理者處理。',
+  SHEET_AUTH_FAILED:
+    '伺服器的 Google 寫回設定有誤，請通知系統管理者檢查服務帳號金鑰。',
+  SHEET_MODIFIED:
+    '這份試算表在匯入後被修改過，寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」。',
+  SHEET_UNAVAILABLE:
+    'Google 試算表暫時無法寫入，請稍後再試或改用下載 xlsx',
 };
 
 /* ------------------------------------------------------------------ */

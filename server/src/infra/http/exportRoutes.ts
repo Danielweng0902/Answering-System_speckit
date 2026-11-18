@@ -21,6 +21,7 @@ export type ExportRoutesDependencies = {
   writeBackGuidedNotes?:
     | ((
         database: DatabaseSync,
+        options: { force?: boolean },
       ) => Promise<
         | { ok: true; writtenCells: number }
         | { ok: false; code: ErrorCode; message: string }
@@ -36,7 +37,12 @@ const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
   GUIDED_NOTES_NOT_LINK: 422,
   SHEET_NOT_CONFIGURED: 503,
   SHEET_NOT_FOUND: 422,
+  SHEET_TAB_NOT_FOUND: 422,
   SHEET_NOT_EDITABLE: 422,
+  SHEET_NOT_NATIVE: 422,
+  SHEET_API_DISABLED: 503,
+  SHEET_AUTH_FAILED: 503,
+  SHEET_MODIFIED: 409,
   SHEET_UNAVAILABLE: 502,
 };
 
@@ -154,7 +160,11 @@ export function createExportRouter(
       }
 
       try {
-        const result = await dependencies.writeBackGuidedNotes(database);
+        // 老師確認「試算表被改過但仍要寫回」時帶 force（006 T023）。
+        const body = (request.body ?? {}) as { force?: unknown };
+        const result = await dependencies.writeBackGuidedNotes(database, {
+          force: body.force === true,
+        });
         if (!result.ok) {
           response.status(ERROR_STATUS[result.code] ?? 500).json({
             error: { code: result.code, message: result.message },

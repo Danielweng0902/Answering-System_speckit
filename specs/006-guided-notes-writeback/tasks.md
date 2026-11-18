@@ -36,6 +36,12 @@
 - [ ] T019 **另一位組員審查**（憲法要求的合併關卡）：在 PR 上留下 review，重點為寫入範圍、權限與錯誤處理
 - [x] T020 **共用契約 D12 改版**：005 合併後一次套用（避免兩個 PR 同時改同一份契約）。D12 已改為「對線上試算表讀寫」並升版（v0.6），`docs/shared/FEATURE-CONTRACT.md` 已更新
 
+## Phase 5: 人工驗證後的修正（2026-11-18，依 006 人工驗證建議）
+
+- [x] T021 **把 Google 的失敗拆成可行動的錯誤代碼**（建議 1）：`sheetWriter.ts` 讀取回應原因分類為 `SHEET_AUTH_FAILED`（401 或取不到 token）、`SHEET_API_DISABLED`（403 + SERVICE_DISABLED）、`SHEET_NOT_EDITABLE`（403 權限不足）、`SHEET_NOT_NATIVE`（400 not supported for this document：檔案其實是 xlsx）、`SHEET_TAB_NOT_FOUND`（400 Unable to parse range：工作表改名）、`SHEET_NOT_FOUND`（404）、`SHEET_UNAVAILABLE`（429／5xx／網路錯誤）；每個代碼都有老師看得懂、也知道怎麼處理的訊息
+- [x] T022 **階段改變時清掉上一次的寫回／揭曉訊息**（建議 2）：`TeacherPage.tsx` 在階段或匯入來源變化時清除訊息，避免老師誤以為新的活動也失敗
+- [x] T023 **寫回前比對線上試算表版面**（建議 3）：寫回前讀取線上試算表並比對題號與空格結構；不一致時回 `SHEET_MODIFIED`，老師可按「仍要寫回」以 `force` 略過比對（讀不到線上試算表時不比對、不阻擋）
+
 ## Notes
 
 - **判定不保存**（沿用 005 research R1）：寫回與匯出都只是「重算一次答案要寫到哪裡」，不新增狀態。

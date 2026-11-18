@@ -73,16 +73,45 @@ describe('Google 試算表寫入（006 US1）', () => {
     expect(called).toBe(false);
   });
 
+  // 006 T021：依人工驗證建議 1，把 Google 的失敗分成老師看得懂、也知道
+  // 該怎麼處理的錯誤代碼。
   it.each([
-    { status: 401, body: {}, code: 'SHEET_NOT_EDITABLE' },
-    { status: 403, body: {}, code: 'SHEET_NOT_EDITABLE' },
+    { status: 401, body: {}, code: 'SHEET_AUTH_FAILED' },
+    {
+      status: 403,
+      body: { error: { status: 'PERMISSION_DENIED', message: 'The caller does not have permission' } },
+      code: 'SHEET_NOT_EDITABLE',
+    },
+    {
+      status: 403,
+      body: {
+        error: {
+          status: 'SERVICE_DISABLED',
+          message: 'Google Sheets API has not been used in project 123 before or it is disabled',
+        },
+      },
+      code: 'SHEET_API_DISABLED',
+    },
     { status: 404, body: {}, code: 'SHEET_NOT_FOUND' },
     {
       status: 400,
-      body: { error: { message: 'Unable to parse range: 學習單!H5' } },
-      code: 'SHEET_NOT_FOUND',
+      body: {
+        error: {
+          message: 'This operation is not supported for this document.',
+        },
+      },
+      code: 'SHEET_NOT_NATIVE',
     },
-    { status: 400, body: { error: { message: 'Invalid value' } }, code: 'SHEET_UNAVAILABLE' },
+    {
+      status: 400,
+      body: { error: { message: 'Unable to parse range: 學習單!H5' } },
+      code: 'SHEET_TAB_NOT_FOUND',
+    },
+    {
+      status: 400,
+      body: { error: { message: 'Invalid value' } },
+      code: 'SHEET_UNAVAILABLE',
+    },
     { status: 429, body: {}, code: 'SHEET_UNAVAILABLE' },
     { status: 500, body: {}, code: 'SHEET_UNAVAILABLE' },
   ])('HTTP $status 映射成 $code', async ({ status, body, code }) => {
@@ -95,6 +124,20 @@ describe('Google 試算表寫入（006 US1）', () => {
     await expect(writer.writeCells(REQUEST)).rejects.toMatchObject({
       name: 'SheetWriteError',
       code,
+    });
+  });
+
+  it('取不到 access token（金鑰／授權問題）不是「暫時無法寫入」', async () => {
+    const writer = createGoogleSheetWriter({
+      accessTokenProvider: async () => {
+        throw new Error('token request failed');
+      },
+      apiBaseUrl: 'https://sheets.test',
+      fetchImpl: (async () => jsonResponse(200, {})) as unknown as typeof fetch,
+    });
+
+    await expect(writer.writeCells(REQUEST)).rejects.toMatchObject({
+      name: 'SheetAuthError',
     });
   });
 

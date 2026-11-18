@@ -82,6 +82,59 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     });
   });
 
+  it('試算表被改過時提示並讓老師確認後再寫回（人工驗證建議 3）', async () => {
+    writeBackGuidedNotes.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'SHEET_MODIFIED',
+        message:
+          '這份試算表在匯入後被修改過，寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」。',
+      },
+    });
+    render(<TeacherPage snapshot={makeSnapshot()} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('被修改過');
+    });
+
+    writeBackGuidedNotes.mockResolvedValue({ ok: true, writtenCells: 6 });
+    fireEvent.click(screen.getByRole('button', { name: '仍要寫回' }));
+
+    await waitFor(() => {
+      expect(writeBackGuidedNotes).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  it('階段改變時清掉上一次的寫回訊息（人工驗證建議 2）', async () => {
+    writeBackGuidedNotes.mockResolvedValue({
+      ok: false,
+      error: { code: 'SHEET_NOT_EDITABLE', message: '沒有這份試算表的編輯權限' },
+    });
+    const { rerender } = render(<TeacherPage snapshot={makeSnapshot()} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('編輯權限');
+    });
+
+    // 重設活動 → 階段改變 → 舊訊息不該還留在畫面上。
+    rerender(
+      <TeacherPage
+        snapshot={makeSnapshot({ phase: 'preparing', revision: 2 })}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+  });
+
   it('上傳 xlsx 的學習單沒有線上目標，按鈕停用並提示改用下載', () => {
     render(
       <TeacherPage
