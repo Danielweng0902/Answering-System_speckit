@@ -74,37 +74,101 @@ describe('Google 試算表寫入（006 US1）', () => {
   });
 
   // 006 T021：依人工驗證建議 1，把 Google 的失敗分成老師看得懂、也知道
-  // 該怎麼處理的錯誤代碼。
+  // 該怎麼處理的錯誤代碼。案例採用 **Google 官方標準錯誤格式**：
+  // `status` ＋ `message` ＋ `details[].reason`（見 Google API 錯誤說明）。
   it.each([
     { status: 401, body: {}, code: 'SHEET_AUTH_FAILED' },
     {
-      status: 403,
-      body: { error: { status: 'PERMISSION_DENIED', message: 'The caller does not have permission' } },
-      code: 'SHEET_NOT_EDITABLE',
-    },
-    {
+      // 官方格式：專案沒啟用 Sheets API 時，status 是 PERMISSION_DENIED，
+      // 真正的原因在 details[].reason = SERVICE_DISABLED。
       status: 403,
       body: {
         error: {
-          status: 'SERVICE_DISABLED',
-          message: 'Google Sheets API has not been used in project 123 before or it is disabled',
+          code: 403,
+          message:
+            'Google Sheets API has not been used in project 1234567890 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/sheets.googleapis.com/console?project=1234567890 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.',
+          status: 'PERMISSION_DENIED',
+          details: [
+            {
+              '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+              reason: 'SERVICE_DISABLED',
+              domain: 'googleapis.com',
+              metadata: {
+                service: 'sheets.googleapis.com',
+                consumer: 'project/1234567890',
+              },
+            },
+          ],
         },
       },
       code: 'SHEET_API_DISABLED',
     },
-    { status: 404, body: {}, code: 'SHEET_NOT_FOUND' },
     {
+      // 只有訊息文字帶線索、沒有 details 時也要判斷成「專案沒啟用 API」。
+      status: 403,
+      body: {
+        error: {
+          code: 403,
+          message:
+            'Google Sheets API has not been used in project 1234567890 before or it is disabled.',
+          status: 'PERMISSION_DENIED',
+        },
+      },
+      code: 'SHEET_API_DISABLED',
+    },
+    {
+      // 官方格式的「沒有編輯權限」：status 與 reason 都是 PERMISSION_DENIED。
+      status: 403,
+      body: {
+        error: {
+          code: 403,
+          message:
+            'The caller does not have permission',
+          status: 'PERMISSION_DENIED',
+          details: [
+            {
+              '@type': 'type.googleapis.com/google.rpc.ErrorInfo',
+              reason: 'PERMISSION_DENIED',
+              domain: 'googleapis.com',
+              metadata: { service: 'sheets.googleapis.com' },
+            },
+          ],
+        },
+      },
+      code: 'SHEET_NOT_EDITABLE',
+    },
+    {
+      status: 404,
+      body: {
+        error: {
+          code: 404,
+          message: 'Requested entity was not found.',
+          status: 'NOT_FOUND',
+        },
+      },
+      code: 'SHEET_NOT_FOUND',
+    },
+    {
+      // 官方格式：對「以 Google 試算表開啟的 xlsx」寫入時的回應。
       status: 400,
       body: {
         error: {
+          code: 400,
           message: 'This operation is not supported for this document.',
+          status: 'INVALID_ARGUMENT',
         },
       },
       code: 'SHEET_NOT_NATIVE',
     },
     {
       status: 400,
-      body: { error: { message: 'Unable to parse range: 學習單!H5' } },
+      body: {
+        error: {
+          code: 400,
+          message: 'Unable to parse range: 學習單!H5',
+          status: 'INVALID_ARGUMENT',
+        },
+      },
       code: 'SHEET_TAB_NOT_FOUND',
     },
     {

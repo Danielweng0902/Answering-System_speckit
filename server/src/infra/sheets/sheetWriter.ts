@@ -81,14 +81,18 @@ export function toSheetRange(sheetName: string, cell: string): string {
  */
 async function classifyResponse(response: Response): Promise<SheetWriteErrorCode> {
   const body = await response.text().catch(() => '');
-  const reason = extractErrorReason(body);
+  const signals = extractErrorSignals(body);
 
   if (response.status === 401) {
     return 'SHEET_AUTH_FAILED';
   }
   if (response.status === 403) {
-    // 專案沒啟用 Sheets API 與「沒有編輯權限」都回 403，靠原因字串區分。
-    return reason === 'SERVICE_DISABLED' ? 'SHEET_API_DISABLED' : 'SHEET_NOT_EDITABLE';
+    // 「專案沒啟用 Sheets API」與「沒有編輯權限」都回 403，但前者 Google 的
+    // `status` 會是 PERMISSION_DENIED，真正的線索在 `details[].reason`
+    // （SERVICE_DISABLED）與訊息文字（has not been used in project）。
+    return signals.indicatesApiDisabled
+      ? 'SHEET_API_DISABLED'
+      : 'SHEET_NOT_EDITABLE';
   }
   if (response.status === 404) {
     return 'SHEET_NOT_FOUND';
@@ -106,21 +110,60 @@ async function classifyResponse(response: Response): Promise<SheetWriteErrorCode
   return 'SHEET_UNAVAILABLE';
 }
 
-/** 從 Google 的錯誤 JSON 取出狀態字串（例如 `SERVICE_DISABLED`）。 */
-function extractErrorReason(body: string): string {
-  try {
-    const parsed = JSON.parse(body) as {
-      error?: { status?: unknown; errors?: { reason?: unknown }[] };
+/** Google 錯誤 JSON 裡我們用得到的線索。 */
+type ErrorSignals = {
+  /** `error.status`，例如 `PERMISSION_DENIED`。 */
+  status: string;
+  /** `error.details[].reason` 與 `error.errors[].reason` 的所有值。 */
+  reasons: string[];
+  /** `error.message`。 */
+  message: string;
+  /** 是否可判定為「這個 Google Cloud 專案還沒啟用 Sheets API」。 */
+  indicatesApiDisabled: boolean;
+};
+
+/**
+ * 從 Google 的錯誤 JSON 取出線索。
+ *
+ * 重要：Google 的標準錯誤格式中，「專案未啟用 API」的 `status` 是
+ * `PERMISSION_DENIED`，真正的原因放在 `details[].reason`（`SERVICE_DISABLED`），
+ * 訊息文字則是「…has not been used in project … before or it is disabled」。
+ * 只看 `status` 會把它誤判成「沒有編輯權限」，所以三個來源都看。
+ */
+function extractErrorSignals(body: string): ErrorSignals {
+  const empty: ErrorSignals = {
+    status: '',
+    reasons: [],
+    message: '',
+    indicatesApiDisabled: false,
+  };
+  let parsed: {
+    error?: {
+      status?: unknown;
+      message?: unknown;
+      details?: { reason?: unknown }[];
+      errors?: { reason?: unknown }[];
     };
-    const status = parsed.error?.status;
-    if (typeof status === 'string') {
-      return status;
-    }
-    const reason = parsed.error?.errors?.[0]?.reason;
-    return typeof reason === 'string' ? reason : '';
+  };
+  try {
+    parsed = JSON.parse(body) as typeof parsed;
   } catch {
-    return '';
+    return empty;
   }
+  const error = parsed.error;
+  const status = typeof error?.status === 'string' ? error.status : '';
+  const message = typeof error?.message === 'string' ? error.message : '';
+  const reasons = [
+    ...(Array.isArray(error?.details) ? error.details : []),
+    ...(Array.isArray(error?.errors) ? error.errors : []),
+  ]
+    .map((detail) => (typeof detail?.reason === 'string' ? detail.reason : ''))
+    .filter((reason) => reason !== '');
+  const indicatesApiDisabled =
+    reasons.includes('SERVICE_DISABLED') ||
+    status === 'SERVICE_DISABLED' ||
+    message.includes('has not been used in project');
+  return { status, reasons, message, indicatesApiDisabled };
 }
 
 /** 建立以服務帳號呼叫 Google Sheets API 的寫入器。 */

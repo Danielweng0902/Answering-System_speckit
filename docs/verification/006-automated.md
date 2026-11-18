@@ -6,7 +6,7 @@
 
 | 指令 | 結果 | 實際輸出摘要 |
 |---|---|---|
-| `npm test` | PASS | server：**49 files、400 tests 全過**（新增 006 的 33 個案例）；web：**18 files、95 tests 全過**（新增 5 個案例：錯誤分類、版面比對、force 覆寫、確認按鈕、訊息清除） |
+| `npm test` | PASS | server：**49 files、401 tests 全過**（新增 006 的 34 個案例）；web：**18 files、95 tests 全過**（新增 5 個案例：錯誤分類、版面比對、force 覆寫、確認按鈕、訊息清除） |
 | `npm run test:e2e` | PASS | 15 passed、2 skipped（既有截圖測試需 `SCREENSHOTS=1`） |
 | `npm run check` | PASS | typecheck、ESLint（`--max-warnings=0`）、`scripts/check-diagrams.sh`（3 張 006 圖已重出 PNG）全過 |
 
@@ -20,7 +20,7 @@
 | AC-006-04 沒有人作答的題目不寫入 | 同檔「沒有搶答成功的答案時不寫任何儲存格」 |
 | AC-006-05 上傳 xlsx 沒有雲端目標 | 同檔「上傳的 xlsx 沒有雲端目標，不呼叫寫入器」→ `GUIDED_NOTES_NOT_LINK` |
 | AC-006-06／07 失敗原因可讀 | `server/tests/unit/sheetWriter.test.ts`（HTTP 狀態 → 錯誤代碼）與同檔「寫入失敗時把錯誤代碼回給上層，不洩漏 API 回應內容」 |
-| 人工驗證建議 1：錯誤可行動 | `sheetWriter.test.ts` 的分類表（401／403 PERMISSION_DENIED／403 SERVICE_DISABLED／404／400 not supported／400 range／429／5xx）＋「取不到 access token 是金鑰問題而非暫時不可用」 |
+| 人工驗證建議 1：錯誤可行動 | `sheetWriter.test.ts` 的分類表，案例採用 **Google 官方標準錯誤格式**（`status` ＋ `message` ＋ `details[].reason`）：401、403 + `details[].reason=SERVICE_DISABLED`（專案沒啟用 Sheets API）、403 + `PERMISSION_DENIED`（沒編輯權限）、404、400 not supported（其實是 xlsx）、400 range（工作表改名）、429、5xx；另有「取不到 access token 是金鑰問題而非暫時不可用」 |
 | 人工驗證建議 2：舊訊息清除 | `web/tests/teacher/TeacherWriteBack.test.tsx`「階段改變時清掉上一次的寫回訊息」 |
 | 人工驗證建議 3：寫回前比對版面 | `server/tests/integration/writeBackSheetCheck.test.ts`（相同 → 直接寫回；不同 → `SHEET_MODIFIED` 且不寫入；force → 仍寫回；讀不到 → 不阻擋）＋ web 測試「仍要寫回」按鈕帶 force |
 | AC-006-08 沒有服務帳號 | 同檔「伺服器沒有設定服務帳號時回 SHEET_NOT_CONFIGURED」＋路由 503 案例 |
