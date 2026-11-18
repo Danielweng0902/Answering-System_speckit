@@ -176,7 +176,7 @@ describe('PhaseControl', () => {
     vi.mocked(sendCommand).mockResolvedValue({ ok: true });
 
     render(<PhaseControl snapshot={makeSnapshot({ phase: 'preparing' })} />);
-    fireEvent.click(screen.getByRole('switch', { name: '設定倒數' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: '設定倒數' }));
     fireEvent.change(screen.getByLabelText<HTMLInputElement>('倒數秒數'), {
       target: { value: '65' },
     });
@@ -193,7 +193,7 @@ describe('PhaseControl', () => {
     const rendered = render(
       <PhaseControl snapshot={makeSnapshot({ phase: 'preparing' })} />,
     );
-    const checkbox = screen.getByRole('switch', {
+    const checkbox = screen.getByRole('checkbox', {
       name: '設定倒數',
     }) as HTMLInputElement;
     const secondsInput = screen.getByLabelText<HTMLInputElement>('倒數秒數');

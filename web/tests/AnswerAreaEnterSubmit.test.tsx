@@ -151,15 +151,37 @@ describe('作答的錯誤訊息與 Enter 送出（003 人工驗證建議；2026-
     expect(sendCommand).not.toHaveBeenCalled();
   });
 
-  it('沒填完時按 Enter 仍然只提示錯誤、不送出', async () => {
+  it('題組還有後面的空格沒填時，Enter 只移到下一格、不送出也不顯示錯誤（人工驗證建議）', async () => {
     render(<AnswerArea snapshot={snapshot()} />);
 
-    const input = screen.getByLabelText('第 2 題（1）答案');
+    const first = screen.getByLabelText('第 2 題（1）答案');
+    const second = screen.getByLabelText('第 2 題（2）答案');
+    fireEvent.change(first, { target: { value: '甲' } });
+    pressEnter(first);
+
+    await waitFor(() => {
+      expect(second).toBe(document.activeElement);
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('只有這一格沒填時按 Enter 才會提示錯誤、不送出', async () => {
+    render(<AnswerArea snapshot={snapshot()} />);
+
+    const input = screen.getByLabelText('第 1 題答案');
     pressEnter(input);
 
-    expect((await screen.findByRole('alert')).textContent).toBe(
-      '第（1）格、第（2）格不可為空白',
-    );
+    expect((await screen.findByRole('alert')).textContent).toBe('答案不可為空白');
     expect(sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('顯示字數，讓貼上被截斷時看得到（人工驗證建議）', () => {
+    render(<AnswerArea snapshot={snapshot()} />);
+
+    const input = screen.getByLabelText('第 1 題答案');
+    fireEvent.change(input, { target: { value: '甲答案' } });
+
+    expect(screen.getByText('3／200')).toBeDefined();
   });
 });

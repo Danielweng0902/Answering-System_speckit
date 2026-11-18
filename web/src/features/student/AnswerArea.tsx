@@ -213,61 +213,101 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                 {question.prompt !== '' && (
                   <p className={styles.prompt}>{question.prompt}</p>
                 )}
-                {question.blanks.map((blank, index) => (
-                  <label
-                    key={blank.position}
-                    className={styles.blank}
-                    htmlFor={`answer-${question.number}-${blank.position}`}
-                  >
-                    <span className={styles.prefix}>
-                      {blank.prefix === '' ? '答案' : blank.prefix}
-                    </span>
-                    <input
-                      id={`answer-${question.number}-${blank.position}`}
-                      className={styles.input}
-                      type="text"
-                      aria-label={inputLabel(question, blank.prefix)}
-                      value={answers[index] ?? ''}
-                      disabled={isSubmitted || isSubmitting}
-                      readOnly={isSubmitted}
-                      // 答案上限與伺服器一致（003 FR-023：每格 1–200 字），
-                      // 先在輸入端擋住超長，伺服器仍會再驗一次。
-                      maxLength={MAX_ANSWER_LENGTH}
-                      // 學生的答案是簡答（多為中文），關閉拼字檢查避免紅線。
-                      spellCheck={false}
-                      ref={(element) => {
-                        if (element === null) {
-                          inputRefs.current.delete(
+                {question.blanks.map((blank, index) => {
+                  const answerText = answers[index] ?? '';
+                  const nextEmptyIndex = question.blanks.findIndex(
+                    (_candidate, candidateIndex) =>
+                      candidateIndex > index &&
+                      (draft[candidateIndex] ?? '').trim() === '',
+                  );
+                  const allFilled = question.blanks.every(
+                    (_candidate, candidateIndex) =>
+                      (draft[candidateIndex] ?? '').trim() !== '',
+                  );
+                  return (
+                    <label
+                      key={blank.position}
+                      className={styles.blank}
+                      htmlFor={`answer-${question.number}-${blank.position}`}
+                    >
+                      <span className={styles.prefix}>
+                        {blank.prefix === '' ? '答案' : blank.prefix}
+                      </span>
+                      <input
+                        id={`answer-${question.number}-${blank.position}`}
+                        className={styles.input}
+                        type="text"
+                        aria-label={inputLabel(question, blank.prefix)}
+                        value={answerText}
+                        disabled={isSubmitted || isSubmitting}
+                        readOnly={isSubmitted}
+                        // 答案上限與伺服器一致（003 FR-023：每格 1–200 字），
+                        // 先在輸入端擋住超長，伺服器仍會再驗一次。
+                        maxLength={MAX_ANSWER_LENGTH}
+                        // 學生的答案是簡答（多為中文），關閉拼字檢查避免紅線。
+                        spellCheck={false}
+                        // 行動鍵盤的送出鍵：還有空格沒填是「下一個」，
+                        // 全部填完才是「傳送」（2026-11-18 人工驗證建議）。
+                        enterKeyHint={allFilled ? 'send' : 'next'}
+                        ref={(element) => {
+                          if (element === null) {
+                            inputRefs.current.delete(
+                              `${question.number}-${blank.position}`,
+                            );
+                            return;
+                          }
+                          inputRefs.current.set(
                             `${question.number}-${blank.position}`,
+                            element,
                           );
-                          return;
-                        }
-                        inputRefs.current.set(
-                          `${question.number}-${blank.position}`,
-                          element,
-                        );
-                      }}
-                      onChange={(event) => {
-                        updateAnswer(question, index, event.currentTarget.value);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter') {
-                          return;
-                        }
-                        // 中文輸入法（IME）組字／選字時的 Enter 是「選字」，
-                        // 不能當成送出；`isComposing` 是標準訊號，`keyCode 229`
-                        // 補上 Safari 的事件順序問題（Modern Web Guidance 的
-                        // ime-safe-enter-submit：兩個訊號任一個成立就略過）。
-                        const native = event.nativeEvent;
-                        if (native.isComposing || native.keyCode === 229) {
-                          return;
-                        }
-                        event.preventDefault();
-                        void submit(question);
-                      }}
-                    />
-                  </label>
-                ))}
+                        }}
+                        onChange={(event) => {
+                          updateAnswer(
+                            question,
+                            index,
+                            event.currentTarget.value,
+                          );
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') {
+                            return;
+                          }
+                          // 中文輸入法（IME）組字／選字時的 Enter 是「選字」，
+                          // 不能當成送出；`isComposing` 是標準訊號，`keyCode 229`
+                          // 補上 Safari 的事件順序問題（Modern Web Guidance 的
+                          // ime-safe-enter-submit：兩個訊號任一個成立就略過）。
+                          const native = event.nativeEvent;
+                          if (native.isComposing || native.keyCode === 229) {
+                            return;
+                          }
+                          event.preventDefault();
+                          // 還有後面的空格沒填 → 只移到下一格，不送出也不
+                          // 顯示錯誤（2026-11-18 人工驗證建議：學生用 Enter
+                          // 跳下一格時不該像被罵）。
+                          if (nextEmptyIndex >= 0) {
+                            const nextBlank = question.blanks[nextEmptyIndex];
+                            if (nextBlank !== undefined) {
+                              inputRefs.current
+                                .get(
+                                  `${question.number}-${nextBlank.position}`,
+                                )
+                                ?.focus();
+                            }
+                            return;
+                          }
+                          void submit(question);
+                        }}
+                      />
+                      {/* 貼上超過 200 字會被截斷，顯示字數讓學生看得到
+                          （2026-11-18 人工驗證建議）。 */}
+                      {!isSubmitted && (
+                        <span className={styles.counter}>
+                          {`${String(answerText.length)}／${String(MAX_ANSWER_LENGTH)}`}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
                 {isSubmitted && (
                   <p className={styles.submitted} role="status">
                     本組已送出：{answers.join('、')}

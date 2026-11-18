@@ -33,7 +33,7 @@ npx modern-web-guidance@latest retrieve ime-safe-enter-submit,autofill-sign-in-f
 |---|---|---|---|---|
 | A1 | 答案欄位沒設字數上限，老師要靠伺服器回錯才知道超過 200 字 | `forms`（用原生屬性做驗證） | 答案 `<input>` 加 `maxLength={200}`（與 003 FR-023 一致）與 `spellCheck={false}` | 輸入端先擋；伺服器仍照原樣驗第二次 |
 | A2 | 送出失敗後焦點留在按鈕，鍵盤／螢幕閱讀器使用者要自己找哪一格沒填 | `accessible-error-announcement`（送出失敗後聚焦第一個無效欄位） | 驗證失敗時把焦點移到第一個沒填的欄位 | 只影響鍵盤操作順序，不改文案 |
-| A3 | 開／關設定用 checkbox，螢幕閱讀器讀成「已勾選／未勾選」 | `switch` | 倒數與公平順位開關改用 `role="switch"` | 原生 `switch` 屬性目前只有 Safari 支援，所以用 `role="switch"` 得到同樣語意，**不引入 polyfill**；可存取角色變了，測試與 e2e 的 role 查詢已同步更新 |
+| A3 | 開／關設定用 checkbox，螢幕閱讀器讀成「已勾選／未勾選」 | `switch` | 只有「啟用公平順位」改用 `role="switch"`（切換即生效） | 原生 `switch` 屬性目前只有 Safari 支援，所以用 `role="switch"` 得到同樣語意，**不引入 polyfill**；可存取角色變了，測試與 e2e 的 role 查詢已同步更新。**（2026-11-18 審查修正：「設定倒數」要按「開啟搶答」才生效，依 ARIA APG 建議維持原生 checkbox，已還原；外觀仍是勾選框，開關樣式留待 DESIGN.md 規劃。）** |
 | A4 | 密碼欄位可空白送出，行動鍵盤的送出鍵也沒有語意 | `autofill-sign-in-form` | 加 `required` 與 `enterKeyHint="done"` | 空白送出改由瀏覽器擋下（原本是伺服器回「密碼錯誤」） |
 | A5 | 原生核取方塊用瀏覽器預設色，與設計 token 不一致 | `brand-consistent-forms`（`accent-color`） | `base.css` 用既有 token `var(--color-focus)` 設定 `accent-color` | 只改原色，不新增顏色變數（不違背「介面只用 design tokens」） |
 
@@ -51,14 +51,26 @@ npx modern-web-guidance@latest retrieve ime-safe-enter-submit,autofill-sign-in-f
 1. **003 人工驗證的建議 1**：作答錯誤訊息已由「每個空格都要填寫答案；尚未填寫的空格：第 1 格（答案）」改為「**答案不可為空白**」；題組缺哪一格就點名那一格（例如「第（2）格不可為空白」），伺服器端 `ANSWER_EMPTY` 訊息同步一致。
 2. **學生作答已支援按 Enter 送出**，並做中文輸入法（IME）安全處理：`KeyboardEvent.isComposing` 為真、或 `keyCode === 229`（Safari 事件順序問題）時略過送出，避免選字時誤送。
 
+## 審查（2026-11-18，philip110531）與後續修正
+
+組員在 PR #8 上 **Approve**，並實測（Windows＋Chrome＋微軟注音）：注音選字的 Enter 不會送出、空白單題按 Enter 顯示「答案不可為空白」、已送出的欄位為 disabled 不會重送。依他的意見再調整：
+
+| # | 意見 | 處置 |
+|---|---|---|
+| ① | `role="switch"`：公平順位切換即生效，用 switch 合適；「設定倒數」要按「開啟搶答」才生效，依 ARIA APG 維持 checkbox | **已還原「設定倒數」為原生 checkbox**；只有「啟用公平順位」保留 `role="switch"`。switch 外觀仍是勾選框，開關樣式留待 DESIGN.md |
+| ② | 新文案通順清楚，伺服器 `ANSWER_EMPTY` 同步一致 | 維持。提醒「前綴若出現 `1.` 會變成「第1.格」」：前綴由 002 的 `BLANK_PREFIX_PATTERN` 解析，只可能是「（N）」或「(N)」，官方格式不受影響 |
+| ③ | IME 判斷是標準做法 | 維持 `isComposing` ＋ `keyCode 229` |
+| 建議 1 | 題組在前面的格子按 Enter 會直接送出並顯示紅字，學生像被罵 | **已改**：還有後面的空格沒填時，Enter 只把焦點移到下一個沒填的空格、不送出也不顯示錯誤；全部填完才送出。行動鍵盤的送出鍵同步改為「下一個／傳送」 |
+| 建議 2 | `maxLength=200` 貼上超長會默默截斷 | **已改**：輸入框旁顯示字數（例如 `12／200`），讓學生看得到被截斷 |
+
 ## 風險與限制
 
-- `role="switch"` 會改變**可存取角色**：螢幕閱讀器改讀「開／關」。這是刻意的語意改善，但屬可見於輔助科技的變化，已在 PR 說明中標出。
+- `role="switch"` 會改變**可存取角色**：螢幕閱讀器改讀「開／關」。這是刻意的語意改善，但屬可見於輔助科技的變化，已在 PR 說明中標出（僅「啟用公平順位」）。
 - `maxLength` 只擋「超過 200 字」，空白仍由我們自己的驗證處理（見 B1）。
 - 本指引不含後端安全、權限或資料保護的檢查；那些由 001–006 各自的憲法檢查、GLM 安全覆核與人工審查負責。
 
 ## 驗證
 
-- `npm test`：server 48 files／367 tests、web **18 files／93 tests** 全過（新增 3 個案例：答案上限與拼字檢查、焦點移位、密碼欄位原生屬性）。
+- `npm test`：server 48 files／367 tests、web **19 files／100 tests** 全過（新增 10 個案例：答案上限與拼字檢查、焦點移位、密碼欄位原生屬性、錯誤訊息新文案、Enter 送出、IME 安全、Enter 移到下一格、字數顯示）。
 - `npm run test:e2e`：15 passed、2 skipped（005 e2e 的開關查詢已改為 `role="switch"`）。
 - `npm run check`：typecheck、ESLint、圖檔檢查全過。

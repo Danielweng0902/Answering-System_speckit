@@ -88,11 +88,9 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             name="enable-countdown"
             checked={countdownEnabled}
             disabled={controlsDisabled}
-            // 開／關語意（Modern Web Guidance 的 switch 模式）：原生
-            // checkbox 加 role="switch"，螢幕閱讀器會讀成「開／關」而不是
-            // 「已勾選／未勾選」；原生 switch 屬性目前只有 Safari 支援，
-            // 因此不引入 polyfill。
-            role="switch"
+            // 維持原生 checkbox（不改成 role="switch"）：倒數秒數要按
+            // 「開啟搶答」才生效，依 ARIA APG 建議這是表單欄位而不是
+            // 立即生效的開關；只有「啟用公平順位」是立即生效，才用 switch。
             onChange={(event) => {
               setCountdownEnabled(event.target.checked);
             }}
