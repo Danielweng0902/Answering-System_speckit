@@ -33,7 +33,7 @@
 - [x] T016 更新 `README.md`（進度表、操作流程）與 `docs/EXECUTION-PLAYBOOK.md`（006 的注意事項）
 - [x] T017 執行 `npm test`、`npm run test:e2e`、`npm run check`，記錄在 `docs/verification/006-automated.md`
 - [x] T018 **真實線上寫回的人工驗證**（需要服務帳號金鑰與一份可編輯的線上試算表）：依 `quickstart.md` 執行，結果寫在 `docs/verification/006-manual.md`
-- [ ] T019 **另一位組員審查**（憲法要求的合併關卡）：在 PR 上留下 review，重點為寫入範圍、權限與錯誤處理
+- [x] T019 **另一位組員審查**（憲法要求的合併關卡）：philip110531 於 2026-11-18 在 PR #7 逐項確認（寫入範圍、格式與公式、權限、本地資料不動、金鑰零落地）並正式 Approve；其提出的錯誤分類問題（Google 回的 `details[].reason`）已修正後再核可
 - [x] T020 **共用契約 D12 改版**：005 合併後一次套用（避免兩個 PR 同時改同一份契約）。D12 已改為「對線上試算表讀寫」並升版（v0.6），`docs/shared/FEATURE-CONTRACT.md` 已更新
 
 ## Phase 5: 人工驗證後的修正（2026-11-18，依 006 人工驗證建議）
