@@ -32,7 +32,7 @@
 - [x] T015 新增三張 006 圖（component／class／seq-writeback）並重出 PNG，`scripts/check-diagrams.sh` 通過
 - [x] T016 更新 `README.md`（進度表、操作流程）與 `docs/EXECUTION-PLAYBOOK.md`（006 的注意事項）
 - [x] T017 執行 `npm test`、`npm run test:e2e`、`npm run check`，記錄在 `docs/verification/006-automated.md`
-- [ ] T018 **真實線上寫回的人工驗證**（需要服務帳號金鑰與一份可編輯的線上試算表）：依 `quickstart.md` 執行，結果寫在 `docs/verification/006-manual.md`
+- [x] T018 **真實線上寫回的人工驗證**（需要服務帳號金鑰與一份可編輯的線上試算表）：依 `quickstart.md` 執行，結果寫在 `docs/verification/006-manual.md`
 - [ ] T019 **另一位組員審查**（憲法要求的合併關卡）：在 PR 上留下 review，重點為寫入範圍、權限與錯誤處理
 - [x] T020 **共用契約 D12 改版**：005 合併後一次套用（避免兩個 PR 同時改同一份契約）。D12 已改為「對線上試算表讀寫」並升版（v0.6），`docs/shared/FEATURE-CONTRACT.md` 已更新
 
