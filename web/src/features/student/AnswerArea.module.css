@@ -61,6 +61,12 @@
   font-size: var(--font-size-small);
 }
 
+/* 字數計數：讓學生看得到貼上過長被截斷（2026-11-18 人工驗證建議）。 */
+.counter {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+
 .input {
   box-sizing: border-box;
   width: 100%;

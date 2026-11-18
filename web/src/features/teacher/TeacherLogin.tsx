@@ -59,6 +59,10 @@ export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
             type="password"
             name="password"
             autoComplete="current-password"
+            // 密碼是必填：先由瀏覽器擋住空白送出（Modern Web Guidance：
+            // 登入表單用原生驗證），送出鍵在行動鍵盤上標示為「完成」。
+            required
+            enterKeyHint="done"
             value={password}
             disabled={isSubmitting}
             aria-invalid={errorMessage !== null}

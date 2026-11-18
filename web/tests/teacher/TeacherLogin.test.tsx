@@ -38,6 +38,16 @@ describe('TeacherLogin', () => {
     fetchMock.mockReset();
   });
 
+  it('密碼欄位是必填、有 current-password 自動填寫與「完成」鍵盤標示', () => {
+    render(<TeacherLogin />);
+
+    const passwordInput = screen.getByLabelText<HTMLInputElement>('老師密碼');
+    expect(passwordInput.required).toBe(true);
+    expect(passwordInput.getAttribute('autocomplete')).toBe('current-password');
+    expect(passwordInput.getAttribute('enterkeyhint')).toBe('done');
+    expect(passwordInput.type).toBe('password');
+  });
+
   it('錯誤密碼顯示伺服器錯誤訊息、清空密碼並留在登入畫面', async () => {
     fetchMock.mockResolvedValue(
       mockLoginResponse(401, {

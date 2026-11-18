@@ -85,7 +85,7 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     await importGroupQuestions(teacherPage);
 
     // US2：準備中可以切換公平順位。
-    const fairnessToggle = teacherPage.getByRole('checkbox', {
+    const fairnessToggle = teacherPage.getByRole('switch', {
       name: '啟用公平順位',
     });
     await expect(fairnessToggle).not.toBeChecked();

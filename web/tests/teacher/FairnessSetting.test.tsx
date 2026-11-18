@@ -42,7 +42,7 @@ describe('005 公平順位開關（US2；T018、AC-005-09、AC-005-10）', () =>
   it('準備中顯示開關且預設關閉，並附規則說明', () => {
     render(<PhaseControl snapshot={makeSnapshot()} />);
 
-    const checkbox = screen.getByRole('checkbox', {
+    const checkbox = screen.getByRole('switch', {
       name: '啟用公平順位',
     }) as HTMLInputElement;
 
@@ -57,7 +57,7 @@ describe('005 公平順位開關（US2；T018、AC-005-09、AC-005-10）', () =>
     render(<PhaseControl snapshot={makeSnapshot()} />);
 
     fireEvent.click(
-      screen.getByRole('checkbox', { name: '啟用公平順位' }),
+      screen.getByRole('switch', { name: '啟用公平順位' }),
     );
 
     await waitFor(() => {
@@ -72,14 +72,14 @@ describe('005 公平順位開關（US2；T018、AC-005-09、AC-005-10）', () =>
       <PhaseControl snapshot={makeSnapshot({ phase: 'open' })} />,
     );
     expect(
-      (screen.getByRole('checkbox', { name: '啟用公平順位' }) as HTMLInputElement)
+      (screen.getByRole('switch', { name: '啟用公平順位' }) as HTMLInputElement)
         .disabled,
     ).toBe(true);
     unmount();
 
     render(<PhaseControl snapshot={makeSnapshot({ phase: 'closed' })} />);
     expect(
-      (screen.getByRole('checkbox', { name: '啟用公平順位' }) as HTMLInputElement)
+      (screen.getByRole('switch', { name: '啟用公平順位' }) as HTMLInputElement)
         .disabled,
     ).toBe(true);
   });
@@ -90,7 +90,7 @@ describe('005 公平順位開關（US2；T018、AC-005-09、AC-005-10）', () =>
     );
 
     expect(
-      (screen.getByRole('checkbox', { name: '啟用公平順位' }) as HTMLInputElement)
+      (screen.getByRole('switch', { name: '啟用公平順位' }) as HTMLInputElement)
         .checked,
     ).toBe(true);
   });

@@ -88,6 +88,9 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             name="enable-countdown"
             checked={countdownEnabled}
             disabled={controlsDisabled}
+            // 維持原生 checkbox（不改成 role="switch"）：倒數秒數要按
+            // 「開啟搶答」才生效，依 ARIA APG 建議這是表單欄位而不是
+            // 立即生效的開關；只有「啟用公平順位」是立即生效，才用 switch。
             onChange={(event) => {
               setCountdownEnabled(event.target.checked);
             }}
@@ -143,6 +146,8 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             name="enable-fair-ranking"
             checked={snapshot.fairRankingEnabled}
             disabled={isSending || !isPreparing}
+            // 同「設定倒數」：以 role="switch" 表達開／關語意。
+            role="switch"
             onChange={(event) => {
               void send('activity:fair-ranking', {
                 enabled: event.target.checked,

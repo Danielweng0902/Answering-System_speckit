@@ -1,0 +1,76 @@
+# Web 端審查：Modern Web Guidance（GoogleChrome）
+
+日期：2026-11-17｜分支：`chore/web-guidance-audit`（疊在 `005-fairness-and-extras` 之上）
+
+## 審查方法
+
+基準文件：[GoogleChrome/modern-web-guidance-src](https://github.com/GoogleChrome/modern-web-guidance-src)（Chrome／Edge／Firefox／MDN 共同維護的現代 Web 指引原始碼）。用該 repo 提供的 CLI 取得指引並掃描本專案：
+
+```bash
+npx modern-web-guidance@latest legacy-scan web/src
+# → 0 findings from 38 qualified guides（legacy 模式指引涵蓋約 20% 指引）
+
+npx modern-web-guidance@latest retrieve ime-safe-enter-submit,autofill-sign-in-form,accessible-error-announcement,switch
+```
+
+`legacy-scan` 只涵蓋 38 個「舊寫法」模式，所以另外依本專案的技術棧（React SPA、Socket.IO、表單、投影頁）取用相關指引逐項比對。**這份指引是 web platform 現代化與可用性基準，不是資安掃描**；資安仍以專案憲法與 GLM 覆核為準。
+
+## 已經符合的部分（不需修改）
+
+| 檢查項目 | 指引 | 現況 |
+|---|---|---|
+| 中文輸入法按 Enter 不會誤送出 | `ime-safe-enter-submit` | 全專案**沒有任何自訂 Enter／keydown 送出**（`rg 'onKeyDown|isComposing|requestSubmit' web/src` 無結果）；原生表單隱含送出會被 IME 攔下，中文輸入安全 |
+| 登入表單結構 | `autofill-sign-in-form` | 已是 `<form>` ＋ `<label for>` ＋ `type="password"` ＋ `name="password"` ＋ `autoComplete="current-password"` |
+| 錯誤訊息與欄位的關聯 | `accessible-error-announcement` | `aria-describedby` **只在錯誤出現時**才指向錯誤元素（隱藏時不引用，與指引一致）；`aria-invalid` 同步 |
+| 語言與行動裝置 | `html` | `<html lang="zh-Hant">`、viewport meta 齊全 |
+| 尊重 OS 文字縮放 | `respect-os-text-scale` | 字級與間距全部用 rem token，未寫死 px 字級 |
+| 欄位標籤 | `accessibility` | 所有 `<input>` 都有 `<label htmlFor>` ＋ 對應 `id`；連結欄位用 `type="url"` |
+| 舊式寫法 | `legacy-scan` | 0 findings |
+
+## 本次修正
+
+| # | 問題 | 指引 | 修正 | 影響 |
+|---|---|---|---|---|
+| A1 | 答案欄位沒設字數上限，老師要靠伺服器回錯才知道超過 200 字 | `forms`（用原生屬性做驗證） | 答案 `<input>` 加 `maxLength={200}`（與 003 FR-023 一致）與 `spellCheck={false}` | 輸入端先擋；伺服器仍照原樣驗第二次 |
+| A2 | 送出失敗後焦點留在按鈕，鍵盤／螢幕閱讀器使用者要自己找哪一格沒填 | `accessible-error-announcement`（送出失敗後聚焦第一個無效欄位） | 驗證失敗時把焦點移到第一個沒填的欄位 | 只影響鍵盤操作順序，不改文案 |
+| A3 | 開／關設定用 checkbox，螢幕閱讀器讀成「已勾選／未勾選」 | `switch` | 只有「啟用公平順位」改用 `role="switch"`（切換即生效） | 原生 `switch` 屬性目前只有 Safari 支援，所以用 `role="switch"` 得到同樣語意，**不引入 polyfill**；可存取角色變了，測試與 e2e 的 role 查詢已同步更新。**（2026-11-18 審查修正：「設定倒數」要按「開啟搶答」才生效，依 ARIA APG 建議維持原生 checkbox，已還原；外觀仍是勾選框，開關樣式留待 DESIGN.md 規劃。）** |
+| A4 | 密碼欄位可空白送出，行動鍵盤的送出鍵也沒有語意 | `autofill-sign-in-form` | 加 `required` 與 `enterKeyHint="done"` | 空白送出改由瀏覽器擋下（原本是伺服器回「密碼錯誤」） |
+| A5 | 原生核取方塊用瀏覽器預設色，與設計 token 不一致 | `brand-consistent-forms`（`accent-color`） | `base.css` 用既有 token `var(--color-focus)` 設定 `accent-color` | 只改原色，不新增顏色變數（不違背「介面只用 design tokens」） |
+
+## 刻意不採納（附理由）
+
+| # | 建議 | 不採納的理由 |
+|---|---|---|
+| B1 | 答案欄位加 `required` | 原生驗證會取代我們較詳細的訊息；即使 2026-11-18 已把訊息改短（「答案不可為空白」「第（2）格不可為空白」），原生驗證仍只會說「請填寫此欄位」而指不出是哪一格，因此維持不用 `required`，改以自訂訊息與送出時的焦點移位（見 A2） |
+| B2 | 改用單一 polite live region ＋ `:user-invalid` 同步 | 我們的錯誤只在「送出」後出現，不會在輸入途中跳出，屬於指引建議的另一種情境；套用反而會增加複雜度 |
+| B3 | 密碼欄加「顯示密碼」切換 | 純 UI 新增，牽涉設計；建議交設計負責人決定，本次不做 |
+| B4 | 引入 `input-switch-polyfill` | Chrome／Edge／Firefox 尚未支援原生 `switch` 屬性，為一個語意新增相依不划算；`role="switch"` 已達到相同效果 |
+
+## 待組員決定（使用者可見行為）→ **2026-11-18 兩組同意，已實作**
+
+1. **003 人工驗證的建議 1**：作答錯誤訊息已由「每個空格都要填寫答案；尚未填寫的空格：第 1 格（答案）」改為「**答案不可為空白**」；題組缺哪一格就點名那一格（例如「第（2）格不可為空白」），伺服器端 `ANSWER_EMPTY` 訊息同步一致。
+2. **學生作答已支援按 Enter 送出**，並做中文輸入法（IME）安全處理：`KeyboardEvent.isComposing` 為真、或 `keyCode === 229`（Safari 事件順序問題）時略過送出，避免選字時誤送。
+
+## 審查（2026-11-18，philip110531）與後續修正
+
+組員在 PR #8 上 **Approve**，並實測（Windows＋Chrome＋微軟注音）：注音選字的 Enter 不會送出、空白單題按 Enter 顯示「答案不可為空白」、已送出的欄位為 disabled 不會重送。依他的意見再調整：
+
+| # | 意見 | 處置 |
+|---|---|---|
+| ① | `role="switch"`：公平順位切換即生效，用 switch 合適；「設定倒數」要按「開啟搶答」才生效，依 ARIA APG 維持 checkbox | **已還原「設定倒數」為原生 checkbox**；只有「啟用公平順位」保留 `role="switch"`。switch 外觀仍是勾選框，開關樣式留待 DESIGN.md |
+| ② | 新文案通順清楚，伺服器 `ANSWER_EMPTY` 同步一致 | 維持。提醒「前綴若出現 `1.` 會變成「第1.格」」：前綴由 002 的 `BLANK_PREFIX_PATTERN` 解析，只可能是「（N）」或「(N)」，官方格式不受影響 |
+| ③ | IME 判斷是標準做法 | 維持 `isComposing` ＋ `keyCode 229` |
+| 建議 1 | 題組在前面的格子按 Enter 會直接送出並顯示紅字，學生像被罵 | **已改**：還有後面的空格沒填時，Enter 只把焦點移到下一個沒填的空格、不送出也不顯示錯誤；全部填完才送出。行動鍵盤的送出鍵同步改為「下一個／傳送」 |
+| 建議 2 | `maxLength=200` 貼上超長會默默截斷 | **已改**：輸入框旁顯示字數（例如 `12／200`），讓學生看得到被截斷 |
+
+## 風險與限制
+
+- `role="switch"` 會改變**可存取角色**：螢幕閱讀器改讀「開／關」。這是刻意的語意改善，但屬可見於輔助科技的變化，已在 PR 說明中標出（僅「啟用公平順位」）。
+- `maxLength` 只擋「超過 200 字」，空白仍由我們自己的驗證處理（見 B1）。
+- 本指引不含後端安全、權限或資料保護的檢查；那些由 001–006 各自的憲法檢查、GLM 安全覆核與人工審查負責。
+
+## 驗證
+
+- `npm test`：server 48 files／367 tests、web **19 files／100 tests** 全過（新增 10 個案例：答案上限與拼字檢查、焦點移位、密碼欄位原生屬性、錯誤訊息新文案、Enter 送出、IME 安全、Enter 移到下一格、字數顯示）。
+- `npm run test:e2e`：15 passed、2 skipped（005 e2e 的開關查詢已改為 `role="switch"`）。
+- `npm run check`：typecheck、ESLint、圖檔檢查全過。

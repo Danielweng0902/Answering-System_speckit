@@ -360,7 +360,7 @@ describe('AnswerArea 題組（US5；AC-003-22、23）', () => {
     );
 
     expect((await screen.findByRole('alert')).textContent).toContain(
-      '每個空格都要填寫答案；尚未填寫的空格：（2）',
+      '第（2）格不可為空白',
     );
     expect(sendCommand).not.toHaveBeenCalled();
 
@@ -373,7 +373,7 @@ describe('AnswerArea 題組（US5；AC-003-22、23）', () => {
     );
 
     expect((await screen.findByRole('alert')).textContent).toContain(
-      '每個空格都要填寫答案；尚未填寫的空格：（2）',
+      '第（2）格不可為空白',
     );
     expect(sendCommand).not.toHaveBeenCalled();
   });
