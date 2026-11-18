@@ -1,6 +1,6 @@
 # 001 人工驗證紀錄（T079）
 
-> 本表由設計與驗證負責人依 [`specs/001-activity-session/quickstart.md`](../../specs/001-activity-session/quickstart.md) 的 12 個步驟實際操作後填寫「結果」欄（通過／不通過＋實際觀察）。表格已預先寫好步驟與預期值，**請不要刪除或改寫預期值**；不通過時另開 GitHub issue 並在此備註編號。
+> 本表由設計與驗證負責人依 [`specs/001-activity-session/quickstart.md`](../../specs/001-activity-session/quickstart.md) 的 13 個步驟實際操作後填寫「結果」欄（通過／不通過＋實際觀察）。表格已預先寫好步驟與預期值，**請不要刪除或改寫預期值**；不通過時另開 GitHub issue 並在此備註編號。
 
 - 執行人：　　　　　　　　　（設計與驗證負責人）
 - 日期：
