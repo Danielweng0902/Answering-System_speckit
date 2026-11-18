@@ -30,6 +30,19 @@ export type HttpAppOptions = {
   teacherPassword?: string | undefined;
   /** 002 匯入服務；未注入時以資料庫建立預設實例（時鐘與 fetch 不可控）。 */
   importService?: ImportService | undefined;
+  /**
+   * 006：寫回線上 Google 試算表的用處；未注入時該功能回
+   * SHEET_NOT_CONFIGURED（伺服器沒有服務帳號設定）。
+   */
+  writeBackGuidedNotes?:
+    | ((
+        database: DatabaseSync,
+        options: { force?: boolean | undefined },
+      ) => Promise<
+        | { ok: true; writtenCells: number }
+        | { ok: false; code: ErrorCode; message: string }
+      >)
+    | undefined;
 };
 
 const DEFAULT_WEB_DIST = fileURLToPath(
@@ -91,6 +104,8 @@ export function createApp(options: HttpAppOptions): Express {
       database: options.database,
       exportGuidedNotes: (database) => exportGuidedNotes(database, new Date()),
       exportResultCsv: (database) => exportResultCsv(database, new Date()),
+      // 006：未設定服務帳號時不注入，路由會回 SHEET_NOT_CONFIGURED。
+      writeBackGuidedNotes: options.writeBackGuidedNotes,
     }),
   );
 

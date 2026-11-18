@@ -3,16 +3,12 @@ import type { ErrorCode } from '@classroom/shared';
 import { resolveIdentity, type TeacherIdentity } from './access.js';
 import { getActivity } from '../infra/db/activityRepo.js';
 import { listValidSubmissionsWithAnswers } from '../infra/db/answerRepo.js';
-import { getStoredGuidedNotes, list as listQuestions } from '../infra/db/questionRepo.js';
+import { getStoredGuidedNotes } from '../infra/db/questionRepo.js';
 import { buildResults } from './answerProjections.js';
 import { computeSettlement } from './answerSettlementService.js';
+import { resolveGuidedNotesTargets } from './guidedNotesTargets.js';
 import { buildCsv } from './csvBuilder.js';
-import { buildBlankWrites } from './guidedNotesExporter.js';
-import {
-  getWorksheetXml,
-  isMergedWithRightCell,
-  replaceCellText,
-} from '../infra/xlsx/xlsxEditor.js';
+import { replaceCellText } from '../infra/xlsx/xlsxEditor.js';
 
 export type ExportAuthorization =
   { ok: true; teacher: TeacherIdentity } | { ok: false; code: ErrorCode };
@@ -113,6 +109,7 @@ export function authorizeExport(
  *
  * winners 由 003 的 buildResults／decideWinner 單一入口判定；此方法本身唯讀，
  * 不更新任何資料列、不產生 Socket 事件、不遞增 revision（FR-008）。
+ * 要寫到哪一格由 resolveGuidedNotesTargets 決定（006 與線上寫回共用同一套）。
  */
 export async function exportGuidedNotes(database: DatabaseSync, now: Date): Promise<ExportFile> {
   const stored = getStoredGuidedNotes(database);
@@ -120,27 +117,17 @@ export async function exportGuidedNotes(database: DatabaseSync, now: Date): Prom
     throw new Error('Cannot export Guided Notes: no imported file');
   }
 
-  const questions = listQuestions(database);
-  const resultByNumber = new Map(
-    buildResults(database).map((result) => [result.questionNumber, result]),
-  );
-  const originalSheetXml = await getWorksheetXml(stored.file, stored.sheetName);
+  const targets = await resolveGuidedNotesTargets(database, now);
   let bytes = stored.file;
 
-  for (const question of questions) {
-    const result = resultByNumber.get(question.number);
-    const blanks = question.blanks.map((blank) => ({
-      ...blank,
-      hasSeparateRightAnswerCell:
-        blank.prefix !== '' && !isMergedWithRightCell(originalSheetXml, blank.cell),
-    }));
-    const writes = buildBlankWrites(result?.winner?.answers ?? null, blanks);
-    if (writes === null) {
-      continue;
-    }
-
-    for (const write of writes) {
-      bytes = await replaceCellText(bytes, stored.sheetName, write.cell, write.content);
+  if (targets !== null) {
+    for (const write of targets.writes) {
+      bytes = await replaceCellText(
+        bytes,
+        targets.sheetName,
+        write.cell,
+        write.content,
+      );
     }
   }
 

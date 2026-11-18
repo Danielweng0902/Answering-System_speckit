@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   downloadGuidedNotes,
   downloadResultCsv,
+  writeBackGuidedNotes,
   type DownloadExportResult,
 } from '../../lib/api';
 import { Countdown } from '../shared/Countdown';
@@ -26,6 +27,56 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   const [exportError, setExportError] = useState<string | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const [revealError, setRevealError] = useState<string | null>(null);
+  const [isWritingBack, setIsWritingBack] = useState(false);
+  const [writeBackMessage, setWriteBackMessage] = useState<string | null>(null);
+  const [writeBackError, setWriteBackError] = useState<string | null>(null);
+  const [writeBackCode, setWriteBackCode] = useState<string | null>(null);
+
+  /**
+   * 006 T022（人工驗證建議 2）：階段改變、重設活動或重新匯入時，
+   * 上一次的寫回／揭曉訊息要清掉，否則老師會誤以為這場也失敗。
+   * 用「render 期間調整 state」而不是 effect，避免多一次渲染與多餘的 effect。
+   */
+  const activityKey = `${snapshot?.phase ?? 'none'}:${
+    snapshot?.role === 'teacher' ? (snapshot.guidedNotes?.importedAt ?? '') : ''
+  }`;
+  const [previousActivityKey, setPreviousActivityKey] = useState(activityKey);
+  if (previousActivityKey !== activityKey) {
+    setPreviousActivityKey(activityKey);
+    setWriteBackMessage(null);
+    setWriteBackError(null);
+    setWriteBackCode(null);
+    setRevealError(null);
+  }
+
+  /**
+   * 006：把答案寫回老師的線上 Google 試算表。失敗時保留伺服器的訊息，
+   * 老師可以改用「匯出 Guided Notes」下載 xlsx。
+   *
+   * 試算表在匯入後被改過時，伺服器會回 `SHEET_MODIFIED`；此時提供
+   * 「仍要寫回」按鈕，由老師確認後帶 force 再送一次（人工驗證建議 3）。
+   */
+  async function handleWriteBack(force = false): Promise<void> {
+    setWriteBackMessage(null);
+    setWriteBackError(null);
+    setWriteBackCode(null);
+    setIsWritingBack(true);
+    try {
+      const result = await writeBackGuidedNotes(force);
+      if (!result.ok) {
+        setWriteBackError(result.error.message);
+        setWriteBackCode(result.error.code);
+        return;
+      }
+      setWriteBackMessage(
+        result.writtenCells === 0
+          ? '這場沒有搶答成功的答案，沒有需要寫回的儲存格。'
+          : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。這次沒有人作答的題目不會被清除，表上可能還留著上一場的答案。`,
+      );
+    } finally {
+      setIsWritingBack(false);
+    }
+  }
 
   /** 005（FR-017）：逐題揭曉或全部揭曉；失敗顯示伺服器的中文訊息。 */
   async function sendReveal(
@@ -117,6 +168,19 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
             <button
               className={styles.exportButton}
               type="button"
+              disabled={
+                isWritingBack ||
+                snapshot.guidedNotes?.sourceKind !== 'link'
+              }
+              onClick={() => {
+                void handleWriteBack();
+              }}
+            >
+              寫回 Google 試算表
+            </button>
+            <button
+              className={styles.exportButton}
+              type="button"
               disabled={isExporting}
               onClick={() => {
                 void handleExport(downloadGuidedNotes);
@@ -135,6 +199,33 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               匯出 CSV
             </button>
           </div>
+          {snapshot.guidedNotes?.sourceKind !== 'link' && (
+            <p className={styles.exportError}>
+              這次的學習單是上傳的 xlsx，沒有線上試算表可以寫回；請用「匯出 Guided Notes」。
+            </p>
+          )}
+          {writeBackMessage !== null && (
+            <p className={styles.exportError} role="status">
+              {writeBackMessage}
+            </p>
+          )}
+          {writeBackError !== null && (
+            <p className={styles.exportError} role="alert">
+              {writeBackError}
+            </p>
+          )}
+          {writeBackCode === 'SHEET_MODIFIED' && (
+            <button
+              className={styles.exportButton}
+              type="button"
+              disabled={isWritingBack}
+              onClick={() => {
+                void handleWriteBack(true);
+              }}
+            >
+              仍要寫回
+            </button>
+          )}
           {exportError !== null && (
             <p className={styles.exportError} role="alert">
               {exportError}

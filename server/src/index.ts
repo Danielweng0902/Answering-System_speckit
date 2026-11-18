@@ -15,6 +15,9 @@ import { createActivityCommands } from './app/activityCommands.js';
 import { createAnswerCommands } from './app/answerCommands.js';
 import { createFairnessSettler } from './app/fairnessSettler.js';
 import { createProjectorCommands } from './app/projectorCommands.js';
+import { writeBackGuidedNotes } from './app/guidedNotesWriteBack.js';
+import { createGoogleSheetWriter, type SheetWriter } from './infra/sheets/sheetWriter.js';
+import { createServiceAccountTokenProvider } from './infra/sheets/serviceAccountToken.js';
 import { FAIR_BATCH_WINDOW_MS } from './domain/answerSettlement.js';
 import { createCountdown, type CountdownScheduler } from './app/countdown.js';
 import { createGroupCommands } from './app/groupCommands.js';
@@ -41,6 +44,11 @@ export type CreateServerOptions = {
   fetchImpl?: typeof fetch;
   /** 002 匯入服務的時鐘（15 分鐘有效期）；預設真實時鐘。 */
   now?: () => Date;
+  /**
+   * 006：線上寫回 Google 試算表的寫入器；測試注入假的，不連網路。
+   * 未注入且沒有設定服務帳號時，該功能回 SHEET_NOT_CONFIGURED。
+   */
+  sheetWriter?: SheetWriter | null;
 };
 
 export type ServerControl = Pick<StateBroadcaster, 'broadcastState'> & {
@@ -111,12 +119,38 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     fetchImpl: options.fetchImpl,
   });
 
+  // 006：線上寫回需要服務帳號；沒有設定就不注入該功能，路由回
+  // SHEET_NOT_CONFIGURED，xlsx 下載與 CSV 匯出不受影響。
+  const sheetWriter =
+    options.sheetWriter !== undefined
+      ? options.sheetWriter
+      : config.googleServiceAccountEmail !== undefined &&
+          config.googleServiceAccountPrivateKey !== undefined
+        ? createGoogleSheetWriter({
+            accessTokenProvider: createServiceAccountTokenProvider({
+              credentials: {
+                clientEmail: config.googleServiceAccountEmail,
+                privateKey: config.googleServiceAccountPrivateKey,
+              },
+            }),
+          })
+        : null;
+
   const httpServer = createHttpServer(
     createApp({
       database,
       webDistPath: options.webDistPath,
       teacherPassword: options.teacherPassword ?? config.teacherPassword,
       importService,
+      writeBackGuidedNotes: (
+        target: DatabaseSync,
+        writeBackOptions: { force?: boolean | undefined },
+      ) =>
+        writeBackGuidedNotes(target, sheetWriter, new Date(), {
+          force: writeBackOptions.force,
+          // 讀取線上試算表比對版面；測試注入假的 fetch，不連網路。
+          fetchImpl: options.fetchImpl,
+        }),
     }),
   );
   const io = new SocketIOServer(httpServer);
