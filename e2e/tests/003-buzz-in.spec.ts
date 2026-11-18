@@ -116,7 +116,7 @@ test('US1 基本流程：兩組看到 6 題各自送出，同組 2 秒內看到�
       .getByRole('button', { name: '送出第 1 題', exact: true })
       .click();
     await expect(firstQuestionOnSender.getByRole('alert')).toContainText(
-      '每個空格都要填寫答案',
+      '答案不可為空白',
     );
 
     await firstQuestionOnSender
@@ -523,7 +523,7 @@ test('US5 題組：第 1、2 題顯示兩個前綴欄，缺填被拒、填滿整
       .getByRole('button', { name: '送出第 1 題', exact: true })
       .click();
     await expect(firstQuestion.getByRole('alert')).toContainText(
-      '每個空格都要填寫答案；尚未填寫的空格：（2）',
+      '第（2）格不可為空白',
     );
     await expect(
       firstQuestion.getByRole('button', { name: '已送出', exact: true }),

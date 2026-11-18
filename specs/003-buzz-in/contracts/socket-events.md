@@ -53,7 +53,7 @@ type Ack =
 |---|---|---|
 | `QUESTION_NOT_FOUND` | 題號不存在，或伺服器已換題 | 找不到這個題號，請重新整理後再試 |
 | `BLANK_COUNT_MISMATCH` | 答案筆數與該題空格數不相等 | 這一題要填滿所有空格才能送出 |
-| `ANSWER_EMPTY` | 某個空格 trim 後為空 | 每個空格都要填寫答案 |
+| `ANSWER_EMPTY` | 某個空格 trim 後為空 | 答案不可為空白 |
 | `ANSWER_TOO_LONG` | 某個空格 trim 後超過 200 code point | 每個空格最多 200 個字 |
 | `ALREADY_SUBMITTED` | 本組此題已有有效作答 | 本組已經送出這一題，不能再送出 |
 | `SUBMISSION_NOT_FOUND` | 老師要作廢的組別／題目沒有有效作答，或已作廢 | 找不到可以作廢的作答，請重新整理後再試 |

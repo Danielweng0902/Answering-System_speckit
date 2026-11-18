@@ -306,7 +306,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   QUESTIONS_REQUIRED: '請先匯入題目',
   QUESTION_NOT_FOUND: '找不到這個題號，請重新整理後再試',
   BLANK_COUNT_MISMATCH: '這一題要填滿所有空格才能送出',
-  ANSWER_EMPTY: '每個空格都要填寫答案',
+  ANSWER_EMPTY: '答案不可為空白',
   ANSWER_TOO_LONG: '每個空格最多 200 個字',
   ALREADY_SUBMITTED: '本組已經送出這一題，不能再送出',
   SUBMISSION_NOT_FOUND: '找不到可以作廢的作答，請重新整理後再試',

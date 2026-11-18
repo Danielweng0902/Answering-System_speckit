@@ -33,17 +33,21 @@ function inputLabel(question: StudentQuestion, prefix: string): string {
     : `第 ${question.number} 題${prefix}答案`;
 }
 
-function blankText(prefix: string, index: number): string {
-  return prefix === '' ? `第 ${index + 1} 格（答案）` : prefix;
+/**
+ * 錯誤訊息用的空格標示（2026-11-18 兩組同意，採 003 人工驗證建議 1）：
+ * 單題寫「答案」、題組寫「第（2）格」，讓訊息短又不會分不出是哪一格。
+ */
+function blankLabel(prefix: string): string {
+  return prefix === '' ? '答案' : `第${prefix}格`;
 }
 
-function missingBlankTexts(
+function missingBlankLabels(
   question: StudentQuestion,
   draftAnswers: string[],
 ): string[] {
   return question.blanks.flatMap((blank, index) =>
     (draftAnswers[index] ?? '').trim() === ''
-      ? [blankText(blank.prefix, index)]
+      ? [blankLabel(blank.prefix)]
       : [],
   );
 }
@@ -134,11 +138,11 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
     const draftAnswers = question.blanks.map(
       (_blank, index) => drafts[question.number]?.[index] ?? '',
     );
-    const missingBlanks = missingBlankTexts(question, draftAnswers);
+    const missingBlanks = missingBlankLabels(question, draftAnswers);
     if (missingBlanks.length > 0) {
       setErrors((current) => ({
         ...current,
-        [question.number]: `每個空格都要填寫答案；尚未填寫的空格：${missingBlanks.join('、')}`,
+        [question.number]: `${missingBlanks.join('、')}不可為空白`,
       }));
       // 送出失敗後把焦點移到第一個沒填的欄位，讓鍵盤與螢幕閱讀器使用者
       // 不用自己找（Modern Web Guidance：送出失敗後聚焦第一個無效欄位）。
@@ -245,6 +249,21 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                       }}
                       onChange={(event) => {
                         updateAnswer(question, index, event.currentTarget.value);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') {
+                          return;
+                        }
+                        // 中文輸入法（IME）組字／選字時的 Enter 是「選字」，
+                        // 不能當成送出；`isComposing` 是標準訊號，`keyCode 229`
+                        // 補上 Safari 的事件順序問題（Modern Web Guidance 的
+                        // ime-safe-enter-submit：兩個訊號任一個成立就略過）。
+                        const native = event.nativeEvent;
+                        if (native.isComposing || native.keyCode === 229) {
+                          return;
+                        }
+                        event.preventDefault();
+                        void submit(question);
                       }}
                     />
                   </label>
