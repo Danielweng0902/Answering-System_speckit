@@ -10,9 +10,12 @@ NCU SE6005 軟體工程期末專題。老師在電腦上開活動、建立組別
 |---|---|
 | 001 活動與組別進場 | 功能全部完成，只差 T079 完整人工驗證（`docs/verification/001-manual.md` 尚未建立） |
 | 002 Guided Notes 匯入 | 已完成，含人工驗證：tasks 57/57；2026-11-13 依 quickstart 實測 13 步全部通過，無待辦問題（`docs/verification/002-manual.md`） |
-| 003 搶答作答 | 已完成，含人工驗證：tasks 63/63；2026-11-14 philip110531 依 quickstart 實測 23 步全部通過，僅介面文字建議（`docs/verification/003-manual.md`） |
+| 003 搶答作答 | 已完成，含人工驗證：tasks 63/63；2026-11-14 philip110531 依 quickstart 實測 23 步全部通過，僅介面文字建議（`docs/verification/003-manual.md`）。2026-11-18 另依人工驗證建議調整：空白作答提示改為「答案不可為空白」、支援按 Enter 送出（中文輸入法選字不會誤送）、題組 Enter 只跳下一格、輸入框顯示字數 |
 | 004 匯出 | 已完成：tasks 全部勾選；closed 才能匯出寫好搶答成功答案的 Guided Notes 與含 BOM 的結果 CSV（2026-11-17 起 CSV 為 8 欄），作廢作答不匯出。philip110531 通過 PR 審查（2026-11-17 Approve）與人工驗證（11-15 完整流程＋11-17 複測通過，`docs/verification/004-manual.md`）；已合併進 `main` |
-| 005 公平順位與投影看板 | 程式與自動驗證完成，PR 開啟中：準備中可切換「公平順位」（預設關閉，3 秒同批依成功題數排序，老師作廢成功組會連鎖重算）；CSV 第 8 欄標示公平順位；新增 `/projector` 投影看板（搶答中零作答資訊、結束後依題號逐題揭曉）。尚差 GLM 安全覆核（T033）、另一位組員審查（T034）與人工驗證（T037） |
+| 005 公平順位與投影看板 | 已完成並合併進 `main`：準備中可切換「公平順位」（預設關閉，3 秒同批依成功題數排序，老師作廢成功組會連鎖重算）；CSV 第 8 欄標示公平順位；新增 `/projector` 投影看板（搶答中零作答資訊、結束後依題號逐題揭曉）。philip110531 通過 PR 審查（2026-11-17 Approve）與 19 步人工驗證（`docs/verification/005-manual.md`）；共用契約同步升到 v0.6（D12／D13／D14／D16／D25） |
+| 006 寫回線上 Google Sheets | 實作中，PR 開啟中：依助教 2026-11-17 說明，答案直接寫回老師線上那份 Google 試算表（只寫答案值、老師的格式與公式不動；失敗時有對應原因與「匯出 xlsx」備援）。T018 真實線上寫回驗證 10 步全部通過（`docs/verification/006-manual.md`）；尚差另一位組員審查（T019） |
+
+另有依 Google 官方 [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance-src) 完成的表單／無障礙修正（PR #8，已合併）：答案欄 200 字上限、送出失敗時焦點移到沒填的欄位、開關的開／關語意（只套用在立即生效的「啟用公平順位」）、密碼欄原生必填，審查報告見 `docs/verification/web-guidance-audit.md`。
 
 逐項進度看 [`specs/001-activity-session/tasks.md`](specs/001-activity-session/tasks.md) 的勾選狀態。
 
