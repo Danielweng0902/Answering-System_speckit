@@ -22,7 +22,7 @@ export type ExportRoutesDependencies = {
     | ((
         database: DatabaseSync,
       ) => Promise<
-        | { ok: true; writtenCells: number }
+        | { ok: true; writtenCells: number; remapped: boolean }
         | { ok: false; code: ErrorCode; message: string }
       >)
     | undefined;
@@ -169,9 +169,15 @@ export function createExportRouter(
           });
           return;
         }
-        response.json({ writtenCells: result.writtenCells });
+        // remapped=true 表示線上版面只是位置移動，答案已自動對到新的座標。
+        response.json({
+          writtenCells: result.writtenCells,
+          remapped: result.remapped,
+        });
         // 原則IV：只記事件與寫入格數；不記答案、token 或金鑰。
-        console.info(`export:writeback cells=${result.writtenCells}`);
+        console.info(
+          `export:writeback cells=${result.writtenCells} remapped=${String(result.remapped)}`,
+        );
       } catch (error) {
         next(error);
       }

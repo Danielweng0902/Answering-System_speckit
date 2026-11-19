@@ -187,7 +187,7 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
       fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
-    expect(result).toEqual({ ok: true, writtenCells: 2 });
+    expect(result).toEqual({ ok: true, writtenCells: 2, remapped: false });
     expect(requests).toHaveLength(1);
     expect(requests[0]?.spreadsheetId).toBe('sheet-id-123');
     expect(requests[0]?.sheetName).toBe('學習單');
@@ -243,7 +243,7 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
       fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
-    expect(result).toEqual({ ok: true, writtenCells: 0 });
+    expect(result).toEqual({ ok: true, writtenCells: 0, remapped: false });
     expect(requests).toHaveLength(0);
   });
 
