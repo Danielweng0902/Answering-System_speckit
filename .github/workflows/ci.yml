@@ -1,0 +1,31 @@
+name: CI
+
+# 這個 repo 原本沒有任何 CI，PR 上不會有 checks 標記。
+# 最小驗證：型別 + lint + 圖表檢查 + 單元／整合測試（不跑 e2e，
+# e2e 需要 Playwright 瀏覽器，屬人工驗證的一環）。
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # package.json 的 engines 要求 Node >= 24
+          node-version: 24
+          cache: npm
+
+      - name: 安裝相依套件
+        run: npm ci
+
+      - name: 型別、lint、圖表檢查
+        run: npm run check
+
+      - name: 單元與整合測試
+        run: npm test
