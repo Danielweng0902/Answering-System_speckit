@@ -229,7 +229,7 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 - [x] T076 [P] 把 specify 階段的圖細化為技術層：在 `diagrams/001-activity-session-component.puml` 與 `-class.puml` 補上實際模組與型別名稱，重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`
 - [x] T077 [P] 撰寫根目錄 `README.md`：系統簡述、安裝、設定 `.env`、啟動、測試指令（不含任何密碼）
 - [x] T078 執行 `npm test`、`npm run test:e2e`、`npm run check`，把指令與輸出記錄在 `docs/verification/001-automated.md`
-- [ ] T079 **人工驗證**（由設計與驗證負責人執行）：依 quickstart 的人工驗證表逐步操作，把結果、截圖與發現的問題記錄在 `docs/verification/001-manual.md`；問題另開 GitHub issue
+- [x] T079 **人工驗證**（由設計與驗證負責人執行）：philip110531 於 2026-11-19 依 quickstart 的人工驗證表完成 **13 個步驟全部通過**、未開 GitHub issue，結果記錄在 `docs/verification/001-manual.md`（含三種獨立瀏覽器 context 的時間性驗收、重啟後階段與組別保留、未設定密碼的情況）
 
 ---
 
