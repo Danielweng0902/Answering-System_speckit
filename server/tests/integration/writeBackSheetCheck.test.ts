@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { writeBackGuidedNotes } from '../../src/app/guidedNotesWriteBack.js';
 import { openDatabase } from '../../src/infra/db/database.js';
@@ -53,7 +55,16 @@ async function seedWithShiftedStoredCells(
       sourceKind: 'link',
       sourceUrl: 'https://docs.google.com/spreadsheets/d/sheet-id-123',
       fileName: '02-official-group.xlsx',
-      file: new Uint8Array(),
+      file: new Uint8Array(
+        await readFile(
+          fileURLToPath(
+            new URL(
+              '../../../fixtures/guided-notes/02-official-group.xlsx',
+              import.meta.url,
+            ),
+          ),
+        ),
+      ),
       sheetName: '學習單',
       importedAt: '2026-11-17T09:00:00.000Z',
     },
@@ -99,7 +110,7 @@ describe('006 寫回時的座標來源（2026-11-19 review）', () => {
     ]);
   });
 
-  it('老師在匯入後把列往下移 → 題號與前綴還對得上時，改用線上現在的座標寫入（不會整體錯位）', async () => {
+  it('老師在匯入後把列往下移 → 版面已變，不寫回，回 SHEET_MODIFIED（2026-11-19 review：硬寫會整體錯位）', async () => {
     database = openDatabase(':memory:');
     await seedWithShiftedStoredCells(database);
     const { writer, requests } = recordingWriter();
@@ -108,12 +119,8 @@ describe('006 寫回時的座標來源（2026-11-19 review）', () => {
       fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
-    expect(result).toEqual({ ok: true, writtenCells: 2 });
-    // 用線上解析出的 H5／H6，而不是儲存的 H7／H8。
-    expect(requests[0]?.updates).toEqual([
-      { cell: 'H5', value: '甲答案' },
-      { cell: 'H6', value: '乙答案' },
-    ]);
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });
+    expect(requests).toHaveLength(0);
   });
 
   it('線上題目被改掉（題號／空格數不同）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {

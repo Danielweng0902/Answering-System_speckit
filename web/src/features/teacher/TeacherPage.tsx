@@ -30,6 +30,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   const [isWritingBack, setIsWritingBack] = useState(false);
   const [writeBackMessage, setWriteBackMessage] = useState<string | null>(null);
   const [writeBackError, setWriteBackError] = useState<string | null>(null);
+  const [writeBackCode, setWriteBackCode] = useState<string | null>(null);
 
   /**
    * 006 T022（人工驗證建議 2）：階段改變、重設活動或重新匯入時，
@@ -58,11 +59,13 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   async function handleWriteBack(): Promise<void> {
     setWriteBackMessage(null);
     setWriteBackError(null);
+    setWriteBackCode(null);
     setIsWritingBack(true);
     try {
       const result = await writeBackGuidedNotes();
       if (!result.ok) {
         setWriteBackError(result.error.message);
+        setWriteBackCode(result.error.code);
         return;
       }
       setWriteBackMessage(
@@ -207,9 +210,36 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
             </p>
           )}
           {writeBackError !== null && (
-            <p className={styles.exportError} role="alert">
-              {writeBackError}
-            </p>
+            <>
+              <p className={styles.exportError} role="alert">
+                {writeBackError}
+              </p>
+              <div className={styles.exportActions}>
+                {/* 版面有變或比對不到時，先給老師最安全的路：下載含答案的 xlsx。 */}
+                <button
+                  className={styles.exportButton}
+                  type="button"
+                  disabled={isExporting}
+                  onClick={() => {
+                    void handleExport(downloadGuidedNotes);
+                  }}
+                >
+                  下載含答案的 xlsx
+                </button>
+                {writeBackCode === 'SHEET_CHECK_FAILED' && (
+                  <button
+                    className={styles.exportButton}
+                    type="button"
+                    disabled={isWritingBack}
+                    onClick={() => {
+                      void handleWriteBack();
+                    }}
+                  >
+                    重試寫回
+                  </button>
+                )}
+              </div>
+            </>
           )}
           {exportError !== null && (
             <p className={styles.exportError} role="alert">

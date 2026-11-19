@@ -88,7 +88,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       error: {
         code: 'SHEET_MODIFIED',
         message:
-          '線上試算表的題目已與匯入時不同（題號、空格數或前綴改變），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載 xlsx；或確認後在「準備中」重新匯入再作答。',
+          '線上試算表的版面已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx；若要重新匯入，只能在作答前（準備中）進行，活動結束後重匯必須先重設、會清掉這場的作答。',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -98,10 +98,14 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('alert').textContent).toContain('已與匯入時不同');
+      expect(screen.getByRole('alert').textContent).toContain('版面已與匯入時不同');
     });
-    // 不再提供「仍要寫回」：照舊座標硬寫可能整體錯位（2026-11-19 review 實測）。
+    // 不再提供「仍要寫回」：照舊座標硬寫會整體錯位（2026-11-19 review 實測）。
     expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
+    // 首選改成下載含答案的 xlsx。
+    expect(
+      screen.getByRole('button', { name: '下載含答案的 xlsx' }),
+    ).toBeDefined();
   });
 
   it('階段改變時清掉上一次的寫回訊息（人工驗證建議 2）', async () => {
@@ -136,7 +140,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       error: {
         code: 'SHEET_CHECK_FAILED',
         message:
-          '無法讀取線上試算表，無法確定答案要寫到哪一格（常見原因：關閉了「知道連結者可檢視」或網路不穩）。請恢復後再試，或改用「匯出 Guided Notes」下載 xlsx。',
+          '無法讀取線上試算表，比對不了版面（常見原因：關閉了「知道連結者可檢視」或網路不穩）。請再按一次「寫回 Google 試算表」重試；仍無法比對請改用「匯出 Guided Notes」下載含答案的 xlsx。',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -149,6 +153,11 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       expect(screen.getByRole('alert').textContent).toContain('無法讀取');
     });
     expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
+    // 比對失敗時可以重試（重按會重新讀取線上試算表），也可以直接下載 xlsx。
+    expect(screen.getByRole('button', { name: '重試寫回' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: '下載含答案的 xlsx' }),
+    ).toBeDefined();
   });
 
   it('上傳 xlsx 的學習單沒有線上目標，按鈕停用並提示改用下載', () => {

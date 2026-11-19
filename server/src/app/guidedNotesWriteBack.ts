@@ -5,22 +5,22 @@
  * 那份線上試算表（助教 2026-11-17 說明：系統要直接串接線上 Google Sheets
  * 讀寫，不是下載 xlsx 離線處理）。
  *
- * 寫回前一定會**重新讀取並解析線上試算表**，用「現在」的座標寫入：
- * - 版面沒變 → 照原位寫。
- * - 老師在匯入後插了一列／挪了欄，但**題號、前綴與空格數都還對得上**
- *   → 直接用新的座標寫，答案仍然對得上題目（2026-11-19 review 的實測：
- *   在最上方插一列後照舊座標寫會整體錯位）。
- * - 題目本身改了（題號／空格數／前綴不同）→ 對應不起來，擋下來請老師改用
- *   「匯出 xlsx」。
- * - 讀不到線上試算表 → 無法確認要寫到哪裡，一律擋下（讀不到不代表服務帳號
- *   不能寫，硬寫會覆蓋別的格或公式）。
+ * 寫回前一定會**重新讀取並解析線上試算表**，確認版面與匯入時完全一致：
+ * - 一致 → 用匯入時的座標寫入（此時線上座標與儲存座標相同，安全）。
+ * - **不一致**（列欄被挪動、題目被改動）→ 對應不起來，**不寫回**，請老師
+ *   改用「匯出 Guided Notes」下載含答案的 xlsx。
+ * - **讀不到／解析不出來** → 無法確認要寫到哪裡，**不寫回**，請老師先重試，
+ *   仍無法比對就下載 xlsx。
+ *
+ * 為什麼不放寬：讀不到線上試算表不代表服務帳號不能寫，硬寫會覆蓋別的格或
+ * 公式（2026-11-19 實測：插一列後照舊座標寫會整體錯位一行）。
+ * 「自動對到線上現在的新格子」是後續工作（下一個 PR），這次不做。
  *
  * 本模組唯讀本地資料（不動作答、不動資料庫），只在線上試算表寫入答案值。
  */
 import type { DatabaseSync } from 'node:sqlite';
 import { ERROR_MESSAGES, type ErrorCode } from '@classroom/shared';
-import { buildResults } from './answerProjections.js';
-import { buildBlankWrites } from './guidedNotesExporter.js';
+import { resolveGuidedNotesTargets } from './guidedNotesTargets.js';
 import { getStoredGuidedNotes, list as listQuestions } from '../infra/db/questionRepo.js';
 import { parseGuidedNotes, type ParsedQuestion } from '../domain/guidedNotesParser.js';
 import {
@@ -28,7 +28,6 @@ import {
   parseSheetLink,
 } from '../infra/sheets/googleSheetsFetcher.js';
 import { readWorkbook } from '../infra/xlsx/workbookReader.js';
-import { getWorksheetXml, isMergedWithRightCell } from '../infra/xlsx/xlsxEditor.js';
 import {
   SheetAuthError,
   SheetWriteError,
@@ -40,7 +39,7 @@ export type WriteBackResult =
   | { ok: false; code: ErrorCode; message: string };
 
 export type WriteBackOptions = {
-  /** 讀取線上試算表用來取得「現在」的座標；測試注入假的 fetch，不連網路。 */
+  /** 讀取線上試算表用來比對版面；測試注入假的 fetch，不連網路。 */
   fetchImpl?: typeof fetch | undefined;
 };
 
@@ -48,22 +47,69 @@ function failure(code: ErrorCode): WriteBackResult {
   return { ok: false, code, message: ERROR_MESSAGES[code] };
 }
 
-type SheetQuestion = {
-  number: number;
-  blanks: { position: number; prefix: string; cell: string }[];
-};
-
-/** 兩個題目的「題意」是否一致（只看題號、空格數與前綴，不看位置）。 */
-function sameQuestionShape(
-  stored: { blanks: readonly { prefix: string }[] },
-  live: { blanks: readonly { prefix: string }[] },
-): boolean {
-  return (
-    stored.blanks.length === live.blanks.length &&
-    stored.blanks.every(
-      (blank, index) => blank.prefix === live.blanks[index]?.prefix,
+/** 題目與空格的結構指紋：題號＋每個空格的格號與前綴。 */
+function structureSignature(
+  questions: readonly {
+    number: number;
+    blanks: readonly { position: number; prefix: string; cell: string }[];
+  }[],
+): string {
+  return questions
+    .map(
+      (question) =>
+        `${question.number}:${question.blanks
+          .map(
+            (blank) => `${blank.position}/${blank.prefix}/${blank.cell}`,
+          )
+          .join(',')}`,
     )
-  );
+    .join('|');
+}
+
+type SheetCheck = 'unchanged' | 'changed' | 'failed';
+
+/**
+ * 比對線上試算表與匯入當時保存的版面。
+ *
+ * - `unchanged`：讀得到且結構（含儲存格座標）完全相同 → 可以寫。
+ * - `changed`：讀得到但結構不同（列欄被挪動或題目被改）→ 不寫回。
+ * - `failed`：讀不到或解析不出來 → 不寫回，請老師重試或下載 xlsx。
+ */
+async function compareSheetWithImport(
+  database: DatabaseSync,
+  spreadsheetId: string,
+  fetchImpl: typeof fetch | undefined,
+): Promise<SheetCheck> {
+  try {
+    const bytes = await fetchSheetXlsx(spreadsheetId, { fetchImpl });
+    const grids = await readWorkbook(bytes);
+    const parsed = parseGuidedNotes(grids);
+    if (!parsed.ok) {
+      // 解析不出題目＝無法確認版面 → 視為比對失敗。
+      return 'failed';
+    }
+    const stored = listQuestions(database).map((question) => ({
+      number: question.number,
+      blanks: question.blanks.map((blank) => ({
+        position: blank.position,
+        prefix: blank.prefix,
+        cell: blank.cell,
+      })),
+    }));
+    const live = (parsed.questions as ParsedQuestion[]).map((question) => ({
+      number: question.number,
+      blanks: question.blanks.map((blank) => ({
+        position: blank.position,
+        prefix: blank.prefix,
+        cell: blank.cell,
+      })),
+    }));
+    return structureSignature(stored) === structureSignature(live)
+      ? 'unchanged'
+      : 'changed';
+  } catch {
+    return 'failed';
+  }
 }
 
 /**
@@ -71,8 +117,8 @@ function sameQuestionShape(
  *
  * - 匯入來源不是連結（上傳的 xlsx）→ 沒有雲端目標，回 GUIDED_NOTES_NOT_LINK。
  * - 伺服器沒有設定服務帳號 → 回 SHEET_NOT_CONFIGURED。
- * - 讀不到或解析不出線上試算表 → 回 SHEET_CHECK_FAILED（無法確認要寫到哪裡）。
- * - 線上題目已改動、對應不起來 → 回 SHEET_MODIFIED。
+ * - 線上版面與匯入時不同 → 回 SHEET_MODIFIED，請老師下載含答案的 xlsx。
+ * - 讀不到或解析不出線上試算表 → 回 SHEET_CHECK_FAILED，請老師重試或下載 xlsx。
  * - 沒有任何搶答成功答案 → 不寫入任何儲存格，回成功與 0。
  */
 export async function writeBackGuidedNotes(
@@ -97,73 +143,36 @@ export async function writeBackGuidedNotes(
     return failure('SHEET_NOT_FOUND');
   }
 
-  // 讀線上試算表：拿「現在」的版面與座標。
-  let liveBytes: Uint8Array;
-  let liveQuestions: ParsedQuestion[];
-  let liveSheetName: string;
-  try {
-    liveBytes = await fetchSheetXlsx(spreadsheetId, { fetchImpl: options.fetchImpl });
-    const grids = await readWorkbook(liveBytes);
-    const parsed = parseGuidedNotes(grids);
-    if (!parsed.ok) {
-      return failure('SHEET_CHECK_FAILED');
-    }
-    liveQuestions = parsed.questions;
-    liveSheetName = parsed.sheetName;
-  } catch {
-    // 讀不到 → 無法確定答案要寫到哪一格，不能照舊座標硬寫。
-    return failure('SHEET_CHECK_FAILED');
+  const targets = await resolveGuidedNotesTargets(database, now);
+  if (targets === null) {
+    return failure('NO_GUIDED_NOTES');
   }
-
-  const liveByNumber = new Map(
-    liveQuestions.map((question) => [question.number, question]),
-  );
-  const storedQuestions = listQuestions(database);
-  const results = new Map(
-    buildResults(database, now).map((result) => [result.questionNumber, result]),
-  );
-
-  let liveXml: string;
-  try {
-    liveXml = await getWorksheetXml(liveBytes, liveSheetName);
-  } catch {
-    return failure('SHEET_CHECK_FAILED');
-  }
-
-  const updates: { cell: string; value: string }[] = [];
-  for (const question of storedQuestions) {
-    const answers = results.get(question.number)?.winner?.answers;
-    if (answers === undefined) {
-      // 這題沒有人作答 → 不寫入（寫回不清空上一場的答案，見 contracts）。
-      continue;
-    }
-    const live = liveByNumber.get(question.number);
-    if (live === undefined || !sameQuestionShape(question, live)) {
-      // 題目被改過（題號／空格數／前綴不同）→ 對應不起來，不硬寫。
-      return failure('SHEET_MODIFIED');
-    }
-    const blanks = live.blanks.map((blank) => ({
-      position: blank.position,
-      prefix: blank.prefix,
-      cell: blank.cell,
-      hasSeparateRightAnswerCell:
-        blank.prefix !== '' && !isMergedWithRightCell(liveXml, blank.cell),
-    }));
-    const writes = buildBlankWrites(answers, blanks);
-    for (const write of writes ?? []) {
-      updates.push({ cell: write.cell, value: write.content });
-    }
-  }
-
-  if (updates.length === 0) {
+  if (targets.writes.length === 0) {
     return { ok: true, writtenCells: 0 };
+  }
+
+  const check = await compareSheetWithImport(
+    database,
+    spreadsheetId,
+    options.fetchImpl,
+  );
+  if (check === 'changed') {
+    // 版面已變：對應不起來，不寫回（2026-11-19 review：硬寫會整體錯位）。
+    return failure('SHEET_MODIFIED');
+  }
+  if (check === 'failed') {
+    // 比對失敗不是「沒變」，而是「無法確認」→ 不寫回，請老師重試或下載。
+    return failure('SHEET_CHECK_FAILED');
   }
 
   try {
     await writer.writeCells({
       spreadsheetId,
-      sheetName: liveSheetName,
-      updates,
+      sheetName: targets.sheetName,
+      updates: targets.writes.map((write) => ({
+        cell: write.cell,
+        value: write.content,
+      })),
     });
   } catch (error) {
     if (error instanceof SheetWriteError) {
@@ -175,7 +184,5 @@ export async function writeBackGuidedNotes(
     return failure('SHEET_UNAVAILABLE');
   }
 
-  return { ok: true, writtenCells: updates.length };
+  return { ok: true, writtenCells: targets.writes.length };
 }
-
-export type { SheetQuestion };

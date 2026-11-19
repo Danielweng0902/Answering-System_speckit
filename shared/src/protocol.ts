@@ -336,9 +336,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   SHEET_AUTH_FAILED:
     '伺服器的 Google 寫回設定有誤，請通知系統管理者檢查服務帳號金鑰。',
   SHEET_MODIFIED:
-    '線上試算表的題目已與匯入時不同（題號、空格數或前綴改變），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載 xlsx；或確認後在「準備中」重新匯入再作答。',
+    '線上試算表的版面已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx；若要重新匯入，只能在作答前（準備中）進行，活動結束後重匯必須先重設、會清掉這場的作答。',
   SHEET_CHECK_FAILED:
-    '無法讀取線上試算表，無法確定答案要寫到哪一格（常見原因：關閉了「知道連結者可檢視」或網路不穩）。請恢復後再試，或改用「匯出 Guided Notes」下載 xlsx。',
+    '無法讀取線上試算表，比對不了版面（常見原因：關閉了「知道連結者可檢視」或網路不穩）。請再按一次「寫回 Google 試算表」重試；仍無法比對請改用「匯出 Guided Notes」下載含答案的 xlsx。',
   SHEET_UNAVAILABLE:
     'Google 試算表暫時無法寫入，請稍後再試或改用下載 xlsx',
 };
