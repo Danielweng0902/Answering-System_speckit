@@ -195,14 +195,16 @@
   text-decoration-thickness: 1px;
 }
 
-/* 最新揭曉的那一題：朱紅圈出搶答成功的組別（無人作答不畫圈）。 */
+/*
+ * 最新揭曉的那一題：贏家組別用**朱紅底線**標出。
+ * 不用手繪橢圓圈——那個太有書法／calligraphy 的味道（2026-11-19 review：
+ * 要去掉中華感）。朱紅在此是「螢光筆標記」的用法，不是字色。
+ */
 .revealItem:last-child .revealWinner:not(.revealWinnerEmpty) {
-  color: var(--color-vermilion);
-  padding: 0 var(--space-2);
-  border: var(--border-width-strong) solid var(--color-vermilion);
-  border-radius: 50%;
+  color: var(--color-ink);
+  border-block-end: 3px solid var(--color-vermilion);
+  padding-block-end: 2px;
   justify-self: start;
-  transform: rotate(-2deg);
 }
 
 .winCountSection {

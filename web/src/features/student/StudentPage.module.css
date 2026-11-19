@@ -67,6 +67,7 @@
 .phaseTitle {
   font-family: var(--font-family-display);
   font-size: var(--font-size-question);
+  font-weight: 600;
 }
 
 .description {

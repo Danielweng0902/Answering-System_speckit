@@ -34,14 +34,21 @@
   --color-border: var(--color-rule);
   --color-focus: var(--color-ink);
 
-  /* 字體：襯線做顯示與數字，無襯線做內文與欄標 */
+  /*
+   * 字體：拉丁襯線（數字、英文、Q1 這類標記）＋ 中文黑體，**逐字 fallback 混排**。
+   * 襯線字沒有中文字，所以中文會自動落到後面的黑體 → 數字與英文有襯線的
+   * 編輯感、中文是乾淨的黑體，不會出現明體／宋體那種「中文報紙」的味道
+   * （2026-11-19 review：要去掉中華感，但保留紙與細線的骨架）。
+   */
   --font-family-display:
-    'Noto Serif TC', 'Source Han Serif TC', 'Songti TC', 'PMingLiU', 'SimSun', 'Times New Roman',
-    serif;
+    'Iowan Old Style', 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman',
+    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-family-base:
-    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', system-ui, -apple-system,
-    'Segoe UI', sans-serif;
+    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', 'Helvetica Neue', Arial,
+    system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-family-utility: var(--font-family-base);
+  /* 只有純拉丁的小標才拉字距。 */
+  --letter-spacing-latin: 0.16em;
 
   --font-size-caption: 0.75rem;
   --font-size-small: 0.8125rem;
@@ -55,8 +62,8 @@
   --line-height-base: 1.5;
   --line-height-question: 1.6;
   --line-height-display: 1.1;
-  /* 欄標（報紙小標）的字距 */
-  --letter-spacing-utility: 0.18em;
+  /* 欄標字距：中文幾乎不拉，拉開就會變成中文印刷的排法。 */
+  --letter-spacing-utility: 0.02em;
 
   /* 間距 */
   --space-0: 0;

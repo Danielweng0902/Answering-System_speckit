@@ -15,6 +15,7 @@
   margin: var(--space-0);
   font-family: var(--font-family-display);
   font-size: var(--font-size-headline);
+  font-weight: 600;
   line-height: var(--line-height-display);
 }
 

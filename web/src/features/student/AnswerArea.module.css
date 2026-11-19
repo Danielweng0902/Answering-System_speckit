@@ -17,6 +17,7 @@
 .title {
   font-family: var(--font-family-display);
   font-size: var(--font-size-question);
+  font-weight: 600;
 }
 
 .description {
@@ -31,8 +32,8 @@
   margin-block-start: var(--space-4);
   border-block-start: var(--border-width-thin) solid var(--color-ink);
   list-style: none;
-  /* 朱紅訂正線：整欄作答區的左邊界。 */
-  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  /* 作答欄左邊界用一般墨線，不用朱紅訂正線（那是中文試卷的符號）。 */
+  border-inline-start: var(--border-width-thin) solid var(--color-ink);
   padding-inline-start: var(--space-4);
 }
 

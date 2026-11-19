@@ -13,6 +13,7 @@
 .title {
   font-family: var(--font-family-utility);
   font-size: var(--font-size-large);
+  font-weight: 600;
   letter-spacing: var(--letter-spacing-utility);
   color: var(--color-ink);
 }

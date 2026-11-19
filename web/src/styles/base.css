@@ -63,12 +63,17 @@ input[type='radio'] {
   border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
 
-/* 報紙欄標：小字、全形寬字距，上下各一條細線。 */
+/* 欄標：小字、墨灰。中文不拉字距（拉了就有中文印刷的味道）。 */
 .utility-caption {
   font-family: var(--font-family-utility);
   font-size: var(--font-size-caption);
   letter-spacing: var(--letter-spacing-utility);
   color: var(--color-ink-muted);
+}
+
+/* 純拉丁的小標（Q1、PROJECTOR 這類）才拉字距。 */
+.utility-caption--latin {
+  letter-spacing: var(--letter-spacing-latin);
 }
 
 @media (prefers-reduced-motion: reduce) {
