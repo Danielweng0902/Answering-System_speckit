@@ -1,11 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { writeBackGuidedNotes } from '../../src/app/guidedNotesWriteBack.js';
 import { openDatabase } from '../../src/infra/db/database.js';
-import { insertSubmission } from '../../src/infra/db/answerRepo.js';
-import { insertGroup } from '../../src/infra/db/groupRepo.js';
-import { replaceAll } from '../../src/infra/db/questionRepo.js';
 import type {
   SheetWriter,
   SheetWriteRequest,
@@ -14,6 +9,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import {
   failingSheetFetch,
   fakeSheetFetch,
+  fakeSheetFetchWithInsertedRow,
   seedOfficialGroupLinkStructure,
 } from './guidedNotesFixtures.js';
 
@@ -39,62 +35,8 @@ function recordingWriter(): {
   };
 }
 
-/**
- * 2026-11-19 review 的實測：在匯入後、寫回前於線上試算表最上方新增一列，
- * 照舊座標寫會整體錯位。這裡用「儲存座標與線上座標不同、但題號與前綴
- * 一致」模擬同一種情況：系統必須改用線上現在的座標寫入。
- */
-async function seedWithShiftedStoredCells(
-  target: DatabaseSync,
-): Promise<void> {
-  insertGroup(target, { id: 'group-1', name: '第一組', position: 1 });
-  insertGroup(target, { id: 'group-2', name: '第二組', position: 2 });
-  replaceAll(
-    target,
-    {
-      sourceKind: 'link',
-      sourceUrl: 'https://docs.google.com/spreadsheets/d/sheet-id-123',
-      fileName: '02-official-group.xlsx',
-      file: new Uint8Array(
-        await readFile(
-          fileURLToPath(
-            new URL(
-              '../../../fixtures/guided-notes/02-official-group.xlsx',
-              import.meta.url,
-            ),
-          ),
-        ),
-      ),
-      sheetName: '學習單',
-      importedAt: '2026-11-17T09:00:00.000Z',
-    },
-    [
-      {
-        id: 'q-1',
-        number: 1,
-        kind: 'group',
-        prompt: '第一題',
-        position: 1,
-        blanks: [
-          // 匯入當時的座標（假設當時表上還多一列，所以比線上多了一列）
-          { position: 1, prefix: '（1）', cell: 'G6' },
-          { position: 2, prefix: '（2）', cell: 'G7' },
-        ],
-      },
-    ],
-  );
-  insertSubmission(target, {
-    id: 's1',
-    questionId: 'q-1',
-    groupId: 'group-1',
-    rank: 1,
-    receivedAt: '2026-11-17T09:30:00.000Z',
-    answers: ['甲答案', '乙答案'],
-  });
-}
-
-describe('006 寫回時的座標來源（2026-11-19 review）', () => {
-  it('線上版面與匯入時相同 → 寫到線上現在的座標', async () => {
+describe('006 寫回前的版面比對與自動對位（2026-11-19 review / T029）', () => {
+  it('線上版面與匯入時相同 → 寫到原來的座標，並回報沒有對位', async () => {
     database = openDatabase(':memory:');
     await seedOfficialGroupLinkStructure(database);
     const { writer, requests } = recordingWriter();
@@ -103,16 +45,38 @@ describe('006 寫回時的座標來源（2026-11-19 review）', () => {
       fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
-    expect(result).toEqual({ ok: true, writtenCells: 2 });
+    expect(result).toEqual({ ok: true, writtenCells: 2, remapped: false });
     expect(requests[0]?.updates).toEqual([
       { cell: 'H5', value: '甲答案' },
       { cell: 'H6', value: '乙答案' },
     ]);
   });
 
-  it('老師在匯入後把列往下移 → 版面已變，不寫回，回 SHEET_MODIFIED（2026-11-19 review：硬寫會整體錯位）', async () => {
+  it('老師在線上插了一列 → 題目沒被改就自動對到線上現在的座標寫入（不再整體錯位）', async () => {
     database = openDatabase(':memory:');
-    await seedWithShiftedStoredCells(database);
+    await seedOfficialGroupLinkStructure(database);
+    const { writer, requests } = recordingWriter();
+
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      // 線上版本在最上方多了一列，題目整個往下移一列（G5→G6、G6→G7）。
+      fetchImpl: await fakeSheetFetchWithInsertedRow(
+        '02-official-group.xlsx',
+        1,
+      ),
+    });
+
+    expect(result).toEqual({ ok: true, writtenCells: 2, remapped: true });
+    expect(requests[0]?.updates).toEqual([
+      { cell: 'H6', value: '甲答案' },
+      { cell: 'H7', value: '乙答案' },
+    ]);
+  });
+
+  it('線上題幹被改掉 → 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+    database = openDatabase(':memory:');
+    await seedOfficialGroupLinkStructure(database, {
+      prompts: { 1: '老師改寫過的題目' },
+    });
     const { writer, requests } = recordingWriter();
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
@@ -123,7 +87,64 @@ describe('006 寫回時的座標來源（2026-11-19 review）', () => {
     expect(requests).toHaveLength(0);
   });
 
-  it('線上題目被改掉（題號／空格數不同）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+  it('兩題的內容互換（題號對調）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+    database = openDatabase(':memory:');
+    // 題號 1、2 互換：題號還在，但題幹對不上，不能寫。
+    await seedOfficialGroupLinkStructure(database, {
+      renumber: { 1: 2, 2: 1 },
+    });
+    const { writer, requests } = recordingWriter();
+
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });
+    expect(requests).toHaveLength(0);
+  });
+
+  it('線上題目的空格數變了 → 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+    database = openDatabase(':memory:');
+    await seedOfficialGroupLinkStructure(database, {
+      blanks: {
+        1: [
+          { position: 1, prefix: '（1）', cell: 'G5' },
+          { position: 2, prefix: '（2）', cell: 'G6' },
+          { position: 3, prefix: '（3）', cell: 'G7' },
+        ],
+      },
+    });
+    const { writer, requests } = recordingWriter();
+
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });
+    expect(requests).toHaveLength(0);
+  });
+
+  it('線上題目的前綴被改掉 → 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+    database = openDatabase(':memory:');
+    await seedOfficialGroupLinkStructure(database, {
+      blanks: {
+        1: [
+          { position: 1, prefix: '(1)', cell: 'G5' },
+          { position: 2, prefix: '（2）', cell: 'G6' },
+        ],
+      },
+    });
+    const { writer, requests } = recordingWriter();
+
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });
+    expect(requests).toHaveLength(0);
+  });
+
+  it('線上是另一份學習單（題目完全不一樣）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
     database = openDatabase(':memory:');
     await seedOfficialGroupLinkStructure(database);
     const { writer, requests } = recordingWriter();
@@ -131,6 +152,22 @@ describe('006 寫回時的座標來源（2026-11-19 review）', () => {
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
       // 04 是另一種版面：第 1 題只有一個空格，與儲存的兩空格題組對不起來。
       fetchImpl: fakeSheetFetch('04-mixed-groups.xlsx'),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });
+    expect(requests).toHaveLength(0);
+  });
+
+  it('答案數與線上的空格數不一致 → 對不起來，不寫入，回 SHEET_MODIFIED', async () => {
+    database = openDatabase(':memory:');
+    // 直接給一筆答案數對不上的作答（正常流程不會產生，防守用）。
+    await seedOfficialGroupLinkStructure(database, {
+      submissionAnswers: ['甲', '乙', '丙'],
+    });
+    const { writer, requests } = recordingWriter();
+
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
     expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });

@@ -36,6 +36,15 @@ file_last_change_time() {
   stat -f %m "$path" 2>/dev/null || stat -c %Y "$path" 2>/dev/null || echo 0
 }
 
+# 淺層 clone（只有一筆 commit）時無法判斷 PNG 是否比 .puml 舊：
+# `git log -1 -- <file>` 對任何檔案都會回同一個 tip commit 時間，
+# 檢查會變成空轉。這裡直接明確報錯，不要靜默放行。
+if git rev-parse --is-shallow-repository 2>/dev/null | grep -q '^true$'; then
+  echo "FAIL 這是淺層 clone（沒有完整 git 歷史），無法判斷 PNG 是否比 .puml 舊。"
+  echo "     請用完整歷史 checkout（CI：actions/checkout 的 fetch-depth: 0）。"
+  fail=1
+fi
+
 for puml in diagrams/*.puml; do
   png="${puml%.puml}.png"
   if [[ ! -f "$png" ]]; then

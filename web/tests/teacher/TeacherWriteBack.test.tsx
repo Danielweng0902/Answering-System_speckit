@@ -40,7 +40,11 @@ function makeSnapshot(
 
 describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
   beforeEach(() => {
-    writeBackGuidedNotes.mockResolvedValue({ ok: true, writtenCells: 6 });
+    writeBackGuidedNotes.mockResolvedValue({
+      ok: true,
+      writtenCells: 6,
+      remapped: false,
+    });
   });
 
   afterEach(() => {
@@ -61,6 +65,9 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     await waitFor(() => {
       expect(screen.getByRole('status').textContent).toContain('已寫回 6 格');
     });
+    // 成功訊息只講這次寫了幾格；「沒人作答的題目不會被清除」是使用限制，
+    // 寫在 quickstart，不在每次成功時跳出來（2026-11-19 review）。
+    expect(screen.getByRole('status').textContent).not.toContain('不會被清除');
   });
 
   it('寫回失敗時顯示伺服器的中文訊息', async () => {
@@ -82,13 +89,13 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     });
   });
 
-  it('試算表被改過時提示並讓老師確認後再寫回（人工驗證建議 3）', async () => {
+  it('線上題目被改過時停下來請老師改用下載（人工驗證建議 3 / T029）', async () => {
     writeBackGuidedNotes.mockResolvedValue({
       ok: false,
       error: {
         code: 'SHEET_MODIFIED',
         message:
-          '線上試算表的版面已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx。',
+          '線上試算表的題目已與匯入時不同（題幹、子題數或前綴有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx。（只是插了一列或挪了欄、題目沒改時，系統會自動對到現在的位置寫入。）',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -98,7 +105,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('alert').textContent).toContain('版面已與匯入時不同');
+      expect(screen.getByRole('alert').textContent).toContain('題目已與匯入時不同');
     });
     // 不再提供「仍要寫回」：照舊座標硬寫會整體錯位（2026-11-19 review 實測）。
     expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
@@ -107,6 +114,25 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     expect(
       screen.getByRole('button', { name: '匯出 Guided Notes' }),
     ).toBeDefined();
+  });
+
+  it('線上版面只是位置移動時，提示答案已自動對到現在的位置（T029）', async () => {
+    writeBackGuidedNotes.mockResolvedValue({
+      ok: true,
+      writtenCells: 2,
+      remapped: true,
+    });
+    render(<TeacherPage snapshot={makeSnapshot()} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('status').textContent).toContain(
+        '答案已自動對到現在的位置',
+      );
+    });
   });
 
   it('階段改變時清掉上一次的寫回訊息（人工驗證建議 2）', async () => {
