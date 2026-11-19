@@ -8,7 +8,7 @@ NCU SE6005 軟體工程期末專題。老師在電腦上開活動、建立組別
 
 | 子功能 | 狀態 |
 |---|---|
-| 001 活動與組別進場 | 功能全部完成，只差 T079 完整人工驗證（`docs/verification/001-manual.md` 尚未建立） |
+| 001 活動與組別進場 | 已完成，含人工驗證：2026-11-19 philip110531 依 quickstart 實測 13 步全部通過、未開 issue（`docs/verification/001-manual.md`） |
 | 002 Guided Notes 匯入 | 已完成，含人工驗證：tasks 57/57；2026-11-13 依 quickstart 實測 13 步全部通過，無待辦問題（`docs/verification/002-manual.md`） |
 | 003 搶答作答 | 已完成，含人工驗證：tasks 63/63；2026-11-14 philip110531 依 quickstart 實測 23 步全部通過，僅介面文字建議（`docs/verification/003-manual.md`）。2026-11-18 另依人工驗證建議調整：空白作答提示改為「答案不可為空白」、支援按 Enter 送出（中文輸入法選字不會誤送）、題組 Enter 只跳下一格、輸入框顯示字數 |
 | 004 匯出 | 已完成：tasks 全部勾選；closed 才能匯出寫好搶答成功答案的 Guided Notes 與含 BOM 的結果 CSV（2026-11-17 起 CSV 為 8 欄），作廢作答不匯出。philip110531 通過 PR 審查（2026-11-17 Approve）與人工驗證（11-15 完整流程＋11-17 複測通過，`docs/verification/004-manual.md`）；已合併進 `main` |
