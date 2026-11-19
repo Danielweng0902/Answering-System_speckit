@@ -49,7 +49,7 @@
 | `SHEET_NOT_NATIVE` | 422 | 這份檔案還是 xlsx 格式；請在試算表選「檔案 → 儲存為 Google 試算表」後重新匯入 |
 | `SHEET_API_DISABLED` | 503 | 伺服器的 Google 專案尚未啟用 Sheets API；請通知系統管理者 |
 | `SHEET_AUTH_FAILED` | 503 | 伺服器的服務帳號金鑰／授權有誤；請通知系統管理者 |
-| `SHEET_MODIFIED` | 409 | 線上試算表的**版面**已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格；請改用「匯出 Guided Notes」下載含答案的 xlsx。重新匯入只能在作答前進行 |
+| `SHEET_MODIFIED` | 409 | 線上試算表的**版面**已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格；請改用「匯出 Guided Notes」下載含答案的 xlsx（重新匯入只能在作答前進行，結束後重匯必須先重設、會清掉這場的作答） |
 | `SHEET_CHECK_FAILED` | 409 | **無法讀取線上試算表**（例如關掉了「知道連結者可檢視」或網路不穩），比對不了版面；請先重試，仍不行請改用「匯出 Guided Notes」下載含答案的 xlsx |
 | `SHEET_UNAVAILABLE` | 502 | 暫時無法寫入（限流、逾時、網路或 Google 服務異常）；請稍後再試或改用下載 xlsx |
 

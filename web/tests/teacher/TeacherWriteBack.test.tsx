@@ -88,7 +88,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       error: {
         code: 'SHEET_MODIFIED',
         message:
-          '線上試算表的版面已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx；若要重新匯入，只能在作答前（準備中）進行，活動結束後重匯必須先重設、會清掉這場的作答。',
+          '線上試算表的版面已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx。',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -102,9 +102,10 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     });
     // 不再提供「仍要寫回」：照舊座標硬寫會整體錯位（2026-11-19 review 實測）。
     expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
-    // 首選改成下載含答案的 xlsx。
+    // 不另開重複按鈕；訊息直接引導老師用既有的「匯出 Guided Notes」。
+    expect(screen.queryByRole('button', { name: '下載含答案的 xlsx' })).toBeNull();
     expect(
-      screen.getByRole('button', { name: '下載含答案的 xlsx' }),
+      screen.getByRole('button', { name: '匯出 Guided Notes' }),
     ).toBeDefined();
   });
 
@@ -153,10 +154,14 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       expect(screen.getByRole('alert').textContent).toContain('無法讀取');
     });
     expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
-    // 比對失敗時可以重試（重按會重新讀取線上試算表），也可以直接下載 xlsx。
-    expect(screen.getByRole('button', { name: '重試寫回' })).toBeDefined();
+    // 不另開重複按鈕；重試就是再按一次既有的「寫回 Google 試算表」，
+    // 下載就是既有的「匯出 Guided Notes」。
+    expect(screen.queryByRole('button', { name: '重試寫回' })).toBeNull();
     expect(
-      screen.getByRole('button', { name: '下載含答案的 xlsx' }),
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: '匯出 Guided Notes' }),
     ).toBeDefined();
   });
 
