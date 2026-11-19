@@ -132,8 +132,13 @@ export function createSocketBroadcaster(
       if (!receivesSubmissionChange) {
         continue;
       }
+      // 用 snapshotForSocket 而不是 createSnapshot：投影檢視的連線必須拿到
+      // **投影快照**。用 createSnapshot 會送一般老師快照給投影頁，
+      // 前端看到 role 變成 'teacher' 就跳回登入畫面（投影看板在學生送出答案
+      // 時掉出看板），而且一般快照含作答資訊，等於把答案送到投影連線
+      // （2026-11-19 review 時用截圖發現：projector-buzzing.png 顯示的是登入頁）。
       emitSnapshotSafely(socket, () =>
-        createSnapshot(database, identity, presence, now),
+        snapshotForSocket(socket, presence, now),
       );
     }
   }
