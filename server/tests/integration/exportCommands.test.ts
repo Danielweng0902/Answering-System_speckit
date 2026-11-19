@@ -349,7 +349,9 @@ describe('004 US1 匯出 Guided Notes（T008）', () => {
         `3,1,第二組,單題答案,1,是,${questionThreeTime},否`,
       ]);
       expect(rows).toHaveLength(6);
-      expect(file.fileName).toBe(buildExportFileName(NOW, 'csv'));
+      // 檔名必須跟匯出時用的時區一致：匯出呼叫指定了 'Asia/Taipei'，
+      // 這裡也要用同一個時區，否則在不同時區的機器（CI 是 UTC）會誤判。
+      expect(file.fileName).toBe(buildExportFileName(NOW, 'csv', 'Asia/Taipei'));
       expect(file.contentType).toBe('text/csv; charset=utf-8');
       expect(databaseSnapshot(database)).toBe(before);
     });
