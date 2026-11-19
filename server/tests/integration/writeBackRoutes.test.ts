@@ -1,20 +1,16 @@
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { issueSession } from '../../src/app/access.js';
-import { insertSubmission } from '../../src/infra/db/answerRepo.js';
 import { getActivity, updateActivity } from '../../src/infra/db/activityRepo.js';
-import { insertGroup } from '../../src/infra/db/groupRepo.js';
-import { replaceAll } from '../../src/infra/db/questionRepo.js';
 import type {
   SheetWriter,
   SheetWriteRequest,
 } from '../../src/infra/sheets/sheetWriter.js';
+import {
+  failingSheetFetch,
+  fakeSheetFetch,
+  seedOfficialGroupLinkStructure,
+} from './guidedNotesFixtures.js';
 import { startTestServer, type TestServer } from './helpers.js';
-
-const FIXTURES = fileURLToPath(
-  new URL('../../../fixtures/guided-notes/', import.meta.url),
-);
 
 let server: TestServer | undefined;
 
@@ -24,41 +20,7 @@ afterEach(async () => {
 });
 
 async function seed(target: TestServer): Promise<void> {
-  insertGroup(target.db, { id: 'group-1', name: '第一組', position: 1 });
-  replaceAll(
-    target.db,
-    {
-      sourceKind: 'link',
-      sourceUrl: 'https://docs.google.com/spreadsheets/d/sheet-id-123',
-      fileName: '02-official-group.xlsx',
-      file: new Uint8Array(
-        await readFile(`${FIXTURES}02-official-group.xlsx`),
-      ),
-      sheetName: '學習單',
-      importedAt: '2026-11-17T09:00:00.000Z',
-    },
-    [
-      {
-        id: 'q-1',
-        number: 1,
-        kind: 'group',
-        prompt: '第一題',
-        position: 1,
-        blanks: [
-          { position: 1, prefix: '（1）', cell: 'G5' },
-          { position: 2, prefix: '（2）', cell: 'G6' },
-        ],
-      },
-    ],
-  );
-  insertSubmission(target.db, {
-    id: 's1',
-    questionId: 'q-1',
-    groupId: 'group-1',
-    rank: 1,
-    receivedAt: '2026-11-17T09:00:00.000Z',
-    answers: ['CPU', '作業系統'],
-  });
+  await seedOfficialGroupLinkStructure(target.db);
 }
 
 function closeActivity(target: TestServer): void {
@@ -76,14 +38,18 @@ function closeActivity(target: TestServer): void {
 async function post(
   target: TestServer,
   token?: string,
+  body: unknown = {},
 ): Promise<Response> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
   if (token !== undefined) {
     headers.Authorization = `Bearer ${token}`;
   }
   return fetch(`${target.url}/api/export/guided-notes/writeback`, {
     method: 'POST',
     headers,
+    body: JSON.stringify(body),
   });
 }
 
@@ -95,7 +61,11 @@ describe('006 寫回路由（US1）', () => {
         requests.push(request);
       },
     };
-    server = await startTestServer({ sheetWriter: writer });
+    server = await startTestServer({
+      sheetWriter: writer,
+      // 假的線上試算表（內容與匯入時相同 → 版面比對通過），不連網路。
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
     await seed(server);
     closeActivity(server);
     const token = issueSession(server.db, { role: 'teacher' });
@@ -105,14 +75,15 @@ describe('006 寫回路由（US1）', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ writtenCells: 2 });
     expect(requests[0]?.updates).toEqual([
-      { cell: 'H5', value: 'CPU' },
-      { cell: 'H6', value: '作業系統' },
+      { cell: 'H5', value: '甲答案' },
+      { cell: 'H6', value: '乙答案' },
     ]);
   });
 
   it('沒有 token 回 401、學生回 403、未結束回 409', async () => {
     server = await startTestServer({
       sheetWriter: { async writeCells(): Promise<void> {} },
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
     await seed(server);
     const teacherToken = issueSession(server.db, { role: 'teacher' });
@@ -127,7 +98,10 @@ describe('006 寫回路由（US1）', () => {
   });
 
   it('伺服器沒有設定服務帳號時回 503 與 SHEET_NOT_CONFIGURED', async () => {
-    server = await startTestServer({ sheetWriter: null });
+    server = await startTestServer({
+      sheetWriter: null,
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
     await seed(server);
     closeActivity(server);
     const token = issueSession(server.db, { role: 'teacher' });
@@ -138,5 +112,29 @@ describe('006 寫回路由（US1）', () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: 'SHEET_NOT_CONFIGURED' },
     });
+  });
+
+  it('讀不到線上試算表、比對失敗時回 409 SHEET_CHECK_FAILED 且不寫入（006 T026）', async () => {
+    const requests: SheetWriteRequest[] = [];
+    const writer: SheetWriter = {
+      async writeCells(request: SheetWriteRequest): Promise<void> {
+        requests.push(request);
+      },
+    };
+    server = await startTestServer({
+      sheetWriter: writer,
+      fetchImpl: failingSheetFetch(),
+    });
+    await seed(server);
+    closeActivity(server);
+    const token = issueSession(server.db, { role: 'teacher' });
+
+    const response = await post(server, token);
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'SHEET_CHECK_FAILED' },
+    });
+    expect(requests).toHaveLength(0);
   });
 });

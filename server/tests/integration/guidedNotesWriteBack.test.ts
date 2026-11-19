@@ -14,6 +14,10 @@ import {
   type SheetWriteRequest,
 } from '../../src/infra/sheets/sheetWriter.js';
 import type { DatabaseSync } from 'node:sqlite';
+import {
+  fakeSheetFetch,
+  seedOfficialGroupLinkStructure,
+} from './guidedNotesFixtures.js';
 
 const FIXTURES = fileURLToPath(
   new URL('../../../fixtures/guided-notes/', import.meta.url),
@@ -174,27 +178,22 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
 
   it('連結來源會呼叫寫入器，帶上試算表 ID、工作表與要寫的儲存格', async () => {
     database = openDatabase(':memory:');
-    await seedGuidedNotes(database, {
-      sourceKind: 'link',
-      fileName: '02-official-group.xlsx',
-    });
-    submit(database, {
-      id: 's3',
-      groupId: 'group-1',
-      rank: 1,
-      answers: ['CPU', '作業系統'],
-    });
+    // 用與線上試算表相同結構的存檔，版面比對才會通過（2026-11-19 review）。
+    await seedOfficialGroupLinkStructure(database);
     const { writer, requests } = recordingWriter();
 
-    const result = await writeBackGuidedNotes(database, writer);
+    // 線上試算表用假的 fetch 模擬（內容與匯入時相同），測試不連網路。
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
 
     expect(result).toEqual({ ok: true, writtenCells: 2 });
     expect(requests).toHaveLength(1);
     expect(requests[0]?.spreadsheetId).toBe('sheet-id-123');
     expect(requests[0]?.sheetName).toBe('學習單');
     expect(requests[0]?.updates).toEqual([
-      { cell: 'H5', value: 'CPU' },
-      { cell: 'H6', value: '作業系統' },
+      { cell: 'H5', value: '甲答案' },
+      { cell: 'H6', value: '乙答案' },
     ]);
   });
 
@@ -212,7 +211,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     });
     const { writer, requests } = recordingWriter();
 
-    const result = await writeBackGuidedNotes(database, writer);
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
 
     expect(result).toMatchObject({ ok: false, code: 'GUIDED_NOTES_NOT_LINK' });
     expect(requests).toHaveLength(0);
@@ -238,7 +239,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     });
     const { writer, requests } = recordingWriter();
 
-    const result = await writeBackGuidedNotes(database, writer);
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
 
     expect(result).toEqual({ ok: true, writtenCells: 0 });
     expect(requests).toHaveLength(0);
@@ -246,23 +249,17 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
 
   it('寫入失敗時把錯誤代碼回給上層，不洩漏 API 回應內容', async () => {
     database = openDatabase(':memory:');
-    await seedGuidedNotes(database, {
-      sourceKind: 'link',
-      fileName: '02-official-group.xlsx',
-    });
-    submit(database, {
-      id: 's5',
-      groupId: 'group-1',
-      rank: 1,
-      answers: ['CPU', '作業系統'],
-    });
+    // 同樣用與線上試算表相同結構的存檔，先通過版面比對才會走到寫入失敗。
+    await seedOfficialGroupLinkStructure(database);
     const writer: SheetWriter = {
       async writeCells(): Promise<void> {
         throw new SheetWriteError('SHEET_NOT_EDITABLE');
       },
     };
 
-    const result = await writeBackGuidedNotes(database, writer);
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
 
     expect(result).toMatchObject({ ok: false, code: 'SHEET_NOT_EDITABLE' });
     expect(JSON.stringify(result)).not.toContain('spreadsheetId');
@@ -290,7 +287,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     );
     const { writer } = recordingWriter();
 
-    await writeBackGuidedNotes(database, writer);
+    await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
 
     const after = JSON.stringify(
       database

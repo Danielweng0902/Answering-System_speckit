@@ -11,10 +11,11 @@ import type {
   SheetWriteRequest,
 } from '../../src/infra/sheets/sheetWriter.js';
 import type { DatabaseSync } from 'node:sqlite';
-
-const FIXTURES = fileURLToPath(
-  new URL('../../../fixtures/guided-notes/', import.meta.url),
-);
+import {
+  failingSheetFetch,
+  fakeSheetFetch,
+  seedOfficialGroupLinkStructure,
+} from './guidedNotesFixtures.js';
 
 let database: DatabaseSync | undefined;
 
@@ -22,74 +23,6 @@ afterEach(() => {
   database?.close();
   database = undefined;
 });
-
-/** 依 02 fixture 的四題結構存檔（版面比對要比完整結構）。 */
-async function seedFullStructure(target: DatabaseSync): Promise<void> {
-  insertGroup(target, { id: 'group-1', name: '第一組', position: 1 });
-  insertGroup(target, { id: 'group-2', name: '第二組', position: 2 });
-  replaceAll(
-    target,
-    {
-      sourceKind: 'link',
-      sourceUrl: 'https://docs.google.com/spreadsheets/d/sheet-id-123',
-      fileName: '02-official-group.xlsx',
-      file: new Uint8Array(
-        await readFile(`${FIXTURES}02-official-group.xlsx`),
-      ),
-      sheetName: '學習單',
-      importedAt: '2026-11-17T09:00:00.000Z',
-    },
-    [
-      {
-        id: 'q-1',
-        number: 1,
-        kind: 'group',
-        prompt: '第一題',
-        position: 1,
-        blanks: [
-          { position: 1, prefix: '（1）', cell: 'G5' },
-          { position: 2, prefix: '（2）', cell: 'G6' },
-        ],
-      },
-      {
-        id: 'q-2',
-        number: 2,
-        kind: 'group',
-        prompt: '第二題',
-        position: 2,
-        blanks: [
-          { position: 1, prefix: '（1）', cell: 'G8' },
-          { position: 2, prefix: '（2）', cell: 'G9' },
-        ],
-      },
-      {
-        id: 'q-3',
-        number: 3,
-        kind: 'single',
-        prompt: '第三題',
-        position: 3,
-        blanks: [{ position: 1, prefix: '', cell: 'G11' }],
-      },
-      {
-        id: 'q-4',
-        number: 4,
-        kind: 'single',
-        prompt: '第四題',
-        position: 4,
-        blanks: [{ position: 1, prefix: '', cell: 'G13' }],
-      },
-    ],
-  );
-  // 有一筆搶答成功的作答，才有東西要寫回。
-  insertSubmission(target, {
-    id: 's1',
-    questionId: 'q-1',
-    groupId: 'group-1',
-    rank: 1,
-    receivedAt: '2026-11-17T09:30:00.000Z',
-    answers: ['甲答案', '乙答案'],
-  });
-}
 
 function recordingWriter(): {
   writer: SheetWriter;
@@ -106,18 +39,64 @@ function recordingWriter(): {
   };
 }
 
-/** 假的線上試算表回應：回傳指定 fixture 的位元組。 */
-function fakeSheetFetch(fileName: string): typeof fetch {
-  return (async () => {
-    const bytes = await readFile(`${FIXTURES}${fileName}`);
-    return new Response(bytes, { status: 200 });
-  }) as unknown as typeof fetch;
+/**
+ * 2026-11-19 review 的實測：在匯入後、寫回前於線上試算表最上方新增一列，
+ * 照舊座標寫會整體錯位。這裡用「儲存座標與線上座標不同、但題號與前綴
+ * 一致」模擬同一種情況：系統必須改用線上現在的座標寫入。
+ */
+async function seedWithShiftedStoredCells(
+  target: DatabaseSync,
+): Promise<void> {
+  insertGroup(target, { id: 'group-1', name: '第一組', position: 1 });
+  insertGroup(target, { id: 'group-2', name: '第二組', position: 2 });
+  replaceAll(
+    target,
+    {
+      sourceKind: 'link',
+      sourceUrl: 'https://docs.google.com/spreadsheets/d/sheet-id-123',
+      fileName: '02-official-group.xlsx',
+      file: new Uint8Array(
+        await readFile(
+          fileURLToPath(
+            new URL(
+              '../../../fixtures/guided-notes/02-official-group.xlsx',
+              import.meta.url,
+            ),
+          ),
+        ),
+      ),
+      sheetName: '學習單',
+      importedAt: '2026-11-17T09:00:00.000Z',
+    },
+    [
+      {
+        id: 'q-1',
+        number: 1,
+        kind: 'group',
+        prompt: '第一題',
+        position: 1,
+        blanks: [
+          // 匯入當時的座標（假設當時表上還多一列，所以比線上多了一列）
+          { position: 1, prefix: '（1）', cell: 'G6' },
+          { position: 2, prefix: '（2）', cell: 'G7' },
+        ],
+      },
+    ],
+  );
+  insertSubmission(target, {
+    id: 's1',
+    questionId: 'q-1',
+    groupId: 'group-1',
+    rank: 1,
+    receivedAt: '2026-11-17T09:30:00.000Z',
+    answers: ['甲答案', '乙答案'],
+  });
 }
 
-describe('006 寫回前的版面比對（人工驗證建議 3；T023）', () => {
-  it('線上試算表與匯入時相同 → 直接寫回', async () => {
+describe('006 寫回時的座標來源（2026-11-19 review）', () => {
+  it('線上版面與匯入時相同 → 寫到線上現在的座標', async () => {
     database = openDatabase(':memory:');
-    await seedFullStructure(database);
+    await seedOfficialGroupLinkStructure(database);
     const { writer, requests } = recordingWriter();
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
@@ -131,12 +110,26 @@ describe('006 寫回前的版面比對（人工驗證建議 3；T023）', () => 
     ]);
   });
 
-  it('線上試算表在匯入後被改過 → 回 SHEET_MODIFIED 且不寫入', async () => {
+  it('老師在匯入後把列往下移 → 版面已變，不寫回，回 SHEET_MODIFIED（2026-11-19 review：硬寫會整體錯位）', async () => {
     database = openDatabase(':memory:');
-    await seedFullStructure(database);
+    await seedWithShiftedStoredCells(database);
     const { writer, requests } = recordingWriter();
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_MODIFIED' });
+    expect(requests).toHaveLength(0);
+  });
+
+  it('線上題目被改掉（題號／空格數不同）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+    database = openDatabase(':memory:');
+    await seedOfficialGroupLinkStructure(database);
+    const { writer, requests } = recordingWriter();
+
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      // 04 是另一種版面：第 1 題只有一個空格，與儲存的兩空格題組對不起來。
       fetchImpl: fakeSheetFetch('04-mixed-groups.xlsx'),
     });
 
@@ -144,29 +137,17 @@ describe('006 寫回前的版面比對（人工驗證建議 3；T023）', () => 
     expect(requests).toHaveLength(0);
   });
 
-  it('老師確認後（force）即使版面不同也寫回', async () => {
+  it('讀不到線上試算表 → 無法確認要寫到哪裡，不寫入，回 SHEET_CHECK_FAILED', async () => {
     database = openDatabase(':memory:');
-    await seedFullStructure(database);
+    await seedOfficialGroupLinkStructure(database);
     const { writer, requests } = recordingWriter();
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
-      force: true,
-      fetchImpl: fakeSheetFetch('04-mixed-groups.xlsx'),
+      fetchImpl: failingSheetFetch(),
     });
 
-    expect(result).toEqual({ ok: true, writtenCells: 2 });
-    expect(requests).toHaveLength(1);
-  });
-
-  it('讀不到線上試算表時不比對、不阻擋寫回', async () => {
-    database = openDatabase(':memory:');
-    await seedFullStructure(database);
-    const { writer } = recordingWriter();
-
-    const result = await writeBackGuidedNotes(database, writer, new Date(), {
-      fetchImpl: (async () => new Response('nope', { status: 500 })) as unknown as typeof fetch,
-    });
-
-    expect(result.ok).toBe(true);
+    // 讀不到不代表服務帳號不能寫 → 不能靜默照舊座標寫入，先停下來問老師。
+    expect(result).toMatchObject({ ok: false, code: 'SHEET_CHECK_FAILED' });
+    expect(requests).toHaveLength(0);
   });
 });

@@ -88,7 +88,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       error: {
         code: 'SHEET_MODIFIED',
         message:
-          '這份試算表在匯入後被修改過，寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」。',
+          '線上試算表的版面已與匯入時不同（列欄位置或題目有變動），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載含答案的 xlsx。',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -98,15 +98,15 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('alert').textContent).toContain('被修改過');
+      expect(screen.getByRole('alert').textContent).toContain('版面已與匯入時不同');
     });
-
-    writeBackGuidedNotes.mockResolvedValue({ ok: true, writtenCells: 6 });
-    fireEvent.click(screen.getByRole('button', { name: '仍要寫回' }));
-
-    await waitFor(() => {
-      expect(writeBackGuidedNotes).toHaveBeenLastCalledWith(true);
-    });
+    // 不再提供「仍要寫回」：照舊座標硬寫會整體錯位（2026-11-19 review 實測）。
+    expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
+    // 不另開重複按鈕；訊息直接引導老師用既有的「匯出 Guided Notes」。
+    expect(screen.queryByRole('button', { name: '下載含答案的 xlsx' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: '匯出 Guided Notes' }),
+    ).toBeDefined();
   });
 
   it('階段改變時清掉上一次的寫回訊息（人工驗證建議 2）', async () => {
@@ -133,6 +133,36 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     await waitFor(() => {
       expect(screen.queryByRole('alert')).toBeNull();
     });
+  });
+
+  it('比對失敗（讀不到線上試算表）時也停下來請老師確認（006 T026）', async () => {
+    writeBackGuidedNotes.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'SHEET_CHECK_FAILED',
+        message:
+          '無法讀取線上試算表，比對不了版面（常見原因：關閉了「知道連結者可檢視」或網路不穩）。請再按一次「寫回 Google 試算表」重試；仍無法比對請改用「匯出 Guided Notes」下載含答案的 xlsx。',
+      },
+    });
+    render(<TeacherPage snapshot={makeSnapshot()} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('無法讀取');
+    });
+    expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
+    // 不另開重複按鈕；重試就是再按一次既有的「寫回 Google 試算表」，
+    // 下載就是既有的「匯出 Guided Notes」。
+    expect(screen.queryByRole('button', { name: '重試寫回' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: '匯出 Guided Notes' }),
+    ).toBeDefined();
   });
 
   it('上傳 xlsx 的學習單沒有線上目標，按鈕停用並提示改用下載', () => {

@@ -5,6 +5,17 @@
  * 那份線上試算表（助教 2026-11-17 說明：系統要直接串接線上 Google Sheets
  * 讀寫，不是下載 xlsx 離線處理）。
  *
+ * 寫回前一定會**重新讀取並解析線上試算表**，確認版面與匯入時完全一致：
+ * - 一致 → 用匯入時的座標寫入（此時線上座標與儲存座標相同，安全）。
+ * - **不一致**（列欄被挪動、題目被改動）→ 對應不起來，**不寫回**，請老師
+ *   改用「匯出 Guided Notes」下載含答案的 xlsx。
+ * - **讀不到／解析不出來** → 無法確認要寫到哪裡，**不寫回**，請老師先重試，
+ *   仍無法比對就下載 xlsx。
+ *
+ * 為什麼不放寬：讀不到線上試算表不代表服務帳號不能寫，硬寫會覆蓋別的格或
+ * 公式（2026-11-19 實測：插一列後照舊座標寫會整體錯位一行）。
+ * 「自動對到線上現在的新格子」是後續工作（下一個 PR），這次不做。
+ *
  * 本模組唯讀本地資料（不動作答、不動資料庫），只在線上試算表寫入答案值。
  */
 import type { DatabaseSync } from 'node:sqlite';
@@ -28,11 +39,6 @@ export type WriteBackResult =
   | { ok: false; code: ErrorCode; message: string };
 
 export type WriteBackOptions = {
-  /**
-   * 老師確認「試算表雖然被改過但仍要寫回」時帶 true，略過版面比對
-   * （006 T023；依人工驗證建議 3）。
-   */
-  force?: boolean | undefined;
   /** 讀取線上試算表用來比對版面；測試注入假的 fetch，不連網路。 */
   fetchImpl?: typeof fetch | undefined;
 };
@@ -60,23 +66,27 @@ function structureSignature(
     .join('|');
 }
 
+type SheetCheck = 'unchanged' | 'changed' | 'failed';
+
 /**
- * 比對線上試算表與匯入當時保存的版面是否不同。
+ * 比對線上試算表與匯入當時保存的版面。
  *
- * 讀不到（沒有連結檢視權限、網路問題）或解析失敗時**不阻擋**寫回：
- * 比對只是提醒，不是安全邊界（006 T023、依人工驗證建議 3）。
+ * - `unchanged`：讀得到且結構（含儲存格座標）完全相同 → 可以寫。
+ * - `changed`：讀得到但結構不同（列欄被挪動或題目被改）→ 不寫回。
+ * - `failed`：讀不到或解析不出來 → 不寫回，請老師重試或下載 xlsx。
  */
-async function hasSheetChangedSinceImport(
+async function compareSheetWithImport(
   database: DatabaseSync,
   spreadsheetId: string,
   fetchImpl: typeof fetch | undefined,
-): Promise<boolean> {
+): Promise<SheetCheck> {
   try {
     const bytes = await fetchSheetXlsx(spreadsheetId, { fetchImpl });
     const grids = await readWorkbook(bytes);
     const parsed = parseGuidedNotes(grids);
     if (!parsed.ok) {
-      return false;
+      // 解析不出題目＝無法確認版面 → 視為比對失敗。
+      return 'failed';
     }
     const stored = listQuestions(database).map((question) => ({
       number: question.number,
@@ -94,9 +104,11 @@ async function hasSheetChangedSinceImport(
         cell: blank.cell,
       })),
     }));
-    return structureSignature(stored) !== structureSignature(live);
+    return structureSignature(stored) === structureSignature(live)
+      ? 'unchanged'
+      : 'changed';
   } catch {
-    return false;
+    return 'failed';
   }
 }
 
@@ -105,7 +117,8 @@ async function hasSheetChangedSinceImport(
  *
  * - 匯入來源不是連結（上傳的 xlsx）→ 沒有雲端目標，回 GUIDED_NOTES_NOT_LINK。
  * - 伺服器沒有設定服務帳號 → 回 SHEET_NOT_CONFIGURED。
- * - 線上試算表在匯入後被改過 → 回 SHEET_MODIFIED，請老師確認後再按一次。
+ * - 線上版面與匯入時不同 → 回 SHEET_MODIFIED，請老師下載含答案的 xlsx。
+ * - 讀不到或解析不出線上試算表 → 回 SHEET_CHECK_FAILED，請老師重試或下載 xlsx。
  * - 沒有任何搶答成功答案 → 不寫入任何儲存格，回成功與 0。
  */
 export async function writeBackGuidedNotes(
@@ -138,15 +151,18 @@ export async function writeBackGuidedNotes(
     return { ok: true, writtenCells: 0 };
   }
 
-  if (options.force !== true) {
-    const changed = await hasSheetChangedSinceImport(
-      database,
-      spreadsheetId,
-      options.fetchImpl,
-    );
-    if (changed) {
-      return failure('SHEET_MODIFIED');
-    }
+  const check = await compareSheetWithImport(
+    database,
+    spreadsheetId,
+    options.fetchImpl,
+  );
+  if (check === 'changed') {
+    // 版面已變：對應不起來，不寫回（2026-11-19 review：硬寫會整體錯位）。
+    return failure('SHEET_MODIFIED');
+  }
+  if (check === 'failed') {
+    // 比對失敗不是「沒變」，而是「無法確認」→ 不寫回，請老師重試或下載。
+    return failure('SHEET_CHECK_FAILED');
   }
 
   try {
