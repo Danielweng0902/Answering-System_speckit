@@ -181,7 +181,7 @@ describe('005 投影看板（US3；T023）', () => {
     const projectorState = waitForState(projector);
     const ack = await sendCommand(student, 'answer:submit', {
       questionNumber: 1,
-      answers: ['甲答案'],
+      answers: ['答案 A'],
     });
     expect(ack).toEqual({ ok: true });
 
@@ -190,7 +190,7 @@ describe('005 投影看板（US3；T023）', () => {
     const serialized = JSON.stringify(state);
     expect(serialized).not.toContain('"answers"');
     expect(serialized).not.toContain('"cells"');
-    expect(serialized).not.toContain('甲答案');
+    expect(serialized).not.toContain('答案 A');
   });
 
   it('非老師身分連線不會取得投影快照（FR-022、AC-005-18）', async () => {

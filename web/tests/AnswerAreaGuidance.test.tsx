@@ -93,7 +93,7 @@ describe('AnswerArea 的 web 指引修正（Modern Web Guidance 審查）', () =
 
     const first = screen.getByLabelText('第 1 題（1）答案');
     const second = screen.getByLabelText('第 1 題（2）答案');
-    fireEvent.change(first, { target: { value: '甲' } });
+    fireEvent.change(first, { target: { value: 'A' } });
     fireEvent.click(screen.getByRole('button', { name: '送出第 1 題' }));
 
     await waitFor(() => {

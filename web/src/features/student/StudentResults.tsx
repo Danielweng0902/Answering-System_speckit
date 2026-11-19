@@ -7,7 +7,7 @@ export type StudentResultsProps = {
 
 /**
  * 題組（一題多空格）的每格答案以原前綴標示、依前綴順序逐格顯示
- * （003 US5；T040；AC-003-25），例如「（1）甲、（2）乙」。
+ * （003 US5；T040；AC-003-25），例如「（1）A、（2）B」。
  * 單題維持原有的「、」合併顯示；blanks 與 answers 同為 blank position
  * 順序（T038 整合測試保證），以 index 對應，與 AnswerArea 相同慣例。
  */

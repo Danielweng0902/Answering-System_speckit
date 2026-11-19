@@ -78,8 +78,8 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     await resetToPreparing(teacherPage);
 
     const suffix = String(Date.now()).slice(-6);
-    const firstGroup = `公平甲組${suffix}`;
-    const secondGroup = `公平乙組${suffix}`;
+    const firstGroup = `公平A 組${suffix}`;
+    const secondGroup = `公平B 組${suffix}`;
     await addGroup(teacherPage, firstGroup);
     await addGroup(teacherPage, secondGroup);
     await importGroupQuestions(teacherPage);
@@ -118,17 +118,17 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     // 02 的第 1 題是題組（兩個空格），整題填完才能送出。
     await questionOne
       .getByLabel('第 1 題（1）答案', { exact: true })
-      .fill('甲答案一');
+      .fill('答案 A1');
     await questionOne
       .getByLabel('第 1 題（2）答案', { exact: true })
-      .fill('甲答案二');
+      .fill('答案 A2');
     await questionOne.getByRole('button', { name: '送出第 1 題', exact: true }).click();
     await expect(
-      questionOne.getByText('本組已送出：甲答案一、甲答案二', { exact: true }),
+      questionOne.getByText('本組已送出：答案 A1、答案 A2', { exact: true }),
     ).toBeVisible({ timeout: 2_000 });
 
     // 投影頁在搶答中不得出現任何答案或作答狀態（FR-015、SC-004）。
-    await expect(projectorPage.getByText('甲答案一')).toHaveCount(0);
+    await expect(projectorPage.getByText('答案 A1')).toHaveCount(0);
     await expect(projectorPage.getByText('搶答結果')).toHaveCount(0);
     // 學生送出答案後，投影頁仍要停留在看板：廣播路徑以前送「一般老師快照」
     // 給投影連線，前端看到 role 變掉就跳回登入畫面（2026-11-19 review 發現）。

@@ -78,8 +78,8 @@ describe('006 寫回路由（US1）', () => {
       remapped: false,
     });
     expect(requests[0]?.updates).toEqual([
-      { cell: 'H5', value: '甲答案' },
-      { cell: 'H6', value: '乙答案' },
+      { cell: 'H5', value: '答案 A' },
+      { cell: 'H6', value: '答案 B' },
     ]);
   });
 

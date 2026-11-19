@@ -71,7 +71,7 @@ describe('005 投影看板頁面（US3；T024）', () => {
               {
                 questionNumber: 1,
                 winnerGroupName: '第一組',
-                winnerAnswers: ['答案甲'],
+                winnerAnswers: ['答案 A'],
               },
             ],
             groupWinCounts: null,
@@ -82,7 +82,7 @@ describe('005 投影看板頁面（US3；T024）', () => {
 
     expect(screen.getByText('第 1 題')).toBeDefined();
     expect(screen.getByText('第一組')).toBeDefined();
-    expect(screen.getByText('答案甲')).toBeDefined();
+    expect(screen.getByText('答案 A')).toBeDefined();
     expect(screen.queryByText('第 2 題')).toBeNull();
   });
 
@@ -97,12 +97,12 @@ describe('005 投影看板頁面（US3；T024）', () => {
               {
                 questionNumber: 1,
                 winnerGroupName: '第一組',
-                winnerAnswers: ['答案甲'],
+                winnerAnswers: ['答案 A'],
               },
               {
                 questionNumber: 2,
                 winnerGroupName: '第二組',
-                winnerAnswers: ['答案乙'],
+                winnerAnswers: ['答案 B'],
               },
             ],
             groupWinCounts: [
