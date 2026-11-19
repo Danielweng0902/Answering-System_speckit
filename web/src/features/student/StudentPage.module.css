@@ -14,7 +14,8 @@
 }
 
 .title,
-.status,
+.groupStatus,
+.phaseStatus,
 .phaseTitle,
 .description,
 .notice {
@@ -29,13 +30,22 @@
   color: var(--color-ink-muted);
 }
 
-.status {
+/* 組別這行是次要資訊，用墨灰。 */
+.groupStatus {
   font-size: var(--font-size-small);
   color: var(--color-ink-muted);
 }
 
+/*
+ * 階段這行只留排版，**不要設 color**：階段顏色由共用的 phaseStyle 決定，
+ * 在這裡設色會蓋掉它（與老師端同一個規則，2026-11-19 review）。
+ */
+.phaseStatus {
+  font-size: var(--font-size-small);
+}
+
 /* 組別名是這張試卷上最大的字。 */
-.status strong {
+.groupStatus strong {
   display: block;
   font-family: var(--font-family-display);
   font-size: var(--font-size-display);

@@ -64,6 +64,11 @@ Token：`--phase-preparing`（＝`--color-ink-muted`）、`--phase-open`（＝`-
 
 補充：**在線**狀態也用朱紅（老師端組別清單與投影看板一致），離線用墨灰。
 
+**實作約束（2026-11-19 review）**：階段色只由共用的 `web/src/features/shared/phaseStyle.module.css` 提供，
+各畫面的本地 class **只排版、不設定 `color`**。共用 class 與本地 class 同樣是「單一 class 選擇器」，
+**誰在 bundle 裡後面誰贏**——本地一旦設色就會蓋掉階段色（而且只在看畫面時才發現，CI 不會紅）。
+`web/tests/phaseColor.test.ts` 會直接讀 CSS 原始檔守住這條規則。
+
 ---
 
 ## 4. 字體

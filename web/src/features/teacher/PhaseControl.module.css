@@ -18,9 +18,14 @@
   margin: var(--space-0);
 }
 
+/*
+ * .status 只留排版：**不要在這裡設 color**。
+ * 階段顏色由共用的 phaseStyle 決定（準備中＝墨灰／搶答中＝朱紅／已結束＝藍）；
+ * 本地規則與共用 class 同樣是單一 class 選擇器，誰在 bundle 裡後面誰贏，
+ * 在這裡設色會蓋掉階段色（2026-11-19 review）。
+ */
 .status {
   font-size: var(--font-size-small);
-  color: var(--color-ink-muted);
 }
 
 .error {

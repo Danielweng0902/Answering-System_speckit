@@ -40,6 +40,10 @@ describe('005 投影看板頁面（US3；T024）', () => {
     render(<ProjectorPage snapshot={projectorSnapshot()} />);
 
     expect(screen.getByRole('heading', { name: '搶答中' })).toBeDefined();
+    // 大標帶上共用的階段色 class（搶答中＝朱紅、已結束＝藍，2026-11-19 review）。
+    expect(
+      screen.getByRole('heading', { name: '搶答中' }).className,
+    ).toMatch(/_open_/);
     expect(screen.getByText('本場先到先得')).toBeDefined();
     expect(screen.getByText('第一組')).toBeDefined();
     expect(screen.getByText('在線')).toBeDefined();
@@ -112,6 +116,10 @@ describe('005 投影看板頁面（US3；T024）', () => {
 
     expect(screen.getByText('各組搶答成功題數')).toBeDefined();
     expect(screen.getAllByText('1 題')).toHaveLength(2);
+    // 已結束＝藍（與老師端、學生端同一組語意色）。
+    expect(
+      screen.getByRole('heading', { name: '已結束' }).className,
+    ).toMatch(/_closed_/);
   });
 
   it('未以老師身分登入時提示需要老師身分', () => {

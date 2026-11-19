@@ -62,11 +62,13 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
         <h1 id="student-page-title" className={styles.title}>
           學生端
         </h1>
-        <p className={styles.status}>
+        <p className={styles.groupStatus}>
           目前組別：<strong>{myGroup?.name ?? '未知組別'}</strong>
         </p>
         {/* 文字維持單一節點，螢幕閱讀器與測試讀到的都是「目前階段：搶答中」。 */}
-        <p className={`${styles.status} ${phaseStyleClass(snapshot.phase)}`}>
+        <p
+          className={`${styles.phaseStatus} ${phaseStyleClass(snapshot.phase)}`}
+        >
           {`目前階段：${PHASE_LABELS[snapshot.phase]}`}
         </p>
       </header>

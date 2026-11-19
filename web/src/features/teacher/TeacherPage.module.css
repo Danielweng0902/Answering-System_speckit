@@ -18,14 +18,8 @@
   line-height: var(--line-height-display);
 }
 
-.status,
 .notice {
   margin: var(--space-0);
-}
-
-.status {
-  font-size: var(--font-size-small);
-  color: var(--color-ink-muted);
 }
 
 .notice {

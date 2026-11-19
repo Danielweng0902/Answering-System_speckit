@@ -45,6 +45,19 @@ describe('PhaseControl', () => {
     expect(screen.getByText('目前階段：搶答中')).toBeDefined();
   });
 
+  it('階段文字帶上共用的階段色 class（搶答中＝朱紅、已結束＝藍，2026-11-19 review）', () => {
+    render(<PhaseControl snapshot={makeSnapshot({ phase: 'open' })} />);
+    expect(screen.getByText('目前階段：搶答中').className).toMatch(/_open_/);
+
+    cleanup();
+    render(<PhaseControl snapshot={makeSnapshot({ phase: 'closed' })} />);
+    expect(screen.getByText('目前階段：已結束').className).toMatch(/_closed_/);
+
+    cleanup();
+    render(<PhaseControl snapshot={makeSnapshot({ phase: 'preparing' })} />);
+    expect(screen.getByText('目前階段：準備中').className).toMatch(/_preparing_/);
+  });
+
   it('preparing：「開啟搶答」可按、「結束搶答」停用', () => {
     render(<PhaseControl snapshot={makeSnapshot({ phase: 'preparing' })} />);
 
