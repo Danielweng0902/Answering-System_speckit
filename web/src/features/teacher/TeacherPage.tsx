@@ -69,8 +69,11 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
         result.writtenCells === 0
           ? '這場沒有搶答成功的答案，沒有需要寫回的儲存格。'
           : result.remapped
-            ? `線上試算表的版面位置有變動，答案已自動對到現在的位置，共寫回 ${String(result.writtenCells)} 格。這次沒有人作答的題目不會被清除，表上可能還留著上一場的答案。`
-            : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。這次沒有人作答的題目不會被清除，表上可能還留著上一場的答案。`,
+            // 成功訊息只講「這次做了什麼」；「沒人作答的題目不會被清除」是
+            // 使用限制，寫在 quickstart，不要每次都跳出來（2026-11-19 review：
+            // 每次都出現容易讓老師誤以為有殘留或系統沒清除成功）。
+            ? `線上試算表的版面位置有變動，答案已自動對到現在的位置，共寫回 ${String(result.writtenCells)} 格。`
+            : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。`,
       );
     } finally {
       setIsWritingBack(false);

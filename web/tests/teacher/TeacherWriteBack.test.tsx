@@ -65,6 +65,9 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     await waitFor(() => {
       expect(screen.getByRole('status').textContent).toContain('已寫回 6 格');
     });
+    // 成功訊息只講這次寫了幾格；「沒人作答的題目不會被清除」是使用限制，
+    // 寫在 quickstart，不在每次成功時跳出來（2026-11-19 review）。
+    expect(screen.getByRole('status').textContent).not.toContain('不會被清除');
   });
 
   it('寫回失敗時顯示伺服器的中文訊息', async () => {

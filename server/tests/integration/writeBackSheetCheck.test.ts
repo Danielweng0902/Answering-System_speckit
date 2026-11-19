@@ -87,7 +87,7 @@ describe('006 寫回前的版面比對與自動對位（2026-11-19 review / T029
     expect(requests).toHaveLength(0);
   });
 
-  it('線上題目被重排（題號對調）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
+  it('兩題的內容互換（題號對調）→ 對應不起來，不寫入，回 SHEET_MODIFIED', async () => {
     database = openDatabase(':memory:');
     // 題號 1、2 互換：題號還在，但題幹對不上，不能寫。
     await seedOfficialGroupLinkStructure(database, {
