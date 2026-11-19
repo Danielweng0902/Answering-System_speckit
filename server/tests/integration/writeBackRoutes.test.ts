@@ -73,7 +73,10 @@ describe('006 寫回路由（US1）', () => {
     const response = await post(server, token);
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ writtenCells: 2 });
+    await expect(response.json()).resolves.toEqual({
+      writtenCells: 2,
+      remapped: false,
+    });
     expect(requests[0]?.updates).toEqual([
       { cell: 'H5', value: '甲答案' },
       { cell: 'H6', value: '乙答案' },

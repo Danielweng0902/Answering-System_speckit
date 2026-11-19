@@ -68,7 +68,9 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
       setWriteBackMessage(
         result.writtenCells === 0
           ? '這場沒有搶答成功的答案，沒有需要寫回的儲存格。'
-          : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。這次沒有人作答的題目不會被清除，表上可能還留著上一場的答案。`,
+          : result.remapped
+            ? `線上試算表的版面位置有變動，答案已自動對到現在的位置，共寫回 ${String(result.writtenCells)} 格。這次沒有人作答的題目不會被清除，表上可能還留著上一場的答案。`
+            : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。這次沒有人作答的題目不會被清除，表上可能還留著上一場的答案。`,
       );
     } finally {
       setIsWritingBack(false);

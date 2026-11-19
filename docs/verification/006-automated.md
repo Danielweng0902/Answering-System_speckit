@@ -6,7 +6,7 @@
 
 | 指令 | 結果 | 實際輸出摘要 |
 |---|---|---|
-| `npm test` | PASS | server：**49 files、401 tests 全過**（新增 006 的 34 個案例）；web：**18 files、95 tests 全過**（新增 5 個案例：錯誤分類、版面比對、force 覆寫、確認按鈕、訊息清除） |
+| `npm test` | PASS | server：**49 files、407 tests 全過**；web：**20 files、107 tests 全過**（2026-11-19 T029 新增：server 版面比對與自動對位 9 個案例、web 對位提示 1 個案例） |
 | `npm run test:e2e` | PASS | 15 passed、2 skipped（既有截圖測試需 `SCREENSHOTS=1`） |
 | `npm run check` | PASS | typecheck、ESLint（`--max-warnings=0`）、`scripts/check-diagrams.sh`（3 張 006 圖已重出 PNG）全過 |
 
@@ -22,7 +22,7 @@
 | AC-006-06／07 失敗原因可讀 | `server/tests/unit/sheetWriter.test.ts`（HTTP 狀態 → 錯誤代碼）與同檔「寫入失敗時把錯誤代碼回給上層，不洩漏 API 回應內容」 |
 | 人工驗證建議 1：錯誤可行動 | `sheetWriter.test.ts` 的分類表，案例採用 **Google 官方標準錯誤格式**（`status` ＋ `message` ＋ `details[].reason`）：401、403 + `details[].reason=SERVICE_DISABLED`（專案沒啟用 Sheets API）、403 + `PERMISSION_DENIED`（沒編輯權限）、404、400 not supported（其實是 xlsx）、400 range（工作表改名）、429、5xx；另有「取不到 access token 是金鑰問題而非暫時不可用」 |
 | 人工驗證建議 2：舊訊息清除 | `web/tests/teacher/TeacherWriteBack.test.tsx`「階段改變時清掉上一次的寫回訊息」 |
-| 人工驗證建議 3／2026-11-19 review：寫回用線上「現在」的座標 | `server/tests/integration/writeBackSheetCheck.test.ts`：版面沒變 → 直接寫；**位置被挪動但題號／前綴一致 → 改用線上現在的座標寫入**（不會整體錯位）；題目被改掉 → `SHEET_MODIFIED` 且不寫入；讀不到 → `SHEET_CHECK_FAILED` 且不寫入。另有 web 測試確認兩種失敗都顯示中文原因、且**不再提供「仍要寫回」** |
+| 人工驗證建議 3／2026-11-19 review／T029：內容比對＋位置比對 | `server/tests/integration/writeBackSheetCheck.test.ts`：版面沒變 → 寫原位（`remapped: false`）；**線上插了一列 → 自動對到線上現在的座標寫入**（`H5`/`H6` → `H6`/`H7`，`remapped: true`，不會整體錯位）；題幹被改 → `SHEET_MODIFIED` 且不寫入；題目被重排 → `SHEET_MODIFIED` 且不寫入；空格數或前綴變了 → `SHEET_MODIFIED`；答案數與空格數對不上 → `SHEET_MODIFIED`；讀不到 → `SHEET_CHECK_FAILED` 且不寫入。另有 web 測試確認對位提示與兩種失敗都顯示中文原因、且**不再提供「仍要寫回」** |
 | AC-006-08 沒有服務帳號 | 同檔「伺服器沒有設定服務帳號時回 SHEET_NOT_CONFIGURED」＋路由 503 案例 |
 | AC-006-09 權限與階段 | `writeBackRoutes.test.ts`「沒有 token 回 401、學生回 403、未結束回 409」 |
 | FR-002 只寫值、不動格式 | `sheetWriter.test.ts` 斷言請求內容為 `values.batchUpdate` ＋ `valueInputOption=RAW` ＋ 只有 `range`／`values` |
@@ -33,4 +33,5 @@
 ## 尚未涵蓋
 
 - **T018 真實線上寫回的人工驗證**：需要服務帳號金鑰與一份可編輯的線上試算表；步驟見 `specs/006-guided-notes-writeback/quickstart.md`。
-- **T019 另一位組員審查**、**T020 共用契約 D12 改版**：待完成。
+- **T029 的人工驗證**：自動對位需要再實測一次「插一列 → 寫回 → 答案落在正確題目的正確格」與「改題幹 → 擋下」；詳見 `docs/verification/006-manual.md` 的「2026-11-19 後續變更與待補實測」。
+- **T020 共用契約 D12 改版**：待完成（T029 不改變 D12 的行為：答案仍然直接寫入線上試算表對應的填空格）。

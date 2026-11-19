@@ -330,7 +330,7 @@ export function downloadResultCsv(): Promise<DownloadExportResult> {
 }
 
 export type WriteBackResult =
-  | { ok: true; writtenCells: number }
+  | { ok: true; writtenCells: number; remapped: boolean }
   | {
       ok: false;
       error: { code: ErrorCode | null; message: string };
@@ -392,5 +392,9 @@ export async function writeBackGuidedNotes(): Promise<WriteBackResult> {
     };
   }
 
-  return { ok: true, writtenCells: body.writtenCells };
+  return {
+    ok: true,
+    writtenCells: body.writtenCells,
+    remapped: body.remapped === true,
+  };
 }

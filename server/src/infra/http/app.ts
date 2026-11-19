@@ -38,7 +38,7 @@ export type HttpAppOptions = {
     | ((
         database: DatabaseSync,
       ) => Promise<
-        | { ok: true; writtenCells: number }
+        | { ok: true; writtenCells: number; remapped: boolean }
         | { ok: false; code: ErrorCode; message: string }
       >)
     | undefined;
