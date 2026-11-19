@@ -106,14 +106,19 @@ export async function sheetBytesWithInsertedRow(
   insertAtRow: number,
 ): Promise<Uint8Array> {
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(await readFile(`${FIXTURES}${fileName}`));
+  // 用 readFile 而不是 load(Buffer)：exceljs 自己的型別把 Buffer 宣告成
+  // `extends ArrayBuffer` 的介面，與 Node 的 Buffer 在 CI 上對不上（2026-11-19
+  // GitHub Actions 第一次跑就抓到這裡型別不符）。
+  await workbook.xlsx.readFile(`${FIXTURES}${fileName}`);
   const sheet = workbook.worksheets[0];
   if (sheet === undefined) {
     throw new Error(`測試用 fixture ${fileName} 沒有工作表`);
   }
   sheet.insertRow(insertAtRow, []);
-  const buffer = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(buffer as ArrayBuffer);
+  const written = await workbook.xlsx.writeBuffer();
+  // writeBuffer 實際回傳的是 Node 的 Buffer（Uint8Array 的子類別），
+  // 轉成 Uint8Array 給呼叫端。
+  return new Uint8Array(written as unknown as Uint8Array);
 }
 
 /** 假的線上試算表回應：回傳指定的位元組（已加工過的線上版本）。 */
