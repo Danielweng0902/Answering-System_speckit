@@ -1,15 +1,7 @@
-.area,
-.question,
-.blank {
-  display: grid;
-}
-
+/* 作答區＝試卷本體：左欄題號（朱紅直線分隔）、右欄題目與作答底線。 */
 .area {
+  display: grid;
   gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
 }
 
 .title,
@@ -23,34 +15,85 @@
 }
 
 .title {
-  font-size: var(--font-size-large);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
 }
 
-.description,
-.prompt {
-  color: var(--color-text-muted);
+.description {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-small);
 }
 
 .questions {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-0);
   padding: var(--space-0);
+  margin-block-start: var(--space-4);
+  border-block-start: var(--border-width-thin) solid var(--color-ink);
   list-style: none;
+  /* 朱紅訂正線：整欄作答區的左邊界。 */
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  padding-inline-start: var(--space-4);
 }
 
 .question {
-  justify-items: start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  padding-block: var(--space-6);
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
+  justify-items: stretch;
+}
+
+.questionItem:last-child .question {
+  border-block-end: 0;
 }
 
 .questionTitle {
-  font-size: var(--font-size-base);
+  grid-row: 1 / span 6;
+}
+
+/* 題號：大字襯線數字 + 小單位「題」。 */
+.questionNumber {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-0);
+}
+
+.questionNumberValue {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-display);
+  font-weight: 600;
+  line-height: var(--line-height-display);
+}
+
+.questionNumberUnit {
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
+}
+
+/* 只給螢幕閱讀器看的文字（題號的語意標籤）。 */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.prompt {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
+  line-height: var(--line-height-question);
 }
 
 .blank {
+  display: grid;
   gap: var(--space-1);
   width: 100%;
 }
@@ -61,42 +104,91 @@
   font-size: var(--font-size-small);
 }
 
-/* 字數計數：讓學生看得到貼上過長被截斷（2026-11-18 人工驗證建議）。 */
-.counter {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-small);
+.prefix {
+  color: var(--color-ink-muted);
 }
 
+/* 字數計數：讓學生看得到貼上過長被截斷（2026-11-18 人工驗證建議）。 */
+.counter {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: lining-nums;
+}
+
+/* 作答處是底線，不是方框。 */
 .input {
   box-sizing: border-box;
   width: 100%;
-  padding: var(--space-2) var(--space-3);
-  color: var(--color-text);
-  background: var(--color-background);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-2) 0;
+  color: var(--color-ink);
+  background: transparent;
+  border: 0;
+  border-block-end: var(--border-width-thin) solid var(--color-ink);
+  border-radius: 0;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
+}
+
+.input:disabled {
+  color: var(--color-ink-muted);
+  border-block-end-color: var(--color-rule);
 }
 
 .input:focus-visible {
-  outline: var(--focus-outline-width) solid var(--color-focus);
+  outline: var(--focus-outline-width) solid var(--color-vermilion);
   outline-offset: var(--focus-outline-offset);
+}
+
+.submitted {
+  color: var(--color-indigo);
 }
 
 .error {
-  padding: var(--space-3);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  background: var(--color-paper-raised);
 }
 
 .button {
-  padding: var(--space-2) var(--space-4);
-  color: var(--color-text);
-  background: var(--color-background);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  justify-self: start;
+  padding: var(--space-3) var(--space-8);
+  color: var(--color-paper);
+  background: var(--color-ink);
+  border: var(--border-width-thin) solid var(--color-ink);
+  transition: background var(--transition-quick);
 }
 
-.button:focus-visible {
-  outline: var(--focus-outline-width) solid var(--color-focus);
-  outline-offset: var(--focus-outline-offset);
+.button:hover:not(:disabled) {
+  color: var(--color-ink);
+  background: transparent;
+}
+
+.button:disabled {
+  color: var(--color-ink-muted);
+  background: transparent;
+  border-color: var(--color-rule);
+}
+
+/* 窄螢幕（手機）把題號欄與題目字級收窄，避免水平溢出。 */
+@media (max-width: 30rem) {
+  .questions {
+    padding-inline-start: var(--space-3);
+  }
+
+  .question {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: var(--space-2) var(--space-3);
+  }
+
+  .questionNumberValue {
+    font-size: var(--font-size-headline);
+  }
+
+  .prompt {
+    font-size: var(--font-size-large);
+  }
+
+  .input {
+    font-size: var(--font-size-large);
+  }
 }

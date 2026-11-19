@@ -17,10 +17,7 @@ type ActiveVoidError = {
   signature: string;
 };
 
-function confirmationSignature(
-  phase: TeacherSnapshot['phase'],
-  cell: AnswerBoardCell,
-): string {
+function confirmationSignature(phase: TeacherSnapshot['phase'], cell: AnswerBoardCell): string {
   return JSON.stringify([phase, cell.state, cell.answers, cell.rank]);
 }
 
@@ -30,13 +27,7 @@ function confirmationSignature(
  * QuestionSummary，只有 blankCount、沒有原始前綴，所以看板以
  * 「第 1 格」「第 2 格」等位置標示，不顯示原前綴。單題維持原樣。
  */
-function CellAnswers({
-  label,
-  answers,
-}: {
-  label: string;
-  answers: AnswerBoardCell['answers'];
-}) {
+function CellAnswers({ label, answers }: { label: string; answers: AnswerBoardCell['answers'] }) {
   if (answers.length <= 1) {
     return (
       <span>
@@ -64,11 +55,8 @@ function CellAnswers({
  * 作廢操作（T053）只在 open 的有效作答顯示，並經確認／取消後才送指令。
  */
 export function AnswerBoard({ snapshot }: AnswerBoardProps) {
-  const groupNames = new Map(
-    snapshot.groups.map((group) => [group.id, group.name]),
-  );
-  const [confirmingCell, setConfirmingCell] =
-    useState<ActiveVoidConfirmation | null>(null);
+  const groupNames = new Map(snapshot.groups.map((group) => [group.id, group.name]));
+  const [confirmingCell, setConfirmingCell] = useState<ActiveVoidConfirmation | null>(null);
   const [voidingCell, setVoidingCell] = useState<string | null>(null);
   const [voidErrors, setVoidErrors] = useState<Record<string, ActiveVoidError>>({});
 
@@ -118,17 +106,13 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
       <h2 id="answer-board-title" className={styles.title}>
         作答看板
       </h2>
-      <p className={styles.description}>
-        每一題、每一組的送出狀態、答案與順位；搶答中即時更新。
-      </p>
+      <p className={styles.description}>每一題、每一組的送出狀態、答案與順位；搶答中即時更新。</p>
       {snapshot.fairRankingEnabled && (
         <p className={styles.muted}>本場使用公平順位：同批作答依已成功題數排序。</p>
       )}
 
       {snapshot.board.length === 0 ? (
-        <p className={styles.empty}>
-          尚未匯入題目，看板會在匯入後顯示每題各組的作答狀態。
-        </p>
+        <p className={styles.empty}>尚未匯入題目，看板會在匯入後顯示每題各組的作答狀態。</p>
       ) : (
         <>
           <div className={styles.tableWrap}>
@@ -146,16 +130,15 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
               <tbody>
                 {snapshot.board.map((question) => (
                   <tr key={question.questionNumber}>
-                    <th scope="row">第 {question.questionNumber} 題</th>
+                    <th scope="row" className={styles.questionCell}>
+                      第 {question.questionNumber} 題
+                    </th>
                     {question.cells.map((cell) => {
                       const key = cellKey(cell);
                       // 確認只對當初點開的同一份作答有效。cell 曾轉成其他
                       // 狀態、被別人變動或 phase 改變後，即使 key 一樣也不
                       // 能自動沿用舊確認（M5；T062）。
-                      const currentSignature = confirmationSignature(
-                        snapshot.phase,
-                        cell,
-                      );
+                      const currentSignature = confirmationSignature(snapshot.phase, cell);
                       const isCurrentConfirmation =
                         confirmingCell?.key === key &&
                         confirmingCell.signature === currentSignature;
@@ -170,14 +153,9 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                           )}
                           {cell.state === 'submitted' && (
                             <>
-                              <CellAnswers
-                                label="已送出："
-                                answers={cell.answers}
-                              />
+                              <CellAnswers label="已送出：" answers={cell.answers} />
                               {cell.rank !== null && (
-                                <span className={styles.muted}>
-                                  第 {cell.rank} 順位
-                                </span>
+                                <span className={styles.muted}>第 {cell.rank} 順位</span>
                               )}
                               {question.settling ? (
                                 <span className={styles.muted}>判定中</span>
@@ -200,9 +178,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                         void confirmVoid(cell);
                                       }}
                                     >
-                                      {voidingCell === key
-                                        ? '作廢中…'
-                                        : '確認作廢'}
+                                      {voidingCell === key ? '作廢中…' : '確認作廢'}
                                     </button>
                                     <button
                                       className={styles.voidButton}
@@ -223,10 +199,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                       clearVoidError(key);
                                       setConfirmingCell({
                                         key,
-                                        signature: confirmationSignature(
-                                          snapshot.phase,
-                                          cell,
-                                        ),
+                                        signature: confirmationSignature(snapshot.phase, cell),
                                       });
                                     }}
                                   >
@@ -237,14 +210,9 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                           )}
                           {cell.state === 'voided' && (
                             <>
-                              <CellAnswers
-                                label="已作廢："
-                                answers={cell.answers}
-                              />
+                              <CellAnswers label="已作廢：" answers={cell.answers} />
                               {cell.rank !== null && (
-                                <span className={styles.muted}>
-                                  原第 {cell.rank} 順位
-                                </span>
+                                <span className={styles.muted}>原第 {cell.rank} 順位</span>
                               )}
                             </>
                           )}
@@ -262,17 +230,11 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
             </table>
           </div>
 
-          <section
-            className={styles.progress}
-            aria-labelledby="answer-progress-title"
-          >
+          <section className={styles.progress} aria-labelledby="answer-progress-title">
             <h3 id="answer-progress-title" className={styles.progressTitle}>
               作答進度
             </h3>
-            <ul
-              className={styles.progressList}
-              aria-label="每一題已送出的組數"
-            >
+            <ul className={styles.progressList} aria-label="每一題已送出的組數">
               {snapshot.progress.perQuestion.map((entry) => (
                 <li key={entry.questionNumber}>
                   第 {entry.questionNumber} 題：
@@ -280,10 +242,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                 </li>
               ))}
             </ul>
-            <ul
-              className={styles.progressList}
-              aria-label="每一組已送出的題數"
-            >
+            <ul className={styles.progressList} aria-label="每一組已送出的題數">
               {snapshot.progress.perGroup.map((entry) => (
                 <li key={entry.groupId}>
                   {groupNames.get(entry.groupId) ?? entry.groupId}：已送出{' '}

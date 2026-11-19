@@ -1,8 +1,27 @@
+/*
+ * 投影看板＝教室後方的佈告欄：方格紙牆、左欄題號、中欄揭曉、右欄計分。
+ * 搶答中只放階段、倒數與各組在線狀態，不放任何作答資訊（005 FR-015）。
+ */
 .page {
   min-height: var(--page-min-height);
   padding: var(--space-6);
-  background-color: var(--color-background);
-  color: var(--color-text);
+  background-color: var(--color-paper);
+  /* 方格紙：只有這裡用漸層，且只用來畫格線。 */
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--color-grid-line) 0 1px,
+      transparent 1px var(--grid-cell)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--color-grid-line) 0 1px,
+      transparent 1px var(--grid-cell)
+    );
+  background-position:
+    -1px -1px,
+    -1px -1px;
+  color: var(--color-ink);
   font-family: var(--font-family-base);
   line-height: var(--line-height-base);
 }
@@ -13,60 +32,76 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  padding-block-end: var(--space-3);
+  margin-block-end: var(--space-6);
+  border-block-end: var(--border-width-thin) solid var(--color-ink);
 }
 
 .title {
   margin: 0;
+  font-family: var(--font-family-display);
   font-size: var(--font-size-display);
+  font-weight: 600;
+  line-height: var(--line-height-display);
 }
 
 .rule {
   margin: 0;
-  font-size: var(--font-size-large);
-  color: var(--color-text-muted);
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
 }
 
 .sectionTitle {
   margin: 0 0 var(--space-3);
-  font-size: var(--font-size-large);
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  font-weight: 400;
+  color: var(--color-ink-muted);
+  padding-block-end: var(--space-2);
+  border-block-end: var(--border-width-thin) solid var(--color-ink);
 }
 
 .hint {
   font-size: var(--font-size-large);
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
 }
 
 .link {
   display: inline-block;
   margin-top: var(--space-4);
-  color: var(--color-focus);
+  color: var(--color-indigo);
   font-size: var(--font-size-large);
+  text-underline-offset: 0.2em;
 }
 
+/* 搶答中：各組在線狀態排成一欄，像點名冊。 */
 .groupSection,
 .revealSection {
-  margin-bottom: var(--space-6);
+  margin-block-end: var(--space-6);
 }
 
 .groupList {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4);
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
+  border-block-start: var(--border-width-thin) solid var(--color-rule);
 }
 
 .groupItem {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
-  background-color: var(--color-surface);
-  font-size: var(--font-size-large);
+  gap: var(--space-3);
+  min-width: 12rem;
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline);
 }
 
 .groupName {
@@ -74,49 +109,139 @@
 }
 
 .online {
-  color: var(--color-text);
+  color: var(--color-vermilion);
 }
 
 .offline {
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
 }
 
 .winCount {
-  font-size: var(--font-size-large);
+  margin-inline-start: auto;
+  font-size: var(--font-size-headline);
+  font-variant-numeric: lining-nums;
+}
+
+/* 揭曉：中欄是題目與答案，右欄是各組計分。 */
+.revealSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 22rem);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.revealSection > .sectionTitle {
+  grid-column: 1 / -1;
 }
 
 .revealList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 0;
   margin: 0;
-  padding-left: var(--space-6);
+  padding: 0;
+  list-style: none;
+  /* 內容區鋪一層紙，讓方格紙退到外圍（像貼在格線牆上的一張紙）。 */
+  background: var(--color-paper);
+  border-block-start: var(--border-width-thin) solid var(--color-rule);
 }
 
 .revealItem {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
   align-items: baseline;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
-  background-color: var(--color-surface);
-  font-size: var(--font-size-large);
+  padding: var(--space-4) 0;
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
 
 .revealNumber {
+  display: grid;
+  justify-items: start;
+  gap: 0;
+}
+
+/* 題號是這面牆上最大的字。 */
+.revealNumberValue {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-display);
   font-weight: 600;
+  line-height: var(--line-height-display);
+}
+
+.revealNumberUnit {
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
+}
+
+.revealNumberText {
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
 }
 
 .revealWinner {
+  font-family: var(--font-family-display);
   font-size: var(--font-size-headline);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.revealWinnerEmpty {
+  color: var(--color-ink-muted);
+  font-weight: 400;
 }
 
 .revealAnswers {
-  color: var(--color-text-muted);
+  grid-column: 2;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
+  color: var(--color-indigo);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  text-decoration-thickness: 1px;
+}
+
+/* 最新揭曉的那一題：朱紅圈出搶答成功的組別（無人作答不畫圈）。 */
+.revealItem:last-child .revealWinner:not(.revealWinnerEmpty) {
+  color: var(--color-vermilion);
+  padding: 0 var(--space-2);
+  border: var(--border-width-strong) solid var(--color-vermilion);
+  border-radius: 50%;
+  justify-self: start;
+  transform: rotate(-2deg);
 }
 
 .winCountSection {
-  margin-top: var(--space-6);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-6);
+  background: var(--color-paper);
+  border-inline-start: var(--border-width-thin) solid var(--color-rule);
+}
+
+/* 計分欄：組別名小、數字大。 */
+.winCountSection .groupItem {
+  min-width: 0;
+  padding-inline-end: 0;
+  font-size: var(--font-size-large);
+}
+
+.winCountSection .winCount {
+  font-size: var(--font-size-display);
+  color: var(--color-vermilion);
+}
+
+@media (max-width: 60rem) {
+  .revealSection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .winCountSection {
+    padding-inline-start: 0;
+    padding-block-start: var(--space-4);
+    border-inline-start: 0;
+    border-block-start: var(--border-width-thin) solid var(--color-rule);
+  }
 }

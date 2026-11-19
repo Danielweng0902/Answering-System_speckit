@@ -15,6 +15,8 @@ NCU SE6005 軟體工程期末專題。老師在電腦上開活動、建立組別
 | 005 公平順位與投影看板 | 已完成並合併進 `main`：準備中可切換「公平順位」（預設關閉，3 秒同批依成功題數排序，老師作廢成功組會連鎖重算）；CSV 第 8 欄標示公平順位；新增 `/projector` 投影看板（搶答中零作答資訊、結束後依題號逐題揭曉）。philip110531 通過 PR 審查（2026-11-17 Approve）與 19 步人工驗證（`docs/verification/005-manual.md`）；共用契約同步升到 v0.6（D12／D13／D14／D16／D25） |
 | 006 寫回線上 Google Sheets | 已完成：依助教 2026-11-17 說明，答案直接寫回老師線上那份 Google 試算表（只寫答案值、老師的格式與公式不動；失敗時有對應原因與「匯出 Guided Notes」下載 xlsx 備援）。T018 真實線上寫回驗證 10 步全部通過（`docs/verification/006-manual.md`），philip110531 於 PR 審查通過（T019）。2026-11-19 依實測修正（PR #12）：寫回前會重新讀取線上試算表比對版面，**版面與匯入時不一致或讀不到就一律不寫回**（不再有「略過比對硬寫」的選項，避免整體錯位、覆蓋其他格或公式），自動對到新格子另開工作（T029）。T025（讓服務帳號也能讀取試算表、老師不必開「知道連結者可檢視」）經組員決定**不實作** |
 
+介面視覺的正本是 [`design/DESIGN.md`](design/DESIGN.md)（2026-11-19 v1.0）：整個系統是一份「會即時更新的試卷」——紙與墨四色、襯線大字、髮絲細線、方角無陰影；學生端像試卷、老師端像主編桌、投影看板像方格紙佈告欄。設計 token 在 `web/src/styles/tokens.css`，改視覺先改 token 再改模組。
+
 另有依 Google 官方 [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance-src) 完成的表單／無障礙修正（PR #8，已合併）：答案欄 200 字上限、送出失敗時焦點移到沒填的欄位、開關的開／關語意（只套用在立即生效的「啟用公平順位」）、密碼欄原生必填，審查報告見 `docs/verification/web-guidance-audit.md`。
 
 逐項進度看 [`specs/001-activity-session/tasks.md`](specs/001-activity-session/tasks.md) 的勾選狀態。

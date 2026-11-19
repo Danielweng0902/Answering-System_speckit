@@ -1,15 +1,7 @@
 import { useRef, useState } from 'react';
-import type {
-  StudentOpenAnswer,
-  StudentOpenSnapshot,
-  StudentQuestion,
-} from '@classroom/shared';
+import type { StudentOpenAnswer, StudentOpenSnapshot, StudentQuestion } from '@classroom/shared';
 import { sendCommand } from '../../lib/socket';
-import {
-  activateDraftSession,
-  writeAnswerDrafts,
-  type AnswerDraftMap,
-} from './answerDrafts';
+import { activateDraftSession, writeAnswerDrafts, type AnswerDraftMap } from './answerDrafts';
 import styles from './AnswerArea.module.css';
 
 export type AnswerAreaProps = {
@@ -22,15 +14,11 @@ const MAX_ANSWER_LENGTH = 200;
 type AnswerStateByQuestion = Map<number, StudentOpenAnswer>;
 
 function answerStates(snapshot: StudentOpenSnapshot): AnswerStateByQuestion {
-  return new Map(
-    snapshot.myAnswers.map((answer) => [answer.questionNumber, answer]),
-  );
+  return new Map(snapshot.myAnswers.map((answer) => [answer.questionNumber, answer]));
 }
 
 function inputLabel(question: StudentQuestion, prefix: string): string {
-  return prefix === ''
-    ? `第 ${question.number} 題答案`
-    : `第 ${question.number} 題${prefix}答案`;
+  return prefix === '' ? `第 ${question.number} 題答案` : `第 ${question.number} 題${prefix}答案`;
 }
 
 /**
@@ -41,14 +29,9 @@ function blankLabel(prefix: string): string {
   return prefix === '' ? '答案' : `第${prefix}格`;
 }
 
-function missingBlankLabels(
-  question: StudentQuestion,
-  draftAnswers: string[],
-): string[] {
+function missingBlankLabels(question: StudentQuestion, draftAnswers: string[]): string[] {
   return question.blanks.flatMap((blank, index) =>
-    (draftAnswers[index] ?? '').trim() === ''
-      ? [blankLabel(blank.prefix)]
-      : [],
+    (draftAnswers[index] ?? '').trim() === '' ? [blankLabel(blank.prefix)] : [],
   );
 }
 
@@ -66,17 +49,12 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
     activateDraftSession(snapshot.sessionId, snapshot.myGroupId),
   );
   const [errors, setErrors] = useState<Record<number, string>>({});
-  const [submittingQuestion, setSubmittingQuestion] = useState<number | null>(
-    null,
-  );
+  const [submittingQuestion, setSubmittingQuestion] = useState<number | null>(null);
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
   const states = answerStates(snapshot);
 
   /** 聚焦該題第一個還沒填的欄位（送出失敗時使用）。 */
-  function focusFirstEmptyBlank(
-    question: StudentQuestion,
-    answers: readonly string[],
-  ): void {
+  function focusFirstEmptyBlank(question: StudentQuestion, answers: readonly string[]): void {
     const emptyIndex = answers.findIndex((answer) => answer.trim() === '');
     if (emptyIndex < 0) {
       return;
@@ -85,15 +63,10 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
     if (blank === undefined) {
       return;
     }
-    inputRefs.current
-      .get(`${question.number}-${blank.position}`)
-      ?.focus();
+    inputRefs.current.get(`${question.number}-${blank.position}`)?.focus();
   }
 
-
-  function persistDrafts(
-    update: (current: AnswerDraftMap) => AnswerDraftMap,
-  ): void {
+  function persistDrafts(update: (current: AnswerDraftMap) => AnswerDraftMap): void {
     setDrafts((current) => {
       const next = update(current);
       writeAnswerDrafts(snapshot.sessionId, snapshot.myGroupId, next);
@@ -101,18 +74,12 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
     });
   }
 
-  function updateAnswer(
-    question: StudentQuestion,
-    blankIndex: number,
-    value: string,
-  ): void {
+  function updateAnswer(question: StudentQuestion, blankIndex: number, value: string): void {
     persistDrafts((current) => {
       const existing = current[question.number];
       // 以空格數補滿空字串，避免先填後格時產生 sparse array：hole 經
       // JSON.stringify 會變 null，重新讀取時整題草稿會被驗證拒絕（T059）。
-      const answers = question.blanks.map(
-        (_blank, index) => existing?.[index] ?? '',
-      );
+      const answers = question.blanks.map((_blank, index) => existing?.[index] ?? '');
       answers[blankIndex] = value;
       return { ...current, [question.number]: answers };
     });
@@ -183,9 +150,7 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
       <h2 id="answer-area-title" className={styles.title}>
         作答區
       </h2>
-      <p className={styles.description}>
-        每一題填好答案後按送出，送出代表整組作答。
-      </p>
+      <p className={styles.description}>每一題填好答案後按送出，送出代表整組作答。</p>
       <ol className={styles.questions} aria-label="作答題目">
         {snapshot.questions.map((question) => {
           const myAnswer = states.get(question.number);
@@ -193,9 +158,7 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
           const isVoided = myAnswer?.state === 'voided';
           const isSubmitting = submittingQuestion === question.number;
           const draft = drafts[question.number] ?? [];
-          const answers = isSubmitted
-            ? (myAnswer?.answers ?? [])
-            : draft;
+          const answers = isSubmitted ? (myAnswer?.answers ?? []) : draft;
           const error = errors[question.number];
 
           return (
@@ -204,25 +167,23 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                 className={styles.question}
                 aria-labelledby={`question-${question.number}-title`}
               >
-                <h3
-                  id={`question-${question.number}-title`}
-                  className={styles.questionTitle}
-                >
-                  第 {question.number} 題
+                <h3 id={`question-${question.number}-title`} className={styles.questionTitle}>
+                  {/* 語意標籤只給螢幕閱讀器；視覺上是試卷上的大題號。 */}
+                  <span className={styles.visuallyHidden}>{`第 ${question.number} 題`}</span>
+                  <span className={styles.questionNumber} aria-hidden="true">
+                    <span className={styles.questionNumberValue}>{question.number}</span>
+                    <span className={styles.questionNumberUnit}>題</span>
+                  </span>
                 </h3>
-                {question.prompt !== '' && (
-                  <p className={styles.prompt}>{question.prompt}</p>
-                )}
+                {question.prompt !== '' && <p className={styles.prompt}>{question.prompt}</p>}
                 {question.blanks.map((blank, index) => {
                   const answerText = answers[index] ?? '';
                   const nextEmptyIndex = question.blanks.findIndex(
                     (_candidate, candidateIndex) =>
-                      candidateIndex > index &&
-                      (draft[candidateIndex] ?? '').trim() === '',
+                      candidateIndex > index && (draft[candidateIndex] ?? '').trim() === '',
                   );
                   const allFilled = question.blanks.every(
-                    (_candidate, candidateIndex) =>
-                      (draft[candidateIndex] ?? '').trim() !== '',
+                    (_candidate, candidateIndex) => (draft[candidateIndex] ?? '').trim() !== '',
                   );
                   return (
                     <label
@@ -251,22 +212,13 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                         enterKeyHint={allFilled ? 'send' : 'next'}
                         ref={(element) => {
                           if (element === null) {
-                            inputRefs.current.delete(
-                              `${question.number}-${blank.position}`,
-                            );
+                            inputRefs.current.delete(`${question.number}-${blank.position}`);
                             return;
                           }
-                          inputRefs.current.set(
-                            `${question.number}-${blank.position}`,
-                            element,
-                          );
+                          inputRefs.current.set(`${question.number}-${blank.position}`, element);
                         }}
                         onChange={(event) => {
-                          updateAnswer(
-                            question,
-                            index,
-                            event.currentTarget.value,
-                          );
+                          updateAnswer(question, index, event.currentTarget.value);
                         }}
                         onKeyDown={(event) => {
                           if (event.key !== 'Enter') {
@@ -288,9 +240,7 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                             const nextBlank = question.blanks[nextEmptyIndex];
                             if (nextBlank !== undefined) {
                               inputRefs.current
-                                .get(
-                                  `${question.number}-${nextBlank.position}`,
-                                )
+                                .get(`${question.number}-${nextBlank.position}`)
                                 ?.focus();
                             }
                             return;

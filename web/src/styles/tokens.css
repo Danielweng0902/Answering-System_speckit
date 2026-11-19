@@ -1,25 +1,55 @@
-/* 暫定，待 design/DESIGN.md 定案。 */
+/*
+ * 設計 token（正本：design/DESIGN.md，2026-11-19 v1.0）。
+ *
+ * 視覺概念：整個系統是一份「會即時更新的試卷」——紙、墨、朱紅、藍四色，
+ * 髮絲細線分隔，方角無陰影，襯線字體做大字與數字。
+ * 改這裡等於改全站外觀；不要在個別模組寫死顏色或圓角。
+ */
 :root {
   color-scheme: light;
 
-  /* 色彩 */
-  --color-background: #f7f7f8;
-  --color-surface: #ffffff;
-  --color-text: #2c3033;
-  --color-text-muted: #5f656b;
-  --color-border: #d7dade;
-  --color-focus: #69717a;
+  /* 色彩：紙與墨 */
+  --color-paper: #f2eee3;
+  --color-paper-raised: #f8f5ec;
+  --color-ink: #16130e;
+  --color-ink-muted: #6a6154;
+  --color-rule: #c9c2b0;
+  /* 方格紙的格線比一般細線更淡，否則會蓋過內容。 */
+  --color-grid-line: #ddd6c5;
+  --color-vermilion: #bf3b2b;
+  --color-indigo: #1f3a93;
 
-  /* 字體 */
+  /* 舊名稱保留對應，讓各模組不必同時改寫 */
+  --color-background: var(--color-paper);
+  --color-surface: var(--color-paper-raised);
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-ink-muted);
+  --color-border: var(--color-rule);
+  --color-focus: var(--color-ink);
+
+  /* 字體：襯線做顯示與數字，無襯線做內文與欄標 */
+  --font-family-display:
+    'Noto Serif TC', 'Source Han Serif TC', 'Songti TC', 'PMingLiU', 'SimSun', 'Times New Roman',
+    serif;
   --font-family-base:
-    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-size-small: 0.875rem;
+    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --font-family-utility: var(--font-family-base);
+
+  --font-size-caption: 0.75rem;
+  --font-size-small: 0.8125rem;
   --font-size-base: 1rem;
-  --font-size-large: 1.25rem;
-  /* 005 投影看板：教室後排也要看得清楚的大字。 */
-  --font-size-headline: 2rem;
-  --font-size-display: 3rem;
+  --font-size-large: 1.125rem;
+  --font-size-question: 1.375rem;
+  --font-size-headline: 1.75rem;
+  --font-size-display: 2.75rem;
+  /* 題號、倒數、組別名：試卷上最大的字 */
+  --font-size-mega: 4.5rem;
   --line-height-base: 1.5;
+  --line-height-question: 1.6;
+  --line-height-display: 1.1;
+  /* 欄標（報紙小標）的字距 */
+  --letter-spacing-utility: 0.18em;
 
   /* 間距 */
   --space-0: 0;
@@ -29,12 +59,25 @@
   --space-4: 1rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --space-10: 3rem;
+  --space-12: 4rem;
 
   /* 結構 */
   --page-min-height: 100vh;
   --content-max-width: 72rem;
-  --radius-medium: 0.375rem;
-  --border-width-thin: 0.0625rem;
-  --focus-outline-width: 0.125rem;
-  --focus-outline-offset: 0.125rem;
+  /* 學生端試卷的閱讀寬度 */
+  --sheet-max-width: 46rem;
+  /* 投影看板 */
+  --board-max-width: 100rem;
+  --grid-cell: 3rem;
+
+  /* 線與角：方角、無陰影是硬規定 */
+  --border-width-thin: 1px;
+  --border-width-strong: 2px;
+  --radius-medium: 0;
+  --focus-outline-width: 2px;
+  --focus-outline-offset: 2px;
+
+  /* 動態：只留狀態轉換，且尊重 prefers-reduced-motion */
+  --transition-quick: 140ms ease-out;
 }

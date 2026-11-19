@@ -12,11 +12,12 @@ html {
 body {
   min-height: var(--page-min-height);
   margin: var(--space-0);
-  background: var(--color-background);
-  color: var(--color-text);
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -32,7 +33,7 @@ textarea {
  */
 input[type='checkbox'],
 input[type='radio'] {
-  accent-color: var(--color-focus);
+  accent-color: var(--color-vermilion);
 }
 
 #root,
@@ -41,6 +42,41 @@ input[type='radio'] {
 }
 
 :focus-visible {
-  outline: var(--focus-outline-width) solid var(--color-focus);
+  outline: var(--focus-outline-width) solid var(--color-ink);
   outline-offset: var(--focus-outline-offset);
+}
+
+/* 選取文字也要像「被畫上來的」，不要預設藍底。 */
+::selection {
+  background: var(--color-vermilion);
+  color: var(--color-paper);
+}
+
+/*
+ * 規則線是這個設計的骨架：共用一份細線樣式，避免各模組各寫各的。
+ */
+.hairline-top {
+  border-block-start: var(--border-width-thin) solid var(--color-rule);
+}
+
+.hairline-bottom {
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
+}
+
+/* 報紙欄標：小字、全形寬字距，上下各一條細線。 */
+.utility-caption {
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

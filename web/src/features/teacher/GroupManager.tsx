@@ -48,10 +48,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
     setRenameName('');
   }
 
-  async function renameGroup(
-    event: FormEvent<HTMLFormElement>,
-    groupId: string,
-  ): Promise<void> {
+  async function renameGroup(event: FormEvent<HTMLFormElement>, groupId: string): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
     setIsSending(true);
@@ -97,11 +94,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
         組別管理
       </h2>
 
-      {!isPreparing && (
-        <p className={styles.explanation}>
-          組別只能在準備中新增、改名或刪除。
-        </p>
-      )}
+      {!isPreparing && <p className={styles.explanation}>組別只能在準備中新增、改名或刪除。</p>}
       {errorMessage !== null && (
         <p className={styles.error} role="alert">
           {errorMessage}
@@ -130,11 +123,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
             }}
           />
         </div>
-        <button
-          className={styles.button}
-          type="submit"
-          disabled={controlsDisabled}
-        >
+        <button className={styles.button} type="submit" disabled={controlsDisabled}>
           新增組別
         </button>
       </form>
@@ -179,11 +168,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                         }}
                       />
                     </div>
-                    <button
-                      className={styles.button}
-                      type="submit"
-                      disabled={controlsDisabled}
-                    >
+                    <button className={styles.button} type="submit" disabled={controlsDisabled}>
                       儲存
                     </button>
                     <button
