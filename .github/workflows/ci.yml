@@ -14,6 +14,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 抓完整 git 歷史：scripts/check-diagrams.sh 靠 git 歷史比對
+          # .puml 與 PNG 誰比較新。Actions 預設 depth=1 只抓一筆 commit，
+          # `git log -1 -- <file>` 會對任何檔案都回 tip commit 的時間，
+          # 讓圖表時序檢查變成空轉（過期的 PNG 也會過關）。
+          # 重現：改了 .puml 未重出 PNG → 完整歷史 FAIL、depth=1 PASS。
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
