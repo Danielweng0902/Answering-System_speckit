@@ -21,7 +21,6 @@ export type ExportRoutesDependencies = {
   writeBackGuidedNotes?:
     | ((
         database: DatabaseSync,
-        options: { force?: boolean },
       ) => Promise<
         | { ok: true; writtenCells: number }
         | { ok: false; code: ErrorCode; message: string }
@@ -161,11 +160,9 @@ export function createExportRouter(
       }
 
       try {
-        // 老師確認「試算表被改過但仍要寫回」時帶 force（006 T023）。
-        const body = (request.body ?? {}) as { force?: unknown };
-        const result = await dependencies.writeBackGuidedNotes(database, {
-          force: body.force === true,
-        });
+        // 寫回前伺服器會重新讀取線上試算表並用「現在」的座標寫入，不需要
+        // 前端帶 force（2026-11-19 review：照舊座標硬寫會錯位）。
+        const result = await dependencies.writeBackGuidedNotes(database);
         if (!result.ok) {
           response.status(ERROR_STATUS[result.code] ?? 500).json({
             error: { code: result.code, message: result.message },

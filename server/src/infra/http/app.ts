@@ -37,7 +37,6 @@ export type HttpAppOptions = {
   writeBackGuidedNotes?:
     | ((
         database: DatabaseSync,
-        options: { force?: boolean | undefined },
       ) => Promise<
         | { ok: true; writtenCells: number }
         | { ok: false; code: ErrorCode; message: string }

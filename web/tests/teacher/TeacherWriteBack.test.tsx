@@ -88,7 +88,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       error: {
         code: 'SHEET_MODIFIED',
         message:
-          '這份試算表在匯入後被修改過，寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」。',
+          '線上試算表的題目已與匯入時不同（題號、空格數或前綴改變），無法確定答案要寫到哪一格。請改用「匯出 Guided Notes」下載 xlsx；或確認後在「準備中」重新匯入再作答。',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -98,15 +98,10 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('alert').textContent).toContain('被修改過');
+      expect(screen.getByRole('alert').textContent).toContain('已與匯入時不同');
     });
-
-    writeBackGuidedNotes.mockResolvedValue({ ok: true, writtenCells: 6 });
-    fireEvent.click(screen.getByRole('button', { name: '仍要寫回' }));
-
-    await waitFor(() => {
-      expect(writeBackGuidedNotes).toHaveBeenLastCalledWith(true);
-    });
+    // 不再提供「仍要寫回」：照舊座標硬寫可能整體錯位（2026-11-19 review 實測）。
+    expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
   });
 
   it('階段改變時清掉上一次的寫回訊息（人工驗證建議 2）', async () => {
@@ -141,7 +136,7 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
       error: {
         code: 'SHEET_CHECK_FAILED',
         message:
-          '無法確認線上試算表在匯入後有沒有被改過（讀不到試算表），寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」；或重新匯入後再寫回。',
+          '無法讀取線上試算表，無法確定答案要寫到哪一格（常見原因：關閉了「知道連結者可檢視」或網路不穩）。請恢復後再試，或改用「匯出 Guided Notes」下載 xlsx。',
       },
     });
     render(<TeacherPage snapshot={makeSnapshot()} />);
@@ -151,15 +146,9 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('alert').textContent).toContain('無法確認');
+      expect(screen.getByRole('alert').textContent).toContain('無法讀取');
     });
-
-    writeBackGuidedNotes.mockResolvedValue({ ok: true, writtenCells: 6 });
-    fireEvent.click(screen.getByRole('button', { name: '仍要寫回' }));
-
-    await waitFor(() => {
-      expect(writeBackGuidedNotes).toHaveBeenLastCalledWith(true);
-    });
+    expect(screen.queryByRole('button', { name: '仍要寫回' })).toBeNull();
   });
 
   it('上傳 xlsx 的學習單沒有線上目標，按鈕停用並提示改用下載', () => {

@@ -30,7 +30,6 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   const [isWritingBack, setIsWritingBack] = useState(false);
   const [writeBackMessage, setWriteBackMessage] = useState<string | null>(null);
   const [writeBackError, setWriteBackError] = useState<string | null>(null);
-  const [writeBackCode, setWriteBackCode] = useState<string | null>(null);
 
   /**
    * 006 T022（人工驗證建議 2）：階段改變、重設活動或重新匯入時，
@@ -45,7 +44,6 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
     setPreviousActivityKey(activityKey);
     setWriteBackMessage(null);
     setWriteBackError(null);
-    setWriteBackCode(null);
     setRevealError(null);
   }
 
@@ -53,20 +51,18 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
    * 006：把答案寫回老師的線上 Google 試算表。失敗時保留伺服器的訊息，
    * 老師可以改用「匯出 Guided Notes」下載 xlsx。
    *
-   * 試算表在匯入後被改過、或**無法讀取線上試算表以致無法確認**時，伺服器會回
-   * `SHEET_MODIFIED`／`SHEET_CHECK_FAILED`；此時提供「仍要寫回」按鈕，由老師
-   * 確認後帶 force 再送一次（人工驗證建議 3、006 T026）。
+   * 寫回前伺服器會重新讀取線上試算表並使用「現在」的座標，所以位置被挪動
+   * 也能正確寫入；只有題目真的改動或讀不到試算表時才會失敗（此時請改用
+   * 「匯出 Guided Notes」下載 xlsx，2026-11-19 review）。
    */
-  async function handleWriteBack(force = false): Promise<void> {
+  async function handleWriteBack(): Promise<void> {
     setWriteBackMessage(null);
     setWriteBackError(null);
-    setWriteBackCode(null);
     setIsWritingBack(true);
     try {
-      const result = await writeBackGuidedNotes(force);
+      const result = await writeBackGuidedNotes();
       if (!result.ok) {
         setWriteBackError(result.error.message);
-        setWriteBackCode(result.error.code);
         return;
       }
       setWriteBackMessage(
@@ -215,19 +211,6 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               {writeBackError}
             </p>
           )}
-          {writeBackCode === 'SHEET_MODIFIED' ||
-          writeBackCode === 'SHEET_CHECK_FAILED' ? (
-            <button
-              className={styles.exportButton}
-              type="button"
-              disabled={isWritingBack}
-              onClick={() => {
-                void handleWriteBack(true);
-              }}
-            >
-              仍要寫回
-            </button>
-          ) : null}
           {exportError !== null && (
             <p className={styles.exportError} role="alert">
               {exportError}

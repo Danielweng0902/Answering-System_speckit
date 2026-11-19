@@ -142,13 +142,9 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
       webDistPath: options.webDistPath,
       teacherPassword: options.teacherPassword ?? config.teacherPassword,
       importService,
-      writeBackGuidedNotes: (
-        target: DatabaseSync,
-        writeBackOptions: { force?: boolean | undefined },
-      ) =>
+      writeBackGuidedNotes: (target: DatabaseSync) =>
         writeBackGuidedNotes(target, sheetWriter, new Date(), {
-          force: writeBackOptions.force,
-          // 讀取線上試算表比對版面；測試注入假的 fetch，不連網路。
+          // 讀取線上試算表以取得「現在」的座標；測試注入假的 fetch，不連網路。
           fetchImpl: options.fetchImpl,
         }),
     }),

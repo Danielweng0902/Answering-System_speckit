@@ -136,10 +136,5 @@ describe('006 寫回路由（US1）', () => {
       error: { code: 'SHEET_CHECK_FAILED' },
     });
     expect(requests).toHaveLength(0);
-
-    // 老師確認後帶 force → 仍然寫回。
-    const confirmed = await post(server, token, { force: true });
-    expect(confirmed.status).toBe(200);
-    expect(requests).toHaveLength(1);
   });
 });

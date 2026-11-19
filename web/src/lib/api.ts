@@ -343,12 +343,11 @@ const GENERIC_WRITEBACK_ERROR = '目前無法寫回 Google 試算表，請稍後
  * 「直接串接線上試算表讀寫」）。失敗時保留伺服器的中文訊息，讓老師知道
  * 要不要改用下載 xlsx。
  *
- * `force`：試算表在匯入後被改過時，老師確認後再按一次就帶 true，
- * 略過版面比對（人工驗證建議 3）。
+ * 伺服器在寫回前會重新讀取線上試算表並使用「現在」的座標，所以這裡
+ * 不需要也不應該帶任何「略過檢查」的參數（2026-11-19 review：照舊座標
+ * 硬寫會整體錯位）。
  */
-export async function writeBackGuidedNotes(
-  force = false,
-): Promise<WriteBackResult> {
+export async function writeBackGuidedNotes(): Promise<WriteBackResult> {
   let response: Response;
 
   try {
@@ -358,7 +357,7 @@ export async function writeBackGuidedNotes(
         authorization: `Bearer ${getToken() ?? ''}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ force }),
+      body: JSON.stringify({}),
     });
   } catch {
     return {

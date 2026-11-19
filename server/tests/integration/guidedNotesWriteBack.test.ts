@@ -14,6 +14,7 @@ import {
   type SheetWriteRequest,
 } from '../../src/infra/sheets/sheetWriter.js';
 import type { DatabaseSync } from 'node:sqlite';
+import { fakeSheetFetch } from './guidedNotesFixtures.js';
 
 const FIXTURES = fileURLToPath(
   new URL('../../../fixtures/guided-notes/', import.meta.url),
@@ -186,9 +187,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     });
     const { writer, requests } = recordingWriter();
 
-    // 版面比對另有 writeBackSheetCheck.test.ts 專測；這裡略過比對，測試不連網路。
+    // 線上試算表用假的 fetch 模擬（內容與匯入時相同），測試不連網路。
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
-      force: true,
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
     expect(result).toEqual({ ok: true, writtenCells: 2 });
@@ -216,7 +217,7 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     const { writer, requests } = recordingWriter();
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
-      force: true,
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
     expect(result).toMatchObject({ ok: false, code: 'GUIDED_NOTES_NOT_LINK' });
@@ -244,7 +245,7 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     const { writer, requests } = recordingWriter();
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
-      force: true,
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
     expect(result).toEqual({ ok: true, writtenCells: 0 });
@@ -270,7 +271,7 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     };
 
     const result = await writeBackGuidedNotes(database, writer, new Date(), {
-      force: true,
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
     });
 
     expect(result).toMatchObject({ ok: false, code: 'SHEET_NOT_EDITABLE' });
@@ -299,7 +300,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     );
     const { writer } = recordingWriter();
 
-    await writeBackGuidedNotes(database, writer, new Date(), { force: true });
+    await writeBackGuidedNotes(database, writer, new Date(), {
+      fetchImpl: fakeSheetFetch('02-official-group.xlsx'),
+    });
 
     const after = JSON.stringify(
       database
