@@ -130,6 +130,9 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     // 投影頁在搶答中不得出現任何答案或作答狀態（FR-015、SC-004）。
     await expect(projectorPage.getByText('甲答案一')).toHaveCount(0);
     await expect(projectorPage.getByText('搶答結果')).toHaveCount(0);
+    // 學生送出答案後，投影頁仍要停留在看板：廣播路徑以前送「一般老師快照」
+    // 給投影連線，前端看到 role 變掉就跳回登入畫面（2026-11-19 review 發現）。
+    await expect(projectorPage.getByRole('heading', { name: '搶答中' })).toBeVisible();
 
     await mkdir(verificationDirectory, { recursive: true });
     await projectorPage.screenshot({
