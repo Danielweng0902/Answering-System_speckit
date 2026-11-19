@@ -17,17 +17,17 @@
 
 .title {
   font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-large);
   letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
+  color: var(--color-ink);
 }
 
 .summaryTitle,
 .warningsTitle {
   font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-large);
   letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
+  color: var(--color-ink);
 }
 
 .error {
@@ -84,8 +84,9 @@
   font-size: var(--font-size-small);
 }
 
+/* 次要動作：四邊留白與主要動作一致（2026-11-19 review）。 */
 .button {
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   color: var(--color-ink);
   background: transparent;
   border: var(--border-width-thin) solid var(--color-ink);

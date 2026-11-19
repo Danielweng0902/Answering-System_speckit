@@ -14,10 +14,17 @@
   --color-ink: #16130e;
   --color-ink-muted: #6a6154;
   --color-rule: #c9c2b0;
-  /* 方格紙的格線比一般細線更淡，否則會蓋過內容。 */
-  --color-grid-line: #ddd6c5;
   --color-vermilion: #bf3b2b;
   --color-indigo: #1f3a93;
+
+  /*
+   * 階段語意色（design/DESIGN.md §3 的階段對照表）：
+   * 準備中＝墨灰、搶答中＝朱紅（此刻正在發生）、已結束＝藍（已完成）。
+   * 三個畫面（老師端、學生端、投影看板）都用這組語意色。
+   */
+  --phase-preparing: var(--color-ink-muted);
+  --phase-open: var(--color-vermilion);
+  --phase-closed: var(--color-indigo);
 
   /* 舊名稱保留對應，讓各模組不必同時改寫 */
   --color-background: var(--color-paper);
@@ -69,7 +76,6 @@
   --sheet-max-width: 46rem;
   /* 投影看板 */
   --board-max-width: 100rem;
-  --grid-cell: 3rem;
 
   /* 線與角：方角、無陰影是硬規定 */
   --border-width-thin: 1px;

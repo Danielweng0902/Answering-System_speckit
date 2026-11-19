@@ -4,6 +4,7 @@ import type { UseSnapshotResult } from '../../lib/useSnapshot';
 import { clearToken } from '../../lib/session';
 import { connectSocket, sendCommand } from '../../lib/socket';
 import { Countdown } from '../shared/Countdown';
+import { phaseStyleClass } from '../shared/phaseStyle';
 import { AnswerArea } from './AnswerArea';
 import { GroupPicker } from './GroupPicker';
 import { StudentResults } from './StudentResults';
@@ -65,11 +66,7 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
           目前組別：<strong>{myGroup?.name ?? '未知組別'}</strong>
         </p>
         {/* 文字維持單一節點，螢幕閱讀器與測試讀到的都是「目前階段：搶答中」。 */}
-        <p
-          className={
-            snapshot.phase === 'open' ? `${styles.status} ${styles.statusOpen}` : styles.status
-          }
-        >
+        <p className={`${styles.status} ${phaseStyleClass(snapshot.phase)}`}>
           {`目前階段：${PHASE_LABELS[snapshot.phase]}`}
         </p>
       </header>

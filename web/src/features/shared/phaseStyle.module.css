@@ -1,0 +1,15 @@
+/*
+ * 階段語意色（design/DESIGN.md §3）：準備中＝墨灰／搶答中＝朱紅／已結束＝藍。
+ * 老師端、學生端、投影看板共用這組 class，保證三個畫面的階段顏色一致。
+ */
+.preparing {
+  color: var(--phase-preparing);
+}
+
+.open {
+  color: var(--phase-open);
+}
+
+.closed {
+  color: var(--phase-closed);
+}

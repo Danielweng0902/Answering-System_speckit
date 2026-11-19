@@ -6,6 +6,7 @@ import type {
 } from '@classroom/shared';
 import { useId, useState } from 'react';
 import { sendCommand, type CommandResult } from '../../lib/socket';
+import { phaseStyleClass } from '../shared/phaseStyle';
 import styles from './PhaseControl.module.css';
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -74,7 +75,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
       <h2 id="phase-control-title" className={styles.title}>
         搶答控制
       </h2>
-      <p className={styles.status}>{`目前階段：${PHASE_LABELS[snapshot.phase]}`}</p>
+      <p className={`${styles.status} ${phaseStyleClass(snapshot.phase)}`}>{`目前階段：${PHASE_LABELS[snapshot.phase]}`}</p>
       {errorMessage !== null && (
         <p className={styles.error} role="alert">
           {errorMessage}
@@ -139,7 +140,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
       </div>
 
       {/* 005（FR-001、AC-005-09）：公平順位只有準備中能切換。 */}
-      <div className={styles.countdownControls}>
+      <div className={styles.fairRankingRow}>
         <label className={styles.checkboxLabel}>
           <input
             type="checkbox"

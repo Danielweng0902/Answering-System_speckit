@@ -8,9 +8,9 @@
 .title {
   margin: var(--space-0);
   font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-large);
   letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
+  color: var(--color-ink);
 }
 
 .explanation,
@@ -61,8 +61,9 @@
   border-radius: 0;
 }
 
+/* 次要動作：四邊留白與主要動作一致（2026-11-19 review）。 */
 .button {
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   color: var(--color-ink);
   background: transparent;
   border: var(--border-width-thin) solid var(--color-ink);
@@ -107,4 +108,10 @@
 .presence {
   color: var(--color-ink-muted);
   font-size: var(--font-size-small);
+}
+
+/* 在線＝此刻有人在線，用朱紅（與投影看板一致，2026-11-19 review）。 */
+.presenceOnline {
+  color: var(--color-vermilion);
+  font-weight: 600;
 }

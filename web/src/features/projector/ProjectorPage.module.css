@@ -1,26 +1,12 @@
 /*
- * 投影看板＝教室後方的佈告欄：方格紙牆、左欄題號、中欄揭曉、右欄計分。
+ * 投影看板＝教室後方的佈告欄：純紙底、左欄題號、中欄揭曉、右欄計分。
  * 搶答中只放階段、倒數與各組在線狀態，不放任何作答資訊（005 FR-015）。
  */
 .page {
   min-height: var(--page-min-height);
   padding: var(--space-6);
+  /* 純紙色：不做方格紙（2026-11-19 review：方格紙太突兀）。 */
   background-color: var(--color-paper);
-  /* 方格紙：只有這裡用漸層，且只用來畫格線。 */
-  background-image:
-    repeating-linear-gradient(
-      to right,
-      var(--color-grid-line) 0 1px,
-      transparent 1px var(--grid-cell)
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      var(--color-grid-line) 0 1px,
-      transparent 1px var(--grid-cell)
-    );
-  background-position:
-    -1px -1px,
-    -1px -1px;
   color: var(--color-ink);
   font-family: var(--font-family-base);
   line-height: var(--line-height-base);
@@ -141,7 +127,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  /* 內容區鋪一層紙，讓方格紙退到外圍（像貼在格線牆上的一張紙）。 */
   background: var(--color-paper);
   border-block-start: var(--border-width-thin) solid var(--color-rule);
 }
@@ -176,11 +161,16 @@
   color: var(--color-ink-muted);
 }
 
-.revealNumberText {
-  font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
-  letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
+/* 只給螢幕閱讀器看的「第 N 題」，畫面上不顯示。 */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .revealWinner {

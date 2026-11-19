@@ -1,6 +1,7 @@
 import type { Phase, ProjectorSnapshot, Snapshot } from '@classroom/shared';
 import { Link } from 'react-router';
 import { Countdown } from '../shared/Countdown';
+import { phaseStyleClass } from '../shared/phaseStyle';
 import { TeacherLogin } from '../teacher/TeacherLogin';
 import styles from './ProjectorPage.module.css';
 
@@ -56,7 +57,10 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
   return (
     <section className={styles.page} aria-labelledby="projector-title">
       <header className={styles.header}>
-        <h1 id="projector-title" className={styles.title}>
+        <h1
+          id="projector-title"
+          className={`${styles.title} ${phaseStyleClass(projector.phase)}`}
+        >
           {PHASE_LABELS[projector.phase]}
         </h1>
         <p className={styles.rule}>
@@ -104,7 +108,8 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
                     <span className={styles.revealNumberUnit} aria-hidden="true">
                       題
                     </span>
-                    <span className={styles.revealNumberText}>
+                    {/* 螢幕閱讀器用的「第 N 題」：視覺上隱藏，畫面只留大題號。 */}
+                    <span className={styles.visuallyHidden}>
                       {`第 ${entry.questionNumber} 題`}
                     </span>
                   </span>

@@ -140,7 +140,13 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
               <li className={styles.group} key={group.id}>
                 <div className={styles.groupHeader}>
                   <strong>{group.name}</strong>
-                  <span className={styles.presence}>
+                  <span
+                    className={
+                      onlineCount > 0
+                        ? `${styles.presence} ${styles.presenceOnline}`
+                        : styles.presence
+                    }
+                  >
                     {onlineCount > 0 ? `在線 ${onlineCount} 人` : '離線'}
                   </span>
                 </div>

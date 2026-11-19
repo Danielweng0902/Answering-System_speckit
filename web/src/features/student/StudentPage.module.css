@@ -44,11 +44,7 @@
   color: var(--color-ink);
 }
 
-/* 搶答中＝此刻正在發生的事，用朱紅。 */
-.statusOpen {
-  color: var(--color-vermilion);
-  font-weight: 600;
-}
+/* 階段顏色由共用的 phaseStyle 提供（準備中＝墨灰／搶答中＝朱紅／已結束＝藍）。 */
 
 .phaseCard {
   display: grid;

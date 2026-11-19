@@ -8,9 +8,9 @@
 .title {
   margin: var(--space-0);
   font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-large);
   letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
+  color: var(--color-ink);
 }
 
 .status,
@@ -66,6 +66,14 @@
   gap: var(--space-4);
 }
 
+/* 公平順位那一列：勾選框與右側說明垂直置中對齊（2026-11-19 review）。 */
+.fairRankingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
 .field {
   display: grid;
   gap: var(--space-1);
@@ -76,6 +84,13 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--font-size-small);
+  line-height: 1.4;
+}
+
+.checkboxLabel input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
 }
 
 .label {
