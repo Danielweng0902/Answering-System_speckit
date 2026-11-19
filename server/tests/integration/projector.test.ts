@@ -143,6 +143,56 @@ describe('005 投影看板（US3；T023）', () => {
     expect(serialized).not.toContain('"cells"');
   });
 
+  it('學生送出答案後，投影連線仍只收到投影快照（2026-11-19 review 發現的 bug）', async () => {
+    const target = await startTestServer();
+    server = target;
+    insertGroup(target.db, { id: 'group-1', name: '第一組', position: 1 });
+    seedQuestions(target.db, [{ number: 1, prompt: '第一題題目' }]);
+
+    const teacherToken = issueSession(target.db, { role: 'teacher' });
+    const teacher = target.connect({ token: teacherToken, autoConnect: false });
+    const teacherInitial = waitForState(teacher);
+    teacher.connect();
+    await teacherInitial;
+
+    const projector = target.connect({
+      token: teacherToken,
+      autoConnect: false,
+      view: 'projector',
+    });
+    const projectorInitial = waitForState(projector);
+    projector.connect();
+    await projectorInitial;
+
+    const studentToken = issueSession(target.db, {
+      role: 'student',
+      groupId: 'group-1',
+    });
+    const student = target.connect({ token: studentToken, autoConnect: false });
+    const studentInitial = waitForState(student);
+    student.connect();
+    await studentInitial;
+
+    await sendCommand(teacher, 'activity:open', {});
+
+    // 學生送出答案 → 伺服器會用 broadcastSubmissionChanged 廣播給老師連線。
+    // 這條路徑以前送「一般老師快照」給投影連線，前端因此跳回登入畫面，
+    // 而且一般快照含作答資訊（FR-015／FR-022：投影連線只收投影快照）。
+    const projectorState = waitForState(projector);
+    const ack = await sendCommand(student, 'answer:submit', {
+      questionNumber: 1,
+      answers: ['甲答案'],
+    });
+    expect(ack).toEqual({ ok: true });
+
+    const state = await projectorState;
+    expect(state.role).toBe('projector');
+    const serialized = JSON.stringify(state);
+    expect(serialized).not.toContain('"answers"');
+    expect(serialized).not.toContain('"cells"');
+    expect(serialized).not.toContain('甲答案');
+  });
+
   it('非老師身分連線不會取得投影快照（FR-022、AC-005-18）', async () => {
     const target = await startTestServer();
     server = target;

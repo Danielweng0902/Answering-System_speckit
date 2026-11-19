@@ -137,6 +137,8 @@
 - Phase 2 的 T004／T005 可與 T008／T009／T010 平行
 - Phase 4 的 T016／T017／T018 與 Phase 5 的 T023／T024 可平行（不同檔案）
 
+- [x] T035 **修掉投影連線在學生送出答案後收到一般快照的 bug**（2026-11-19 review 時看截圖發現：`projector-buzzing.png` 顯示的是登入頁而不是看板）：`broadcastSubmissionChanged()` 用 `createSnapshot()` 而不是 `snapshotForSocket()`，導致投影檢視的連線在學生送出答案時收到**一般老師快照**——前端看到 role 變成 'teacher' 就跳回登入畫面（投影看板在課堂中掉出看板），而且一般快照含作答資訊，等於把答案送到投影連線（違反 FR-015／FR-022「投影連線只收投影快照」）。改成用 `snapshotForSocket()`，並補 server 整合測試（學生送出答案後投影連線仍收到投影快照、封包不含答案）與 e2e 斷言（送出後投影頁仍停在看板）
+
 ---
 
 ## Notes
