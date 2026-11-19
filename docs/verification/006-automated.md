@@ -22,7 +22,7 @@
 | AC-006-06／07 失敗原因可讀 | `server/tests/unit/sheetWriter.test.ts`（HTTP 狀態 → 錯誤代碼）與同檔「寫入失敗時把錯誤代碼回給上層，不洩漏 API 回應內容」 |
 | 人工驗證建議 1：錯誤可行動 | `sheetWriter.test.ts` 的分類表，案例採用 **Google 官方標準錯誤格式**（`status` ＋ `message` ＋ `details[].reason`）：401、403 + `details[].reason=SERVICE_DISABLED`（專案沒啟用 Sheets API）、403 + `PERMISSION_DENIED`（沒編輯權限）、404、400 not supported（其實是 xlsx）、400 range（工作表改名）、429、5xx；另有「取不到 access token 是金鑰問題而非暫時不可用」 |
 | 人工驗證建議 2：舊訊息清除 | `web/tests/teacher/TeacherWriteBack.test.tsx`「階段改變時清掉上一次的寫回訊息」 |
-| 人工驗證建議 3：寫回前比對版面 | `server/tests/integration/writeBackSheetCheck.test.ts`（相同 → 直接寫回；不同 → `SHEET_MODIFIED` 且不寫入；force → 仍寫回；讀不到 → 不阻擋）＋ web 測試「仍要寫回」按鈕帶 force |
+| 人工驗證建議 3：寫回前比對版面 | `server/tests/integration/writeBackSheetCheck.test.ts`（相同 → 直接寫回；不同 → `SHEET_MODIFIED` 且不寫入；force → 仍寫回；**讀不到 → `SHEET_CHECK_FAILED` 且不寫入**；force → 仍寫回）＋ web 測試「仍要寫回」按鈕帶 force |
 | AC-006-08 沒有服務帳號 | 同檔「伺服器沒有設定服務帳號時回 SHEET_NOT_CONFIGURED」＋路由 503 案例 |
 | AC-006-09 權限與階段 | `writeBackRoutes.test.ts`「沒有 token 回 401、學生回 403、未結束回 409」 |
 | FR-002 只寫值、不動格式 | `sheetWriter.test.ts` 斷言請求內容為 `values.batchUpdate` ＋ `valueInputOption=RAW` ＋ 只有 `range`／`values` |

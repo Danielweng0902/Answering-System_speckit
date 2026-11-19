@@ -186,7 +186,10 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     });
     const { writer, requests } = recordingWriter();
 
-    const result = await writeBackGuidedNotes(database, writer);
+    // 版面比對另有 writeBackSheetCheck.test.ts 專測；這裡略過比對，測試不連網路。
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      force: true,
+    });
 
     expect(result).toEqual({ ok: true, writtenCells: 2 });
     expect(requests).toHaveLength(1);
@@ -212,7 +215,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     });
     const { writer, requests } = recordingWriter();
 
-    const result = await writeBackGuidedNotes(database, writer);
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      force: true,
+    });
 
     expect(result).toMatchObject({ ok: false, code: 'GUIDED_NOTES_NOT_LINK' });
     expect(requests).toHaveLength(0);
@@ -238,7 +243,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     });
     const { writer, requests } = recordingWriter();
 
-    const result = await writeBackGuidedNotes(database, writer);
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      force: true,
+    });
 
     expect(result).toEqual({ ok: true, writtenCells: 0 });
     expect(requests).toHaveLength(0);
@@ -262,7 +269,9 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
       },
     };
 
-    const result = await writeBackGuidedNotes(database, writer);
+    const result = await writeBackGuidedNotes(database, writer, new Date(), {
+      force: true,
+    });
 
     expect(result).toMatchObject({ ok: false, code: 'SHEET_NOT_EDITABLE' });
     expect(JSON.stringify(result)).not.toContain('spreadsheetId');
@@ -290,7 +299,7 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     );
     const { writer } = recordingWriter();
 
-    await writeBackGuidedNotes(database, writer);
+    await writeBackGuidedNotes(database, writer, new Date(), { force: true });
 
     const after = JSON.stringify(
       database

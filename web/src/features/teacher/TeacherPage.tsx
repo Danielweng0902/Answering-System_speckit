@@ -53,8 +53,9 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
    * 006：把答案寫回老師的線上 Google 試算表。失敗時保留伺服器的訊息，
    * 老師可以改用「匯出 Guided Notes」下載 xlsx。
    *
-   * 試算表在匯入後被改過時，伺服器會回 `SHEET_MODIFIED`；此時提供
-   * 「仍要寫回」按鈕，由老師確認後帶 force 再送一次（人工驗證建議 3）。
+   * 試算表在匯入後被改過、或**無法讀取線上試算表以致無法確認**時，伺服器會回
+   * `SHEET_MODIFIED`／`SHEET_CHECK_FAILED`；此時提供「仍要寫回」按鈕，由老師
+   * 確認後帶 force 再送一次（人工驗證建議 3、006 T026）。
    */
   async function handleWriteBack(force = false): Promise<void> {
     setWriteBackMessage(null);
@@ -214,7 +215,8 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               {writeBackError}
             </p>
           )}
-          {writeBackCode === 'SHEET_MODIFIED' && (
+          {writeBackCode === 'SHEET_MODIFIED' ||
+          writeBackCode === 'SHEET_CHECK_FAILED' ? (
             <button
               className={styles.exportButton}
               type="button"
@@ -225,7 +227,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
             >
               仍要寫回
             </button>
-          )}
+          ) : null}
           {exportError !== null && (
             <p className={styles.exportError} role="alert">
               {exportError}

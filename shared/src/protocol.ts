@@ -281,6 +281,7 @@ export const ERROR_CODES = [
   'SHEET_API_DISABLED',
   'SHEET_AUTH_FAILED',
   'SHEET_MODIFIED',
+  'SHEET_CHECK_FAILED',
   'SHEET_UNAVAILABLE',
 ] as const;
 
@@ -336,6 +337,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
     '伺服器的 Google 寫回設定有誤，請通知系統管理者檢查服務帳號金鑰。',
   SHEET_MODIFIED:
     '這份試算表在匯入後被修改過，寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」。',
+  SHEET_CHECK_FAILED:
+    '無法確認線上試算表在匯入後有沒有被改過（讀不到試算表），寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」；或重新匯入後再寫回。',
   SHEET_UNAVAILABLE:
     'Google 試算表暫時無法寫入，請稍後再試或改用下載 xlsx',
 };

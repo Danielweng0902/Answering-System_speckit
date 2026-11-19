@@ -135,6 +135,33 @@ describe('TeacherPage 寫回 Google 試算表（006 US1）', () => {
     });
   });
 
+  it('比對失敗（讀不到線上試算表）時也停下來請老師確認（006 T026）', async () => {
+    writeBackGuidedNotes.mockResolvedValue({
+      ok: false,
+      error: {
+        code: 'SHEET_CHECK_FAILED',
+        message:
+          '無法確認線上試算表在匯入後有沒有被改過（讀不到試算表），寫回位置可能與目前的版面不符。確認沒問題請再按一次「寫回 Google 試算表」；或重新匯入後再寫回。',
+      },
+    });
+    render(<TeacherPage snapshot={makeSnapshot()} />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '寫回 Google 試算表' }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toContain('無法確認');
+    });
+
+    writeBackGuidedNotes.mockResolvedValue({ ok: true, writtenCells: 6 });
+    fireEvent.click(screen.getByRole('button', { name: '仍要寫回' }));
+
+    await waitFor(() => {
+      expect(writeBackGuidedNotes).toHaveBeenLastCalledWith(true);
+    });
+  });
+
   it('上傳 xlsx 的學習單沒有線上目標，按鈕停用並提示改用下載', () => {
     render(
       <TeacherPage

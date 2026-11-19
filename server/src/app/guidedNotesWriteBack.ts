@@ -61,22 +61,30 @@ function structureSignature(
 }
 
 /**
- * 比對線上試算表與匯入當時保存的版面是否不同。
+ * 比對線上試算表與匯入當時保存的版面。
  *
- * 讀不到（沒有連結檢視權限、網路問題）或解析失敗時**不阻擋**寫回：
- * 比對只是提醒，不是安全邊界（006 T023、依人工驗證建議 3）。
+ * 三種結果要分開看（006 T026；依人工驗證指出的風險）：
+ * - `unchanged`：讀得到且版面相同 → 可以直接寫。
+ * - `changed`：讀得到但版面不同 → 停下來請老師確認。
+ * - `failed`：**讀不到或解析不出來 → 也是停下來請老師確認**。
+ *   讀不到線上試算表不代表服務帳號不能寫（例如老師關掉「知道連結者可檢視」，
+ *   或暫時性的網路問題），若這時仍照匯入時的座標寫入，答案可能覆蓋
+ *   別的格子或公式。
  */
-async function hasSheetChangedSinceImport(
+type SheetCheck = 'unchanged' | 'changed' | 'failed';
+
+async function compareSheetWithImport(
   database: DatabaseSync,
   spreadsheetId: string,
   fetchImpl: typeof fetch | undefined,
-): Promise<boolean> {
+): Promise<SheetCheck> {
   try {
     const bytes = await fetchSheetXlsx(spreadsheetId, { fetchImpl });
     const grids = await readWorkbook(bytes);
     const parsed = parseGuidedNotes(grids);
     if (!parsed.ok) {
-      return false;
+      // 解析不出題目＝無法確認版面 → 視為比對失敗。
+      return 'failed';
     }
     const stored = listQuestions(database).map((question) => ({
       number: question.number,
@@ -94,9 +102,11 @@ async function hasSheetChangedSinceImport(
         cell: blank.cell,
       })),
     }));
-    return structureSignature(stored) !== structureSignature(live);
+    return structureSignature(stored) === structureSignature(live)
+      ? 'unchanged'
+      : 'changed';
   } catch {
-    return false;
+    return 'failed';
   }
 }
 
@@ -106,6 +116,8 @@ async function hasSheetChangedSinceImport(
  * - 匯入來源不是連結（上傳的 xlsx）→ 沒有雲端目標，回 GUIDED_NOTES_NOT_LINK。
  * - 伺服器沒有設定服務帳號 → 回 SHEET_NOT_CONFIGURED。
  * - 線上試算表在匯入後被改過 → 回 SHEET_MODIFIED，請老師確認後再按一次。
+ * - **無法讀取線上試算表、比對失敗** → 回 SHEET_CHECK_FAILED，同樣請老師確認
+ *   （讀不到不代表服務帳號不能寫，照舊座標寫入可能覆蓋別的格或公式）。
  * - 沒有任何搶答成功答案 → 不寫入任何儲存格，回成功與 0。
  */
 export async function writeBackGuidedNotes(
@@ -139,13 +151,17 @@ export async function writeBackGuidedNotes(
   }
 
   if (options.force !== true) {
-    const changed = await hasSheetChangedSinceImport(
+    const check = await compareSheetWithImport(
       database,
       spreadsheetId,
       options.fetchImpl,
     );
-    if (changed) {
+    if (check === 'changed') {
       return failure('SHEET_MODIFIED');
+    }
+    if (check === 'failed') {
+      // 比對失敗不是「沒變」，而是「無法確認」→ 一律先問老師（T026）。
+      return failure('SHEET_CHECK_FAILED');
     }
   }
 
