@@ -11,3 +11,8 @@
 - [x] T009 **測試**：web 單元測試（判定／插值／key 一致／錯誤對照）＋ e2e（英文預設、切換、重新整理保留）
 - [x] T010 **e2e 語系固定**：`e2e/playwright.config.ts` 的 `locale: 'zh-TW'`（介面預設依系統語言，否則中文斷言失效）
 - [x] T011 **文件**：本 spec、`design/DESIGN.md`（切換器樣式）、`README.md`（進度）
+- [x] T012 **`<html lang>` 跟著語言改**（WCAG 3.1.1，2026-11-19 review）：`LanguageProvider` 用
+  `useLayoutEffect` 更新 `document.documentElement.lang`；e2e 驗證切換後與重新載入後的 `<html lang>`
+- [x] T013 **匯入警告的英文版**（2026-11-19 Philip 回報：匯入 Google 試算表的警告沒翻譯）：
+  伺服器的警告本來就是結構化的（`code` ＋ 題號／儲存格／工作表名），客戶端據此翻譯，
+  中文版維持用伺服器原文；**API 契約不動**

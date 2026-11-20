@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -60,6 +61,17 @@ export function LanguageProvider({
 
   useEffect(() => {
     setCurrentLanguage(language);
+  }, [language]);
+
+  /**
+   * WCAG 3.1.1（Language of Page）：頁面語言改變時 `<html lang>` 也要跟著改，
+   * 否則螢幕閱讀器會用中文發音規則念英文（2026-11-19 review）。
+   * 用 useLayoutEffect 是為了在瀏覽器繪製前就更新，不會有一瞬間用錯語言。
+   */
+  useLayoutEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = language;
+    }
   }, [language]);
 
   const setLanguage = useCallback((next: Language) => {

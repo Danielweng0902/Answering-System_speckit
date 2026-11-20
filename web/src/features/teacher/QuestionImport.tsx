@@ -2,9 +2,11 @@ import type {
   ErrorCode,
   ImportSummary,
   ImportSummaryQuestion,
+  ImportWarning,
   TeacherSnapshot,
 } from '@classroom/shared';
 import { useI18n } from '../../lib/i18n/LanguageProvider';
+import type { Language } from '../../lib/i18n/language';
 import type { MessageKey } from '../../lib/i18n/messages';
 import { useId, useState, type ChangeEvent, type FormEvent } from 'react';
 import {
@@ -41,6 +43,37 @@ const QUESTION_KIND_KEYS: Record<ImportSummaryQuestion['kind'], MessageKey> = {
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
+/**
+ * 匯入警告的顯示文字。
+ *
+ * - **中文版直接用伺服器的 `message`**：那是權威措辭（伺服器改了措辭，
+ *   中文版自動跟上）。
+ * - **英文版用結構化資料翻譯**：伺服器給的警告是結構化的
+ *   （`code` ＋ 題號／儲存格／工作表名），所以客戶端翻譯即可，
+ *   **不必改 API 契約**（2026-11-19 review：匯入警告在英文版沒翻譯）。
+ */
+function importWarningText(
+  t: Translate,
+  warning: ImportWarning,
+  language: Language,
+): string {
+  if (language !== 'en') {
+    return warning.message;
+  }
+  if (warning.code === 'NUMBERS_NOT_SEQUENTIAL') {
+    return t('import.warningNumbersNotSequential', {
+      numbers: warning.numbers.join('、'),
+    });
+  }
+  if (warning.code === 'BLANK_HAS_CONTENT') {
+    return t('import.warningBlankHasContent', {
+      number: warning.number,
+      cell: warning.cell,
+    });
+  }
+  return t('import.warningMultipleSheets', { name: warning.sheetName });
+}
+
 function questionBlankText(t: Translate, question: ImportSummaryQuestion): string {
   return t('import.kindDetail', {
     kind: t(QUESTION_KIND_KEYS[question.kind]),
@@ -50,7 +83,7 @@ function questionBlankText(t: Translate, question: ImportSummaryQuestion): strin
 
 /** 學習單讀取、摘要顯示與確認；只有確認才會送出題目變更指令。 */
 export function QuestionImport({ snapshot }: QuestionImportProps) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const linkId = useId();
   const fileId = useId();
   const [link, setLink] = useState('');
@@ -243,7 +276,9 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
               <h4 className={styles.warningsTitle}>{t('import.warningsTitle')}</h4>
               <ul className={styles.list} aria-label={t('import.warningsTitle')}>
                 {summary.warnings.map((warning, index) => (
-                  <li key={`${warning.code}-${index}`}>{warning.message}</li>
+                  <li key={`${warning.code}-${index}`}>
+                    {importWarningText(t, warning, language)}
+                  </li>
                 ))}
               </ul>
             </div>

@@ -173,6 +173,11 @@ export const zhTW = {
   'import.groupNotice': '第 {numbers} 題是題組',
   'import.warningsTitle': '提醒事項',
   'import.warningsLabel': '提醒事項',
+  'import.warningNumbersNotSequential':
+    '題號不是從 1 開始或沒有連續（實際題號：{numbers}），匯入前請確認',
+  'import.warningBlankHasContent':
+    '題號 {number} 的作答格 {cell} 已有內容，匯出時會被取代',
+  'import.warningMultipleSheets': '多個工作表都有表頭，已使用「{name}」工作表',
   'import.replaceNotice': '確認後會取代現有題目',
   'import.confirm': '確認匯入',
   'import.cancel': '取消',
@@ -376,6 +381,12 @@ export const en: Messages = {
   'import.groupNotice': 'Question {numbers} is a group question',
   'import.warningsTitle': 'Warnings',
   'import.warningsLabel': 'Warnings',
+  'import.warningNumbersNotSequential':
+    'Question numbers do not start at 1 or are not continuous (actual: {numbers}) — please check before importing',
+  'import.warningBlankHasContent':
+    'Question {number} already has content in {cell}; it will be replaced on import',
+  'import.warningMultipleSheets':
+    'Several tabs have a header row; the “{name}” tab is being used',
   'import.replaceNotice': 'Confirming replaces the current questions',
   'import.confirm': 'Import',
   'import.cancel': 'Cancel',
