@@ -93,6 +93,12 @@ test('系統語言是英文時，介面預設顯示英文；切換成中文後�
   await expect(page.getByRole('heading', { name: '學生端' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-TW');
 
+  await mkdir(screenshotDirectory, { recursive: true });
+  await page.screenshot({
+    path: join(screenshotDirectory, 'student-zh-TW.png'),
+    fullPage: true,
+  });
+
   // 切回英文 → 重新整理後仍是英文，<html lang> 也是。
   await page.getByRole('button', { name: 'EN' }).click();
   await page.reload();

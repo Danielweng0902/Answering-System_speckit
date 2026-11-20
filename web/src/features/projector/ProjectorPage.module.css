@@ -24,7 +24,7 @@
 }
 
 /* 語言切換靠右（007 i18n）。 */
-.header > :last-child {
+.headerAside {
   margin-inline-start: auto;
 }
 

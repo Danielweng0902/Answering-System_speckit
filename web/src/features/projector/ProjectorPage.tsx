@@ -67,7 +67,9 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
             ? t('projector.ruleFair')
             : t('projector.ruleFirstCome')}
         </p>
-        <LanguageSwitch />
+        <div className={styles.headerAside}>
+          <LanguageSwitch />
+        </div>
       </header>
 
       {projector.phase === 'open' && projector.countdownEndsAt !== null && (

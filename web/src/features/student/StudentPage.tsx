@@ -43,10 +43,12 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
     return (
       <section className={styles.page} aria-labelledby="student-page-title">
         <header className={styles.header}>
-          <h1 id="student-page-title" className={styles.title}>
-            {t('student.title')}
-          </h1>
-          <LanguageSwitch />
+          <div className={styles.headerTop}>
+            <h1 id="student-page-title" className={styles.title}>
+              {t('student.title')}
+            </h1>
+            <LanguageSwitch />
+          </div>
         </header>
         <GroupPicker groups={snapshot?.groups ?? []} sessionInvalid={sessionInvalid} />
       </section>
@@ -58,10 +60,14 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
   return (
     <section className={styles.page} aria-labelledby="student-page-title">
       <header className={styles.header}>
-        <h1 id="student-page-title" className={styles.title}>
-          {t('student.title')}
-        </h1>
-        <LanguageSwitch />
+        {/* 標題與語言切換同一列，切換器靠右（2026-11-20 review：學生端切換器
+            旁邊有一大段無效空白 → 用明確的結構，不要靠 :last-child 定位）。 */}
+        <div className={styles.headerTop}>
+          <h1 id="student-page-title" className={styles.title}>
+            {t('student.title')}
+          </h1>
+          <LanguageSwitch />
+        </div>
         <p className={styles.groupStatus}>
           {t('group.currentLabel')}{' '}
           <strong>{myGroup?.name ?? t('group.unknown')}</strong>

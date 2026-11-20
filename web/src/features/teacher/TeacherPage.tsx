@@ -103,10 +103,12 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
     return (
       <section className={styles.page} aria-labelledby="teacher-page-title">
         <header className={styles.header}>
-          <h1 id="teacher-page-title" className={styles.title}>
-            {t('teacher.title')}
-          </h1>
-          <LanguageSwitch />
+          <div className={styles.headerTop}>
+            <h1 id="teacher-page-title" className={styles.title}>
+              {t('teacher.title')}
+            </h1>
+            <LanguageSwitch />
+          </div>
         </header>
         <TeacherLogin
           onLoginSuccess={() => {
@@ -151,10 +153,13 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   return (
     <section className={styles.page} aria-labelledby="teacher-page-title">
       <header className={styles.header}>
-        <h1 id="teacher-page-title" className={styles.title}>
-          {t('teacher.title')}
-        </h1>
-        <LanguageSwitch />
+        {/* 標題與語言切換同一列，切換器靠右（2026-11-20 review）。 */}
+        <div className={styles.headerTop}>
+          <h1 id="teacher-page-title" className={styles.title}>
+            {t('teacher.title')}
+          </h1>
+          <LanguageSwitch />
+        </div>
       </header>
       <PhaseControl snapshot={snapshot} />
       {snapshot.phase === 'open' && (
