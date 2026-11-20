@@ -356,8 +356,8 @@ export const en: Messages = {
   'control.resetCancel': 'Cancel',
   'control.resetActivity': 'Reset activity',
 
-  'import.sectionLabel': 'Import worksheet',
-  'import.title': 'Import worksheet',
+  'import.sectionLabel': 'Import Guided Notes',
+  'import.title': 'Import Guided Notes',
   'import.alternativesLabel': 'Other options',
   'import.alternativeShare': 'Change sharing to “anyone with the link”',
   'import.alternativeDownload': 'Download as xlsx and upload it',
@@ -400,7 +400,7 @@ export const en: Messages = {
   'teacher.exportGuided': 'Export Guided Notes',
   'teacher.exportCsv': 'Export CSV',
   'teacher.noOnlineSheet':
-    'This worksheet was uploaded as xlsx, so there is no online sheet to write back to — use “Export Guided Notes”.',
+    'This Guided Notes file was uploaded as xlsx, so there is no online sheet to write back to — use “Export Guided Notes”.',
   'teacher.projectorTitle': 'Projector',
   'teacher.openProjector': 'Open projector',
   'teacher.revealNext': 'Reveal next',

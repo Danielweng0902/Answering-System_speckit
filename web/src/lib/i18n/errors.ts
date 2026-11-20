@@ -23,20 +23,20 @@ export const ERROR_MESSAGES_EN: Partial<Record<ErrorCode, string>> = {
   TEACHER_PASSWORD_NOT_SET: 'No teacher password has been set yet',
   TOO_MANY_ATTEMPTS: 'Too many attempts, please try again later',
   UNAUTHORIZED: 'Please sign in as a teacher first',
-  FILE_INVALID: 'That file could not be read — upload an xlsx worksheet',
+  FILE_INVALID: 'That file could not be read — upload an xlsx Guided Notes file',
   FILE_TOO_LARGE: 'The file is too large — upload an xlsx under 5 MB',
   HEADER_NOT_FOUND:
-    'Header row not found. The worksheet needs a row with the columns 題號 / 題目 / 作答 (number / question / answer).',
+    'Header row not found. The Guided Notes file needs a row with the columns 題號 / 題目 / 作答 (number / question / answer).',
   NO_QUESTIONS:
     'No question numbers found under the header — check that the number column contains numbers',
-  NO_GUIDED_NOTES: 'No worksheet has been imported for this activity yet',
+  NO_GUIDED_NOTES: 'No Guided Notes file has been imported for this activity yet',
   DUPLICATE_QUESTION_NUMBER: 'Duplicate question number — fix it and import again',
   LINK_INVALID:
     'That is not a Google Sheets link — it should start with docs.google.com/spreadsheets',
   LINK_NOT_SHARED: 'That sheet could not be read. You can also:',
   LINK_UNREACHABLE:
     'Could not reach Google Sheets — check the network, or download it as xlsx and upload it',
-  IMPORT_EXPIRED: 'The import summary expired — read the worksheet again',
+  IMPORT_EXPIRED: 'The import summary expired — read the Guided Notes file again',
   QUESTIONS_REQUIRED: 'Import some questions first',
   QUESTION_NOT_FOUND: 'That question no longer exists — please refresh',
   BLANK_COUNT_MISMATCH: 'Every blank of this question must be filled in',
@@ -45,13 +45,13 @@ export const ERROR_MESSAGES_EN: Partial<Record<ErrorCode, string>> = {
   ALREADY_SUBMITTED: 'Your group already submitted this question',
   SUBMISSION_NOT_FOUND: 'That answer no longer exists — please refresh',
   GUIDED_NOTES_NOT_LINK:
-    'This worksheet was uploaded as xlsx, so there is no online sheet to write back to — download the xlsx instead',
+    'This Guided Notes file was uploaded as xlsx, so there is no online sheet to write back to — download the xlsx instead',
   SHEET_NOT_CONFIGURED:
     'The server has no Google service account set up, so it cannot write back — download the xlsx instead',
   SHEET_NOT_FOUND:
     'That Google Sheet could not be found — it may have been deleted; download the xlsx instead',
   SHEET_TAB_NOT_FOUND:
-    'The worksheet inside the sheet could not be found — it may have been renamed; rename it back or import again, or download the xlsx',
+    'The tab inside the sheet could not be found — it may have been renamed; rename it back or import again, or download the xlsx',
   SHEET_NOT_EDITABLE:
     'No edit permission for that sheet — share it with the service account, or download the xlsx',
   SHEET_NOT_NATIVE:
