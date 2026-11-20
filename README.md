@@ -172,7 +172,7 @@ fixtures/ Guided Notes 匯入的測試檔
 - AI 工具的設定與 skill（`CLAUDE.md`、`opencode.json`、`.claude/`、`.agents/`、`.opencode/` 等）不進版本控制，各自在本機設定。要用 Spec Kit 指令時，先安裝 `specify` CLI，再在專案根目錄執行 `specify init --here --ai <工具>` 產生；產生的檔案已被 `.gitignore` 排除。`.specify/`（constitution 與範本）有進版本控制，不要刪。
 - `main` 是組員看的主線；新功能或實驗在分支上做，完成後開 PR 合併回 `main`。
 - 一個子功能一個 branch、一個 PR，不直接 push 到 `main`。
-- 會改變系統行為的修改，要先經另一小組（OpenSpec 組）同意，共同約定在 [`docs/shared/FEATURE-CONTRACT.md`](docs/shared/FEATURE-CONTRACT.md)。
+- 會改變系統行為的修改，要先經另一小組（OpenSpec 組）同意，共同約定在 [`docs/shared/FEATURE-CONTRACT.md`](docs/shared/FEATURE-CONTRACT.md)；逐條決策與我們的實作位置對照在 [`docs/shared/DECISION-MAP.md`](docs/shared/DECISION-MAP.md)。
 - 改了 `diagrams/*.puml` 要用 `scripts/render-diagrams.sh` 重新產生 PNG。
 - 密碼、金鑰只放 `.env`，不得出現在程式、文件、log 或 git 歷史。
 
