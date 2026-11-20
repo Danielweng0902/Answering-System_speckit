@@ -32,36 +32,74 @@ export type ValidSubmissionAnswer = {
 
 type SubmissionRow = Omit<SubmissionRecord, 'answers'>;
 
-function readAnswers(database: DatabaseSync): SubmissionRecord[] {
+type SubmissionAnswerRow = SubmissionRow & {
+  answerText: string | null;
+};
+
+type SubmissionFilter = {
+  questionId?: string;
+  groupId?: string;
+  validOnly?: boolean;
+};
+
+/**
+ * 依題目順位與空格順序一次讀回 Submission 及其答案。
+ * 過濾條件由固定的幾種呼叫端組合，不接受任意 SQL 字串；LEFT JOIN 保留
+ * 沒有答案明細的歷史紀錄，輸出與舊版逐筆查答案的順序完全一致。
+ */
+function readAnswers(database: DatabaseSync, filter: SubmissionFilter = {}): SubmissionRecord[] {
+  const conditions: string[] = [];
+  const parameters: string[] = [];
+  if (filter.questionId !== undefined) {
+    conditions.push('s.question_id = ?');
+    parameters.push(filter.questionId);
+  }
+  if (filter.groupId !== undefined) {
+    conditions.push('s.group_id = ?');
+    parameters.push(filter.groupId);
+  }
+  if (filter.validOnly === true) {
+    conditions.push('s.voided_at IS NULL');
+  }
+  const where = conditions.length === 0 ? '' : `WHERE ${conditions.join(' AND ')}`;
   const rows = database
     .prepare(
       `SELECT s.id, s.question_id AS questionId, q.number AS questionNumber,
               s.group_id AS groupId, s.rank, s.received_at AS receivedAt,
-              s.voided_at AS voidedAt
+              s.voided_at AS voidedAt, a.answer_text AS answerText
        FROM submissions s
        JOIN questions q ON q.id = s.question_id
-       ORDER BY q.position, s.rank`,
+       LEFT JOIN submission_answers a ON a.submission_id = s.id
+       ${where}
+       ORDER BY q.position, s.rank, a.blank_position`,
     )
-    .all() as SubmissionRow[];
-  const answers = database.prepare(
-    `SELECT answer_text AS answerText
-     FROM submission_answers
-     WHERE submission_id = ? ORDER BY blank_position`,
-  );
+    .all(...parameters) as SubmissionAnswerRow[];
 
-  return rows.map((row) => ({
-    ...row,
-    answers: (answers.all(row.id) as { answerText: string }[]).map(
-      (answer) => answer.answerText,
-    ),
-  }));
+  const submissions: SubmissionRecord[] = [];
+  let current: SubmissionRecord | undefined;
+  for (const row of rows) {
+    if (current?.id !== row.id) {
+      current = {
+        id: row.id,
+        questionId: row.questionId,
+        questionNumber: row.questionNumber,
+        groupId: row.groupId,
+        rank: row.rank,
+        receivedAt: row.receivedAt,
+        voidedAt: row.voidedAt,
+        answers: [],
+      };
+      submissions.push(current);
+    }
+    if (row.answerText !== null) {
+      current.answers.push(row.answerText);
+    }
+  }
+  return submissions;
 }
 
 /** A group starts at zero and persists independently of answer data resets. */
-export function getGroupAnswerRevision(
-  database: DatabaseSync,
-  groupId: string,
-): number {
+export function getGroupAnswerRevision(database: DatabaseSync, groupId: string): number {
   const row = database
     .prepare(
       `SELECT answer_revision AS answerRevision
@@ -78,10 +116,7 @@ export function clearAll(database: DatabaseSync): void {
 }
 
 /** Atomically insert the initial counter or advance an existing one. */
-export function incrementGroupAnswerRevision(
-  database: DatabaseSync,
-  groupId: string,
-): void {
+export function incrementGroupAnswerRevision(database: DatabaseSync, groupId: string): void {
   database
     .prepare(
       `INSERT INTO group_answer_revisions (group_id, answer_revision)
@@ -93,10 +128,7 @@ export function incrementGroupAnswerRevision(
 }
 
 /** Atomically insert one submission and every blank answer (nested-safe). */
-export function insertSubmission(
-  database: DatabaseSync,
-  submission: NewSubmission,
-): void {
+export function insertSubmission(database: DatabaseSync, submission: NewSubmission): void {
   database.exec('SAVEPOINT submission_insert');
   try {
     database
@@ -123,9 +155,7 @@ export function insertSubmission(
     }
     database.exec('RELEASE SAVEPOINT submission_insert');
   } catch (error) {
-    database.exec(
-      'ROLLBACK TO SAVEPOINT submission_insert; RELEASE SAVEPOINT submission_insert',
-    );
+    database.exec('ROLLBACK TO SAVEPOINT submission_insert; RELEASE SAVEPOINT submission_insert');
     throw error;
   }
 }
@@ -135,14 +165,7 @@ export function findValid(
   questionId: string,
   groupId: string,
 ): SubmissionRecord | null {
-  return (
-    readAnswers(database).find(
-      (submission) =>
-        submission.questionId === questionId &&
-        submission.groupId === groupId &&
-        submission.voidedAt === null,
-    ) ?? null
-  );
+  return readAnswers(database, { questionId, groupId, validOnly: true })[0] ?? null;
 }
 
 /**
@@ -154,11 +177,12 @@ export function findLatest(
   questionId: string,
   groupId: string,
 ): SubmissionRecord | null {
-  const candidates = readAnswers(database).filter(
-    (submission) =>
-      submission.questionId === questionId && submission.groupId === groupId,
-  );
-  return candidates.at(-1) ?? null;
+  return readAnswers(database, { questionId, groupId }).at(-1) ?? null;
+}
+
+/** 一次讀回某組全部作答與作廢歷史，仍按題目順位與空格順序排列。 */
+export function listByGroup(database: DatabaseSync, groupId: string): SubmissionRecord[] {
+  return readAnswers(database, { groupId });
 }
 
 /** Mark the group's only valid submission voided inside the caller transaction. */
@@ -188,30 +212,20 @@ export function maxRank(database: DatabaseSync, questionId: string): number {
   return row.maxRank;
 }
 
-export function listByQuestion(
-  database: DatabaseSync,
-  questionId: string,
-): SubmissionRecord[] {
-  return readAnswers(database).filter(
-    (submission) => submission.questionId === questionId,
-  );
+export function listByQuestion(database: DatabaseSync, questionId: string): SubmissionRecord[] {
+  return readAnswers(database, { questionId });
 }
 
 /**
  * 005 判定用：一次讀出全部作答（依題目 position、rank 排序）。
  * 判定需要跨題的送達資料，逐題呼叫 listByQuestion 會重複掃描整張表。
  */
-export function listAllSubmissions(
-  database: DatabaseSync,
-): SubmissionRecord[] {
+export function listAllSubmissions(database: DatabaseSync): SubmissionRecord[] {
   return readAnswers(database);
 }
 
 /** 005：某題目前的有效作答筆數（用來判斷是不是該題的第一個答案）。 */
-export function countValidForQuestion(
-  database: DatabaseSync,
-  questionId: string,
-): number {
+export function countValidForQuestion(database: DatabaseSync, questionId: string): number {
   const row = database
     .prepare(
       `SELECT COUNT(*) AS count FROM submissions
@@ -221,25 +235,34 @@ export function countValidForQuestion(
   return row.count;
 }
 
-export function listValidByGroup(
-  database: DatabaseSync,
-  groupId: string,
-): SubmissionRecord[] {
-  return readAnswers(database).filter(
-    (submission) =>
-      submission.groupId === groupId && submission.voidedAt === null,
-  );
+export function listValidByGroup(database: DatabaseSync, groupId: string): SubmissionRecord[] {
+  return readAnswers(database, { groupId, validOnly: true });
+}
+
+export type ValidSubmissionPair = {
+  questionId: string;
+  groupId: string;
+};
+
+/** 老師進度只需要有效「題目×組別」，不得為了計數讀回答案文字。 */
+export function listValidSubmissionPairs(database: DatabaseSync): ValidSubmissionPair[] {
+  return database
+    .prepare(
+      `SELECT question_id AS questionId, group_id AS groupId
+       FROM submissions
+       WHERE voided_at IS NULL`,
+    )
+    .all() as ValidSubmissionPair[];
 }
 
 /**
  * 004 US3（T019）：每個有效答案一列；作廢歷史完全不送進 CSV。
  * 是否搶答成功仍由 app 的 003 result projection 判定，不在 SQL 重算。
  */
-export function listValidSubmissionsWithAnswers(
-  database: DatabaseSync,
-): ValidSubmissionAnswer[] {
-  return database.prepare(
-    `SELECT q.number AS questionNumber,
+export function listValidSubmissionsWithAnswers(database: DatabaseSync): ValidSubmissionAnswer[] {
+  return database
+    .prepare(
+      `SELECT q.number AS questionNumber,
             a.blank_position AS blankPosition,
             s.group_id AS groupId,
             g.name AS groupName,
@@ -252,5 +275,6 @@ export function listValidSubmissionsWithAnswers(
      JOIN submission_answers a ON a.submission_id = s.id
      WHERE s.voided_at IS NULL
      ORDER BY q.number, s.rank, a.blank_position`,
-  ).all() as ValidSubmissionAnswer[];
+    )
+    .all() as ValidSubmissionAnswer[];
 }

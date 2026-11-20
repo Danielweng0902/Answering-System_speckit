@@ -1,11 +1,12 @@
 import type { Socket } from 'socket.io-client';
-import type { Ack, Snapshot } from '@classroom/shared';
+import type { Ack, Snapshot, StudentClosedSnapshot, TeacherSnapshot } from '@classroom/shared';
 import { afterEach, describe, expect, it } from 'vitest';
 import { issueSession } from '../../src/app/access.js';
 import { createSnapshot } from '../../src/app/snapshot.js';
 import {
   getActivity,
   getAnswerEventCount,
+  updateActivity,
   type Activity,
 } from '../../src/infra/db/activityRepo.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
@@ -85,9 +86,7 @@ function submissionAnswers(database: TestServer['db']): SubmissionAnswerRow[] {
     .all() as SubmissionAnswerRow[];
 }
 
-function groupAnswerRevisions(
-  target: TestServer,
-): GroupAnswerRevisionRow[] {
+function groupAnswerRevisions(target: TestServer): GroupAnswerRevisionRow[] {
   return target.db
     .prepare(
       `SELECT group_id AS groupId, answer_revision AS answerRevision
@@ -139,9 +138,7 @@ async function connectStudent(
   const socket = target.connect({ token, autoConnect: false });
   const ownInitial = waitForState(socket);
   // 學生進場會改變 presence；先收掉其他連線的這輪快照，避免後續等待誤收。
-  const observers = existingStudentObservers.map((observer) =>
-    waitForState(observer),
-  );
+  const observers = existingStudentObservers.map((observer) => waitForState(observer));
   socket.connect();
   await Promise.all([ownInitial, ...observers]);
   return socket;
@@ -177,10 +174,7 @@ async function startFixture(
   await teacherInitial;
 
   const studentOne = await connectStudent(target, 'group-1', [teacher]);
-  const studentTwo = await connectStudent(target, 'group-2', [
-    teacher,
-    studentOne,
-  ]);
+  const studentTwo = await connectStudent(target, 'group-2', [teacher, studentOne]);
   return {
     server: target,
     teacher,
@@ -192,9 +186,7 @@ async function startFixture(
 
 async function openActivity(fixture: Fixture): Promise<void> {
   const states = fixture.sockets.map((socket) => waitForState(socket));
-  expect(
-    await sendCommand(fixture.teacher, 'activity:open', {}),
-  ).toEqual({ ok: true });
+  expect(await sendCommand(fixture.teacher, 'activity:open', {})).toEqual({ ok: true });
   await Promise.all(states);
 }
 
@@ -207,10 +199,7 @@ async function submitWithState(
   // 003 US2：作答成功只送所有老師與送出的該組。這個 helper 的既有案例
   // 每次都由一組的一名成員送出，因此只等老師與該成員；其他組/guest 的
   // 「完全沒有 state 封包」由 answerVisibility.test.ts 驗證。
-  const statePromises = [
-    waitForState(fixture.teacher),
-    waitForState(socket),
-  ];
+  const statePromises = [waitForState(fixture.teacher), waitForState(socket)];
   const ack = await sendCommand(socket, 'answer:submit', {
     questionNumber,
     answers,
@@ -225,10 +214,7 @@ async function voidWithState(
   groupId: string,
   questionNumber: number,
 ): Promise<{ ack: Ack; states: Snapshot[] }> {
-  const statePromises = [
-    waitForState(fixture.teacher),
-    waitForState(studentSocket),
-  ];
+  const statePromises = [waitForState(fixture.teacher), waitForState(studentSocket)];
   const ack = await sendCommand(fixture.teacher, 'answer:void', {
     groupId,
     questionNumber,
@@ -254,9 +240,7 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
 
     await openActivity(fixture);
     const closingStates = fixture.sockets.map((socket) => waitForState(socket));
-    expect(
-      await sendCommand(fixture.teacher, 'activity:close', {}),
-    ).toEqual({ ok: true });
+    expect(await sendCommand(fixture.teacher, 'activity:close', {})).toEqual({ ok: true });
     await Promise.all(closingStates);
 
     before = captureState(fixture.server);
@@ -275,12 +259,9 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
     const fixture = await startFixture();
     await openActivity(fixture);
 
-    const { ack, states } = await submitWithState(
-      fixture,
-      fixture.studentOne,
-      1,
-      ['  第一組的答案　'],
-    );
+    const { ack, states } = await submitWithState(fixture, fixture.studentOne, 1, [
+      '  第一組的答案　',
+    ]);
 
     expect(ack).toEqual({ ok: true });
     const [questionOne, questionTwo] = listQuestions(fixture.server.db);
@@ -347,18 +328,12 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
       expectFailureUnchanged(
         fixture.server,
         before,
-        await sendCommand(
-          fixture.studentOne,
-          'answer:submit',
-          testCase.payload,
-        ),
+        await sendCommand(fixture.studentOne, 'answer:submit', testCase.payload),
         testCase.code,
       );
     }
 
-    const { ack } = await submitWithState(fixture, fixture.studentOne, 1, [
-      '錯誤後第一次有效送出',
-    ]);
+    const { ack } = await submitWithState(fixture, fixture.studentOne, 1, ['錯誤後第一次有效送出']);
     expect(ack).toEqual({ ok: true });
     expect(submissions(fixture.server.db).map((row) => row.rank)).toEqual([1]);
   });
@@ -366,13 +341,9 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
   it('同組重複送出回 ALREADY_SUBMITTED，原答案、rank、revision 與快照不變（AC-003-04、SC-007）', async () => {
     const fixture = await startFixture();
     await openActivity(fixture);
-    expect(
-      (
-        await submitWithState(fixture, fixture.studentOne, 1, [
-          '原本答案',
-        ])
-      ).ack,
-    ).toEqual({ ok: true });
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['原本答案'])).ack).toEqual({
+      ok: true,
+    });
 
     const before = captureState(fixture.server);
     expectFailureUnchanged(
@@ -392,15 +363,10 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
     const fixture = await startFixture();
     await openActivity(fixture);
 
-    expect(
-      (await submitWithState(fixture, fixture.studentOne, 1, ['先送'])).ack,
-    ).toEqual({ ok: true });
-    const { ack, states } = await submitWithState(
-      fixture,
-      fixture.studentTwo,
-      1,
-      ['後送'],
-    );
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['先送'])).ack).toEqual({
+      ok: true,
+    });
+    const { ack, states } = await submitWithState(fixture, fixture.studentTwo, 1, ['後送']);
 
     expect(ack).toEqual({ ok: true });
     expect(
@@ -427,27 +393,25 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
     const fixture = await startFixture();
     await openActivity(fixture);
 
-    expect(
-      (await submitWithState(fixture, fixture.studentOne, 1, ['一之一'])).ack,
-    ).toEqual({ ok: true });
-    expect(
-      (await submitWithState(fixture, fixture.studentTwo, 1, ['二之一'])).ack,
-    ).toEqual({ ok: true });
-    expect(
-      (await submitWithState(fixture, fixture.studentTwo, 2, ['二之二'])).ack,
-    ).toEqual({ ok: true });
-    expect(
-      (await submitWithState(fixture, fixture.studentOne, 2, ['一之二'])).ack,
-    ).toEqual({ ok: true });
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['一之一'])).ack).toEqual({
+      ok: true,
+    });
+    expect((await submitWithState(fixture, fixture.studentTwo, 1, ['二之一'])).ack).toEqual({
+      ok: true,
+    });
+    expect((await submitWithState(fixture, fixture.studentTwo, 2, ['二之二'])).ack).toEqual({
+      ok: true,
+    });
+    expect((await submitWithState(fixture, fixture.studentOne, 2, ['一之二'])).ack).toEqual({
+      ok: true,
+    });
 
     expect(
-      submissions(fixture.server.db).map(
-        ({ questionNumber, groupId, rank }) => ({
-          questionNumber,
-          groupId,
-          rank,
-        }),
-      ),
+      submissions(fixture.server.db).map(({ questionNumber, groupId, rank }) => ({
+        questionNumber,
+        groupId,
+        rank,
+      })),
     ).toEqual([
       { questionNumber: 1, groupId: 'group-1', rank: 1 },
       { questionNumber: 1, groupId: 'group-2', rank: 2 },
@@ -466,11 +430,9 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
     fixture.sockets.push(partner);
     await openActivity(fixture);
 
-    const states = [
-      fixture.teacher,
-      fixture.studentOne,
-      partner,
-    ].map((socket) => waitForState(socket));
+    const states = [fixture.teacher, fixture.studentOne, partner].map((socket) =>
+      waitForState(socket),
+    );
     const acks = await Promise.all([
       sendCommand(fixture.studentOne, 'answer:submit', {
         questionNumber: 1,
@@ -493,9 +455,7 @@ describe('answer:submit（US1；AC-003-01–08、SC-001、SC-007）', () => {
     });
     const winningAnswer = acks[0]?.ok ? '第一位成員' : '第二位成員';
     expect(submissionAnswers(fixture.server.db)).toHaveLength(1);
-    expect(submissionAnswers(fixture.server.db)[0]?.answerText).toBe(
-      winningAnswer,
-    );
+    expect(submissionAnswers(fixture.server.db)[0]?.answerText).toBe(winningAnswer);
     for (const snapshot of [snapshots[1], snapshots[2]]) {
       expect(snapshot).toMatchObject({
         myGroupId: 'group-1',
@@ -637,12 +597,7 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
     }
 
     expect(
-      (
-        await submitWithState(fixture, fixture.studentOne, 1, [
-          '第一格',
-          '第二格',
-        ])
-      ).ack,
+      (await submitWithState(fixture, fixture.studentOne, 1, ['第一格', '第二格'])).ack,
     ).toEqual({ ok: true });
     expect(submissions(fixture.server.db)).toHaveLength(1);
     expect(submissions(fixture.server.db)[0]?.rank).toBe(1);
@@ -653,12 +608,7 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
     await openActivity(fixture);
 
     expect(
-      (
-        await submitWithState(fixture, fixture.studentOne, 1, [
-          '  第一格答案　',
-          '第二格答案',
-        ])
-      ).ack,
+      (await submitWithState(fixture, fixture.studentOne, 1, ['  第一格答案　', '第二格答案'])).ack,
     ).toEqual({ ok: true });
 
     expect(submissions(fixture.server.db)).toMatchObject([
@@ -689,14 +639,12 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
     const fixture = await startFixture(mixedQuestionDefinitions);
     await openActivity(fixture);
     const answers = ['前綴一的答案', '前綴二的答案'];
-    expect(
-      (await submitWithState(fixture, fixture.studentOne, 1, answers)).ack,
-    ).toEqual({ ok: true });
+    expect((await submitWithState(fixture, fixture.studentOne, 1, answers)).ack).toEqual({
+      ok: true,
+    });
 
     const closingStates = fixture.sockets.map((socket) => waitForState(socket));
-    expect(
-      await sendCommand(fixture.teacher, 'activity:close', {}),
-    ).toEqual({ ok: true });
+    expect(await sendCommand(fixture.teacher, 'activity:close', {})).toEqual({ ok: true });
     const snapshots = await Promise.all(closingStates);
     const closedStudent = snapshots[1];
 
@@ -754,23 +702,19 @@ describe('answer:submit 題組（US5；FR-007；AC-003-07、22–25）', () => {
         ])
       ).ack,
     ).toEqual({ ok: true });
-    expect(
-      (await submitWithState(fixture, fixture.studentTwo, 2, ['二組第二題']))
-        .ack,
-    ).toEqual({ ok: true });
-    expect(
-      (await submitWithState(fixture, fixture.studentOne, 2, ['一組第二題']))
-        .ack,
-    ).toEqual({ ok: true });
+    expect((await submitWithState(fixture, fixture.studentTwo, 2, ['二組第二題'])).ack).toEqual({
+      ok: true,
+    });
+    expect((await submitWithState(fixture, fixture.studentOne, 2, ['一組第二題'])).ack).toEqual({
+      ok: true,
+    });
 
     expect(
-      submissions(fixture.server.db).map(
-        ({ questionNumber, groupId, rank }) => ({
-          questionNumber,
-          groupId,
-          rank,
-        }),
-      ),
+      submissions(fixture.server.db).map(({ questionNumber, groupId, rank }) => ({
+        questionNumber,
+        groupId,
+        rank,
+      })),
     ).toEqual([
       { questionNumber: 1, groupId: 'group-1', rank: 1 },
       { questionNumber: 1, groupId: 'group-2', rank: 2 },
@@ -796,14 +740,11 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
     );
 
     await openActivity(fixture);
-    expect(
-      (await submitWithState(fixture, fixture.studentOne, 1, ['保留答案']))
-        .ack,
-    ).toEqual({ ok: true });
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['保留答案'])).ack).toEqual({
+      ok: true,
+    });
     const closingStates = fixture.sockets.map((socket) => waitForState(socket));
-    expect(
-      await sendCommand(fixture.teacher, 'activity:close', {}),
-    ).toEqual({ ok: true });
+    expect(await sendCommand(fixture.teacher, 'activity:close', {})).toEqual({ ok: true });
     await Promise.all(closingStates);
 
     before = captureState(fixture.server);
@@ -821,20 +762,11 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
   it('老師作廢成功保留 Submission 與答案，open 學生看到 voided，老師看板與進度排除該作答（FR-029、FR-030）', async () => {
     const fixture = await startFixture();
     await openActivity(fixture);
-    expect(
-      (
-        await submitWithState(fixture, fixture.studentOne, 1, [
-          '要被作廢的答案',
-        ])
-      ).ack,
-    ).toEqual({ ok: true });
-
-    const { ack, states } = await voidWithState(
-      fixture,
-      fixture.studentOne,
-      'group-1',
-      1,
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['要被作廢的答案'])).ack).toEqual(
+      { ok: true },
     );
+
+    const { ack, states } = await voidWithState(fixture, fixture.studentOne, 'group-1', 1);
     expect(ack).toEqual({ ok: true });
     expect(submissions(fixture.server.db)).toMatchObject([
       {
@@ -854,10 +786,7 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
     ]);
 
     const studentState = states[1];
-    if (
-      studentState?.role !== 'student' ||
-      studentState.phase !== 'open'
-    ) {
+    if (studentState?.role !== 'student' || studentState.phase !== 'open') {
       throw new Error('該組沒有收到 open 作廢快照');
     }
     expect(studentState.myAnswers[0]).toEqual({
@@ -871,13 +800,9 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
     if (teacherState?.role !== 'teacher') {
       throw new Error('老師沒有收到作廢快照');
     }
-    const questionOne = teacherState.board.find(
-      (question) => question.questionNumber === 1,
-    );
+    const questionOne = teacherState.board.find((question) => question.questionNumber === 1);
     expect(questionOne?.winnerGroupId).toBeNull();
-    expect(
-      questionOne?.cells.find((cell) => cell.groupId === 'group-1'),
-    ).toEqual({
+    expect(questionOne?.cells.find((cell) => cell.groupId === 'group-1')).toEqual({
       questionNumber: 1,
       groupId: 'group-1',
       groupName: '第一組',
@@ -889,11 +814,10 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
       questionNumber: 1,
       submittedGroupCount: 0,
     });
-    expect(
-      teacherState.progress.perGroup.find(
-        (entry) => entry.groupId === 'group-1',
-      ),
-    ).toEqual({ groupId: 'group-1', submittedQuestionCount: 0 });
+    expect(teacherState.progress.perGroup.find((entry) => entry.groupId === 'group-1')).toEqual({
+      groupId: 'group-1',
+      submittedQuestionCount: 0,
+    });
   });
 
   it('題號、組別、有效作答不存在或 student 冒充老師都被拒，資料與 counter 完全不變（原則 III）', async () => {
@@ -941,11 +865,7 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
       name: '第三組',
       position: 3,
     });
-    const studentThree = await connectStudent(
-      fixture.server,
-      'group-3',
-      fixture.sockets,
-    );
+    const studentThree = await connectStudent(fixture.server, 'group-3', fixture.sockets);
     fixture.sockets.push(studentThree);
     await openActivity(fixture);
 
@@ -954,26 +874,17 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
       [fixture.studentTwo, '第二組答案'],
       [studentThree, '第三組答案'],
     ] as const) {
-      expect(
-        (await submitWithState(fixture, socket, 1, [answer])).ack,
-      ).toEqual({ ok: true });
+      expect((await submitWithState(fixture, socket, 1, [answer])).ack).toEqual({ ok: true });
     }
 
-    const { ack, states } = await voidWithState(
-      fixture,
-      fixture.studentOne,
-      'group-1',
-      1,
-    );
+    const { ack, states } = await voidWithState(fixture, fixture.studentOne, 'group-1', 1);
     expect(ack).toEqual({ ok: true });
     expect(
-      submissions(fixture.server.db).map(
-        ({ groupId, rank, voidedAt }) => ({
-          groupId,
-          rank,
-          voided: voidedAt !== null,
-        }),
-      ),
+      submissions(fixture.server.db).map(({ groupId, rank, voidedAt }) => ({
+        groupId,
+        rank,
+        voided: voidedAt !== null,
+      })),
     ).toEqual([
       { groupId: 'group-1', rank: 1, voided: true },
       { groupId: 'group-2', rank: 2, voided: false },
@@ -984,21 +895,16 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
     if (teacherAfterVoid?.role !== 'teacher') {
       throw new Error('老師沒有收到作廢後看板');
     }
-    const boardAfterVoid = teacherAfterVoid.board.find(
-      (question) => question.questionNumber === 1,
-    );
+    const boardAfterVoid = teacherAfterVoid.board.find((question) => question.questionNumber === 1);
     expect(boardAfterVoid?.winnerGroupId).toBe('group-2');
-    expect(
-      boardAfterVoid?.cells.find((cell) => cell.groupId === 'group-2')?.rank,
-    ).toBe(2);
+    expect(boardAfterVoid?.cells.find((cell) => cell.groupId === 'group-2')?.rank).toBe(2);
     expect(teacherAfterVoid.progress.perQuestion[0]).toEqual({
       questionNumber: 1,
       submittedGroupCount: 2,
     });
     expect(
-      teacherAfterVoid.progress.perGroup.find(
-        (entry) => entry.groupId === 'group-1',
-      )?.submittedQuestionCount,
+      teacherAfterVoid.progress.perGroup.find((entry) => entry.groupId === 'group-1')
+        ?.submittedQuestionCount,
     ).toBe(0);
 
     const beforeDuplicate = captureState(fixture.server);
@@ -1012,21 +918,15 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
       'SUBMISSION_NOT_FOUND',
     );
 
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['第一組重新送出'])).ack).toEqual(
+      { ok: true },
+    );
     expect(
-      (
-        await submitWithState(fixture, fixture.studentOne, 1, [
-          '第一組重新送出',
-        ])
-      ).ack,
-    ).toEqual({ ok: true });
-    expect(
-      submissions(fixture.server.db).map(
-        ({ groupId, rank, voidedAt }) => ({
-          groupId,
-          rank,
-          voided: voidedAt !== null,
-        }),
-      ),
+      submissions(fixture.server.db).map(({ groupId, rank, voidedAt }) => ({
+        groupId,
+        rank,
+        voided: voidedAt !== null,
+      })),
     ).toEqual([
       { groupId: 'group-1', rank: 1, voided: true },
       { groupId: 'group-2', rank: 2, voided: false },
@@ -1060,4 +960,346 @@ describe('answer:void（US3；T026；FR-029、FR-030；AC-003-29–31）', () =>
       },
     ]);
   });
+});
+
+const FULL_GROUP_COUNT = 50;
+const FULL_QUESTION_COUNT = 20;
+
+async function connectFullRoom(
+  target: TestServer,
+): Promise<{ teacher: Socket; students: Socket[]; sockets: Socket[] }> {
+  const teacherToken = issueSession(target.db, { role: 'teacher' });
+  const teacher = target.connect({ token: teacherToken, autoConnect: false });
+  const teacherInitial = waitForState(teacher);
+  teacher.connect();
+  await teacherInitial;
+
+  const students: Socket[] = [];
+  for (let position = 1; position <= FULL_GROUP_COUNT; position += 1) {
+    const groupId = `group-${position}`;
+    insertGroup(target.db, {
+      id: groupId,
+      name: `滿場第 ${position} 組`,
+      position,
+    });
+    students.push(await connectStudent(target, groupId, [teacher, ...students]));
+  }
+  return { teacher, students, sockets: [teacher, ...students] };
+}
+
+describe('效能最佳化的滿場邊緣情境', () => {
+  it('50 組完成 20 題：1,000 筆有效紀錄、每題 rank 1–50、每組完成 20 題', async () => {
+    const target = await startTestServer();
+    server = target;
+    seedQuestions(
+      target.db,
+      Array.from({ length: FULL_QUESTION_COUNT }, (_value, index) => ({
+        number: index + 1,
+        prompt: `滿場第 ${index + 1} 題`,
+      })),
+    );
+    const room = await connectFullRoom(target);
+    const openedStates = room.sockets.map((socket) => waitForState(socket));
+    expect(await sendCommand(room.teacher, 'activity:open', {})).toEqual({
+      ok: true,
+    });
+    await Promise.all(openedStates);
+
+    for (let questionNumber = 1; questionNumber <= FULL_QUESTION_COUNT; questionNumber += 1) {
+      const acks = await Promise.all(
+        room.students.map((socket, index) =>
+          sendCommand(socket, 'answer:submit', {
+            questionNumber,
+            answers: [`第 ${questionNumber} 題第 ${index + 1} 組答案`],
+          }),
+        ),
+      );
+      expect(acks).toEqual(Array.from({ length: FULL_GROUP_COUNT }, () => ({ ok: true })));
+    }
+
+    const rows = submissions(target.db);
+    expect(rows).toHaveLength(FULL_GROUP_COUNT * FULL_QUESTION_COUNT);
+    expect(rows.filter((row) => row.voidedAt === null)).toHaveLength(
+      FULL_GROUP_COUNT * FULL_QUESTION_COUNT,
+    );
+    for (let questionNumber = 1; questionNumber <= FULL_QUESTION_COUNT; questionNumber += 1) {
+      const ranks = rows
+        .filter((row) => row.questionNumber === questionNumber)
+        .map((row) => row.rank)
+        .sort((left, right) => left - right);
+      expect(ranks).toEqual(Array.from({ length: FULL_GROUP_COUNT }, (_value, index) => index + 1));
+    }
+
+    const snapshot = createSnapshot(
+      target.db,
+      { role: 'teacher' },
+      {},
+      FIXED_NOW,
+    ) as TeacherSnapshot;
+    expect(snapshot.progress.perQuestion).toEqual(
+      Array.from({ length: FULL_QUESTION_COUNT }, (_value, index) => ({
+        questionNumber: index + 1,
+        submittedGroupCount: FULL_GROUP_COUNT,
+      })),
+    );
+    expect(
+      snapshot.progress.perGroup.every(
+        (entry) => entry.submittedQuestionCount === FULL_QUESTION_COUNT,
+      ),
+    ).toBe(true);
+
+    const groupQuestionCounts = target.db
+      .prepare(
+        `SELECT COUNT(DISTINCT question_id) AS questionCount, group_id AS groupId
+       FROM submissions
+       WHERE voided_at IS NULL
+       GROUP BY group_id
+       ORDER BY group_id`,
+      )
+      .all() as { questionCount: number; groupId: string }[];
+    expect(groupQuestionCounts).toHaveLength(FULL_GROUP_COUNT);
+    expect(groupQuestionCounts.every((entry) => entry.questionCount === FULL_QUESTION_COUNT)).toBe(
+      true,
+    );
+  }, 60_000);
+
+  it('同組連送五十次：1 成功、49 筆 ALREADY_SUBMITTED、revision 只 +1 且失敗不廣播', async () => {
+    const target = await startTestServer();
+    server = target;
+    insertGroup(target.db, { id: 'group-1', name: '連送測試組', position: 1 });
+    seedQuestions(target.db, [{ number: 1, prompt: '連送題目' }]);
+
+    const teacherToken = issueSession(target.db, { role: 'teacher' });
+    const teacher = target.connect({ token: teacherToken, autoConnect: false });
+    const teacherInitial = waitForState(teacher);
+    teacher.connect();
+    await teacherInitial;
+    const student = await connectStudent(target, 'group-1', [teacher]);
+    const openedStates = [teacher, student].map((socket) => waitForState(socket));
+    expect(await sendCommand(teacher, 'activity:open', {})).toEqual({
+      ok: true,
+    });
+    await Promise.all(openedStates);
+
+    const successStates = [teacher, student].map((socket) => waitForState(socket));
+    expect(
+      await sendCommand(student, 'answer:submit', {
+        questionNumber: 1,
+        answers: ['唯一的有效答案'],
+      }),
+    ).toEqual({ ok: true });
+    await Promise.all(successStates);
+
+    const failures = await Promise.all(
+      Array.from({ length: 49 }, (_value, index) =>
+        sendCommand(student, 'answer:submit', {
+          questionNumber: 1,
+          answers: [`重複嘗試 ${index + 1}`],
+        }),
+      ),
+    );
+    expect(failures).toEqual(
+      Array.from({ length: 49 }, () => ({
+        ok: false,
+        error: { code: 'ALREADY_SUBMITTED', message: expect.any(String) },
+      })),
+    );
+    await expect(waitForState(student, 100)).rejects.toThrow(
+      'Timed out waiting for a state snapshot',
+    );
+
+    expect(submissions(target.db)).toHaveLength(1);
+    expect(submissionAnswers(target.db)).toHaveLength(1);
+    expect(getAnswerEventCount(target.db)).toBe(1);
+    expect(groupAnswerRevisions(target)).toEqual([{ groupId: 'group-1', answerRevision: 1 }]);
+    expect(submissionAnswers(target.db)[0]?.answerText).toBe('唯一的有效答案');
+  });
+
+  it('連續十輪作廢重送：末次 rank 11、10 筆歷史、僅 1 筆有效且進度仍為 1', async () => {
+    const fixture = await startFixture([{ number: 1, prompt: '作廢重送題目' }]);
+    await openActivity(fixture);
+    expect((await submitWithState(fixture, fixture.studentOne, 1, ['第 0 輪答案'])).ack).toEqual({
+      ok: true,
+    });
+
+    for (let round = 1; round <= 10; round += 1) {
+      const voided = await voidWithState(fixture, fixture.studentOne, 'group-1', 1);
+      expect(voided.ack).toEqual({ ok: true });
+      expect(voided.states[1]).toMatchObject({
+        myAnswers: [
+          {
+            questionNumber: 1,
+            state: 'voided',
+            answers: [`第 ${round - 1} 輪答案`],
+          },
+        ],
+      });
+
+      const resubmitted = await submitWithState(fixture, fixture.studentOne, 1, [
+        `第 ${round} 輪答案`,
+      ]);
+      expect(resubmitted.ack).toEqual({ ok: true });
+      const teacherState = resubmitted.states[0] as TeacherSnapshot;
+      const question = teacherState.board[0];
+      expect(question?.winnerGroupId).toBe('group-1');
+      expect(question?.cells.find((cell) => cell.groupId === 'group-1')).toMatchObject({
+        state: 'submitted',
+        rank: round + 1,
+      });
+      expect(teacherState.progress).toEqual({
+        perQuestion: [{ questionNumber: 1, submittedGroupCount: 1 }],
+        perGroup: [
+          { groupId: 'group-1', submittedQuestionCount: 1 },
+          { groupId: 'group-2', submittedQuestionCount: 0 },
+        ],
+      });
+      expect(resubmitted.states[1]).toMatchObject({
+        myAnswers: [
+          {
+            questionNumber: 1,
+            state: 'submitted',
+            answers: [`第 ${round} 輪答案`],
+          },
+        ],
+      });
+    }
+
+    const rows = submissions(fixture.server.db);
+    expect(rows).toHaveLength(11);
+    expect(rows.map((row) => row.rank)).toEqual(
+      Array.from({ length: 11 }, (_value, index) => index + 1),
+    );
+    expect(rows.filter((row) => row.voidedAt !== null)).toHaveLength(10);
+    expect(rows.filter((row) => row.voidedAt === null)).toEqual([
+      expect.objectContaining({ rank: 11 }),
+    ]);
+  });
+});
+
+function makeLongAnswer(
+  round: number,
+  questionNumber: number,
+  groupPosition: number,
+  blankPosition: number,
+): string {
+  const prefix = `第${round}輪第${questionNumber}題第${groupPosition}組第${blankPosition}空🙂`;
+  return `${prefix}${'文'.repeat(200 - Array.from(prefix).length)}`;
+}
+
+it('多空長答案結算後仍逐格一致：20 題各 4 空、每空 200 code point（含 emoji）', async () => {
+  const questionDefinitions = Array.from({ length: FULL_QUESTION_COUNT }, (_value, index) => ({
+    number: index + 1,
+    kind: 'group' as const,
+    prompt: `長答案第 ${index + 1} 題`,
+    blanks: Array.from({ length: 4 }, (_blank, blankIndex) => ({
+      position: blankIndex + 1,
+      prefix: `（${blankIndex + 1}）`,
+      cell: `測試題${index + 1}空${blankIndex + 1}`,
+    })),
+  }));
+  const fixture = await startFixture(questionDefinitions);
+  await openActivity(fixture);
+
+  for (let questionNumber = 1; questionNumber <= FULL_QUESTION_COUNT; questionNumber += 1) {
+    const { ack } = await submitWithState(
+      fixture,
+      fixture.studentOne,
+      questionNumber,
+      Array.from({ length: 4 }, (_value, blankIndex) =>
+        makeLongAnswer(1, questionNumber, 1, blankIndex + 1),
+      ),
+    );
+    expect(ack).toEqual({ ok: true });
+  }
+
+  expect(submissions(fixture.server.db)).toHaveLength(20);
+  expect(submissionAnswers(fixture.server.db)).toHaveLength(80);
+  const openGroupTwo = createSnapshot(
+    fixture.server.db,
+    { role: 'student', groupId: 'group-2' },
+    {},
+    FIXED_NOW,
+  );
+  expect(JSON.stringify(openGroupTwo)).not.toContain(makeLongAnswer(1, 1, 1, 1));
+
+  const beforeRejected = createSnapshot(
+    fixture.server.db,
+    { role: 'student', groupId: 'group-1' },
+    {},
+    FIXED_NOW,
+  );
+  const rejected = await sendCommand(fixture.studentOne, 'answer:submit', {
+    questionNumber: 1,
+    answers: [
+      makeLongAnswer(1, 1, 1, 1),
+      makeLongAnswer(1, 1, 1, 2),
+      '文'.repeat(200) + '🙂',
+      makeLongAnswer(1, 1, 1, 4),
+    ],
+  });
+  expect(rejected).toEqual({
+    ok: false,
+    error: { code: 'ANSWER_TOO_LONG', message: expect.any(String) },
+  });
+  expect(
+    createSnapshot(fixture.server.db, { role: 'student', groupId: 'group-1' }, {}, FIXED_NOW),
+  ).toEqual(beforeRejected);
+
+  const activity = getActivity(fixture.server.db);
+  if (!activity) throw new Error('找不到活動');
+  updateActivity(fixture.server.db, {
+    ...activity,
+    phase: 'closed',
+    revision: activity.revision + 1,
+  });
+
+  const teacherSnapshot = createSnapshot(
+    fixture.server.db,
+    { role: 'teacher' },
+    {},
+    FIXED_NOW,
+  ) as TeacherSnapshot;
+  for (const question of teacherSnapshot.board) {
+    expect(question.cells).toHaveLength(2);
+    expect(question.cells[0]).toMatchObject({
+      groupId: 'group-1',
+      state: 'submitted',
+      rank: 1,
+      answers: Array.from({ length: 4 }, (_value, blankIndex) =>
+        makeLongAnswer(1, question.questionNumber, 1, blankIndex + 1),
+      ),
+    });
+    expect(question.cells[1]).toMatchObject({
+      groupId: 'group-2',
+      state: 'not_submitted',
+      answers: [],
+      rank: null,
+    });
+  }
+
+  const closedSnapshot = createSnapshot(
+    fixture.server.db,
+    { role: 'student', groupId: 'group-1' },
+    {},
+    FIXED_NOW,
+  ) as StudentClosedSnapshot;
+  for (const [index, question] of closedSnapshot.myAnswers.entries()) {
+    expect(question).toEqual({
+      questionNumber: index + 1,
+      state: 'submitted',
+      answers: Array.from({ length: 4 }, (_value, blankIndex) =>
+        makeLongAnswer(1, index + 1, 1, blankIndex + 1),
+      ),
+      rank: 1,
+    });
+  }
+  for (const result of closedSnapshot.results) {
+    expect(result.winner).toEqual({
+      groupId: 'group-1',
+      groupName: '第一組',
+      answers: Array.from({ length: 4 }, (_value, blankIndex) =>
+        makeLongAnswer(1, result.questionNumber, 1, blankIndex + 1),
+      ),
+    });
+  }
 });

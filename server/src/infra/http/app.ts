@@ -1,22 +1,11 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import express, {
-  type Express,
-  type NextFunction,
-  type Request,
-  type Response,
-} from 'express';
+import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import type { DatabaseSync } from 'node:sqlite';
 import { ERROR_MESSAGES, type ErrorCode } from '@classroom/shared';
-import {
-  createImportService,
-  type ImportService,
-} from '../../app/importService.js';
-import {
-  exportGuidedNotes,
-  exportResultCsv,
-} from '../../app/exportCommands.js';
+import { createImportService, type ImportService } from '../../app/importService.js';
+import { exportGuidedNotes, exportResultCsv } from '../../app/exportCommands.js';
 import { createAuthRouter } from './authRoutes.js';
 import { createQuestionRouter } from './questionRoutes.js';
 import { createExportRouter } from './exportRoutes.js';
@@ -44,9 +33,7 @@ export type HttpAppOptions = {
     | undefined;
 };
 
-const DEFAULT_WEB_DIST = fileURLToPath(
-  new URL('../../../../web/dist/', import.meta.url),
-);
+const DEFAULT_WEB_DIST = fileURLToPath(new URL('../../../../web/dist/', import.meta.url));
 
 function errorBody(code: ErrorCode): {
   error: { code: ErrorCode; message: string };
@@ -86,15 +73,13 @@ export function createApp(options: HttpAppOptions): Express {
   app.use(
     createAuthRouter({
       database: options.database,
-      getTeacherPassword: () =>
-        app.locals.teacherPassword as string | undefined,
+      getTeacherPassword: () => app.locals.teacherPassword as string | undefined,
     }),
   );
 
   // 002 匯入路由：只讀取不寫入；raw body 中介層只掛在上傳路徑，
   // 不影響其他 API 的 express.json。
-  const importService =
-    options.importService ?? createImportService({ db: options.database });
+  const importService = options.importService ?? createImportService({ db: options.database });
   app.use(createQuestionRouter({ database: options.database, importService }));
 
   // 004 匯出入口：只在 activity closed 且匯入過學習單後提供。
@@ -110,40 +95,37 @@ export function createApp(options: HttpAppOptions): Express {
 
   // A missing development build must not prevent server startup.
   if (existsSync(webDistPath)) {
-    app.use(express.static(webDistPath));
+    // webDistPath 通常指向 repo 內的 build 輸出，整套目錄由部署流程控制。
+    // 若 repo 放在隱藏目錄（例如工具的 worktree），絕對路徑含 a dot-file
+    // segment；只對這個明確的靜態根目錄放行，client fallback 才能運作。
+    app.use(express.static(webDistPath, { dotfiles: 'allow', index: false }));
   }
 
   // Client-side routes such as /teacher and /student load index.html. This
   // fallback deliberately excludes API paths.
   app.use((request: Request, response: Response, next: NextFunction) => {
-    if (
-      request.method !== 'GET' ||
-      isApiRequest(request) ||
-      !existsSync(indexPath)
-    ) {
+    if (request.method !== 'GET' || isApiRequest(request) || !existsSync(indexPath)) {
       next();
       return;
     }
 
-    response.sendFile(indexPath, (error: unknown) => {
+    response.sendFile(indexPath, { dotfiles: 'allow' }, (error: unknown) => {
       if (error) {
         next(error);
       }
     });
   });
 
-  app.use(
-    (error: unknown, _request: Request, response: Response, next: NextFunction) => {
-      if (isJsonParseError(error)) {
-        response.status(400).json(errorBody('INVALID_INPUT'));
-        return;
-      }
+  app.use((error: unknown, _request: Request, response: Response, next: NextFunction) => {
+    if (isJsonParseError(error)) {
+      response.status(400).json(errorBody('INVALID_INPUT'));
+      return;
+    }
 
-      // No other web errors exist in this phase; let Express use its default
-      // handler rather than inventing an error code outside the contracts.
-      next(error);
-    },
-  );
+    // No other web errors exist in this phase; let Express use its default
+    // handler rather than inventing an error code outside the contracts.
+    next(error);
+  });
 
   return app;
 }

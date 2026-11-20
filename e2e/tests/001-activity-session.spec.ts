@@ -1,3 +1,5 @@
+import { io as createSocketIOClient, type Socket } from 'socket.io-client';
+import type { Snapshot } from '@classroom/shared';
 import { expect, test } from '@playwright/test';
 import { importQuestions } from './helpers.js';
 
@@ -31,43 +33,25 @@ test('老師開啟後三個畫面顯示搶答中，結束後顯示已結束', as
 
     await expect(teacherPage.getByLabel('新增組別名稱')).toBeVisible();
     await teacherPage.getByLabel('新增組別名稱').fill('第一組');
-    await teacherPage
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
-    await expect(
-      teacherPage.getByRole('list', { name: '組別清單' }),
-    ).toContainText('第一組');
+    await teacherPage.getByRole('button', { name: '新增組別', exact: true }).click();
+    await expect(teacherPage.getByRole('list', { name: '組別清單' })).toContainText('第一組');
 
     await teacherPage.getByLabel('新增組別名稱').fill('第二組');
-    await teacherPage
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
-    await expect(
-      teacherPage.getByRole('list', { name: '組別清單' }),
-    ).toContainText('第二組');
+    await teacherPage.getByRole('button', { name: '新增組別', exact: true }).click();
+    await expect(teacherPage.getByRole('list', { name: '組別清單' })).toContainText('第二組');
 
     await teacherPage.getByLabel('新增組別名稱').fill('第三組');
-    await teacherPage
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
-    await expect(
-      teacherPage.getByRole('list', { name: '組別清單' }),
-    ).toContainText('第三組');
+    await teacherPage.getByRole('button', { name: '新增組別', exact: true }).click();
+    await expect(teacherPage.getByRole('list', { name: '組別清單' })).toContainText('第三組');
 
     // 兩位學生各自選擇不同的組別進場。
     await studentOnePage.goto('/student');
-    await studentOnePage
-      .getByRole('button', { name: '第一組', exact: true })
-      .click();
+    await studentOnePage.getByRole('button', { name: '第一組', exact: true }).click();
     await expect(studentOnePage.getByText('目前階段：準備中')).toBeVisible();
-    await expect(
-      studentOnePage.getByText('第一組', { exact: true }),
-    ).toBeVisible();
+    await expect(studentOnePage.getByText('第一組', { exact: true })).toBeVisible();
 
     await studentTwoPage.goto('/student');
-    await studentTwoPage
-      .getByRole('button', { name: '第二組', exact: true })
-      .click();
+    await studentTwoPage.getByRole('button', { name: '第二組', exact: true }).click();
     await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
 
     // 伺服器要求先確認題目才能開啟搶答。
@@ -91,9 +75,7 @@ test('老師開啟後三個畫面顯示搶答中，結束後顯示已結束', as
   }
 });
 
-test('重新整理後學生保留組別與目前階段，老師保留登入身分', async ({
-  browser,
-}) => {
+test('重新整理後學生保留組別與目前階段，老師保留登入身分', async ({ browser }) => {
   const teacherContext = await browser.newContext();
   const studentContext = await browser.newContext();
 
@@ -103,33 +85,23 @@ test('重新整理後學生保留組別與目前階段，老師保留登入身�
     await teacherPage.goto('/teacher');
     await teacherPage.getByLabel('老師密碼').fill(requireTeacherPassword());
     await teacherPage.getByRole('button', { name: '登入', exact: true }).click();
-    await expect(
-      teacherPage.getByRole('button', { name: '開啟搶答', exact: true }),
-    ).toBeVisible();
+    await expect(teacherPage.getByRole('button', { name: '開啟搶答', exact: true })).toBeVisible();
 
     const studentPage = await studentContext.newPage();
     await studentPage.goto('/student');
-    await studentPage
-      .getByRole('button', { name: '第三組', exact: true })
-      .click();
-    await expect(
-      studentPage.getByText('第三組', { exact: true }),
-    ).toBeVisible();
+    await studentPage.getByRole('button', { name: '第三組', exact: true }).click();
+    await expect(studentPage.getByText('第三組', { exact: true })).toBeVisible();
 
     // E2E 全部測試共用同一個伺服器；上一個測試已把活動推進到 closed，
     // 而「重設活動」屬 Phase 8，因此此輪驗證已結束階段的重新整理。
     await expect(studentPage.getByText('目前階段：已結束')).toBeVisible();
 
     await studentPage.reload();
-    await expect(
-      studentPage.getByText('第三組', { exact: true }),
-    ).toBeVisible();
+    await expect(studentPage.getByText('第三組', { exact: true })).toBeVisible();
     await expect(studentPage.getByText('目前階段：已結束')).toBeVisible();
 
     await teacherPage.reload();
-    await expect(
-      teacherPage.getByRole('button', { name: '開啟搶答', exact: true }),
-    ).toBeVisible();
+    await expect(teacherPage.getByRole('button', { name: '開啟搶答', exact: true })).toBeVisible();
     await expect(teacherPage.getByLabel('老師密碼')).not.toBeVisible();
   } finally {
     await teacherContext.close();
@@ -149,9 +121,7 @@ test('重新整理後學生保留組別與目前階段，老師保留登入身�
  * - 步驟 11（重新啟動伺服器）無法在 e2e 中共用伺服器上進行，略過；
  *   持久化行為由 server restart 整合測試涵蓋。
  */
-test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束、重設', async ({
-  browser,
-}) => {
+test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束、重設', async ({ browser }) => {
   const WRONG_PASSWORD_ATTEMPT = '這不是老師密碼';
   const teacherContext = await browser.newContext();
   const studentOneContext = await browser.newContext();
@@ -175,9 +145,7 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     await expect(teacherPage.getByLabel('新增組別名稱')).toBeVisible();
 
     // 準備：共用資料庫下前一個測試已把活動推到「已結束」，先重設回準備中。
-    const phaseText = await teacherPage
-      .getByText(/^目前階段：/)
-      .textContent();
+    const phaseText = await teacherPage.getByText(/^目前階段：/).textContent();
     if (phaseText?.includes('已結束')) {
       await teacherPage.getByRole('button', { name: '重設活動' }).click();
       await teacherPage.getByRole('button', { name: '確認重設' }).click();
@@ -195,9 +163,7 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     const phaseControl = teacherPage.getByRole('region', { name: '搶答控制' });
     if ((await groupList.getByRole('listitem').count()) === 0) {
       await phaseControl.getByRole('button', { name: '開啟搶答' }).click();
-      await expect(phaseControl.getByRole('alert')).toContainText(
-        '請先建立至少一個組別',
-      );
+      await expect(phaseControl.getByRole('alert')).toContainText('請先建立至少一個組別');
       await expect(teacherPage.getByText('目前階段：準備中')).toBeVisible();
     }
 
@@ -205,14 +171,10 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     // B、C 的組別選單在 2 秒內出現兩組（AC-001-14、06）。
     const groupManager = teacherPage.getByRole('region', { name: '組別管理' });
     await groupManager.getByLabel('新增組別名稱').fill('A 組');
-    await groupManager
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
+    await groupManager.getByRole('button', { name: '新增組別', exact: true }).click();
     await expect(groupList).toContainText('A 組');
     await groupManager.getByLabel('新增組別名稱').fill('B 組');
-    await groupManager
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
+    await groupManager.getByRole('button', { name: '新增組別', exact: true }).click();
     await expect(groupList).toContainText('B 組');
     for (const page of [studentOnePage, studentTwoPage]) {
       const picker = page.getByRole('list', { name: '可選組別' });
@@ -222,41 +184,23 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
 
     // 步驟 5：空白、重複、超過 30 字的組名各自被拒絕並說明原因（AC-001-15）。
     await groupManager.getByLabel('新增組別名稱').fill('   ');
-    await groupManager
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
+    await groupManager.getByRole('button', { name: '新增組別', exact: true }).click();
     await expect(groupManager.getByRole('alert')).toContainText('請輸入組名');
 
     await groupManager.getByLabel('新增組別名稱').fill('A 組');
-    await groupManager
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
-    await expect(groupManager.getByRole('alert')).toContainText(
-      '已經有同名的組別',
-    );
+    await groupManager.getByRole('button', { name: '新增組別', exact: true }).click();
+    await expect(groupManager.getByRole('alert')).toContainText('已經有同名的組別');
 
     await groupManager.getByLabel('新增組別名稱').fill('組'.repeat(31));
-    await groupManager
-      .getByRole('button', { name: '新增組別', exact: true })
-      .click();
-    await expect(groupManager.getByRole('alert')).toContainText(
-      '組名最多 30 個字',
-    );
+    await groupManager.getByRole('button', { name: '新增組別', exact: true }).click();
+    await expect(groupManager.getByRole('alert')).toContainText('組名最多 30 個字');
 
     // 步驟 6：B 選A 組、C 選B 組，各自顯示組名與「準備中」（AC-001-07）。
-    await studentOnePage
-      .getByRole('button', { name: 'A 組', exact: true })
-      .click();
-    await expect(
-      studentOnePage.getByText('A 組', { exact: true }),
-    ).toBeVisible();
+    await studentOnePage.getByRole('button', { name: 'A 組', exact: true }).click();
+    await expect(studentOnePage.getByText('A 組', { exact: true })).toBeVisible();
     await expect(studentOnePage.getByText('目前階段：準備中')).toBeVisible();
-    await studentTwoPage
-      .getByRole('button', { name: 'B 組', exact: true })
-      .click();
-    await expect(
-      studentTwoPage.getByText('B 組', { exact: true }),
-    ).toBeVisible();
+    await studentTwoPage.getByRole('button', { name: 'B 組', exact: true }).click();
+    await expect(studentTwoPage.getByText('B 組', { exact: true })).toBeVisible();
     await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
 
     // 002 起開啟搶答前必須先有題目；自行匯入，不依賴其他測試留下的狀態。
@@ -269,16 +213,12 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     await phaseControl.getByRole('button', { name: '開啟搶答' }).click();
     for (const page of [teacherPage, studentOnePage, studentTwoPage]) {
       await expect(page.getByText('目前階段：搶答中')).toBeVisible();
-      await expect(page.getByRole('timer')).toHaveText(
-        /^剩餘時間 00:(29|30)$/,
-      );
+      await expect(page.getByRole('timer')).toHaveText(/^剩餘時間 00:(29|30)$/);
     }
 
     // 步驟 8：B 重新整理頁面，仍是A 組、搶答中（AC-001-18）。
     await studentOnePage.reload();
-    await expect(
-      studentOnePage.getByText('A 組', { exact: true }),
-    ).toBeVisible();
+    await expect(studentOnePage.getByText('A 組', { exact: true })).toBeVisible();
     await expect(studentOnePage.getByText('目前階段：搶答中')).toBeVisible();
 
     // 步驟 9：搶答中嘗試新增組別被拒絕（AC-001-16）——
@@ -309,15 +249,124 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     }
     await expect(groupList).toContainText('A 組');
     await expect(groupList).toContainText('B 組');
-    await expect(
-      studentOnePage.getByText('A 組', { exact: true }),
-    ).toBeVisible();
-    await expect(
-      studentTwoPage.getByText('B 組', { exact: true }),
-    ).toBeVisible();
+    await expect(studentOnePage.getByText('A 組', { exact: true })).toBeVisible();
+    await expect(studentTwoPage.getByText('B 組', { exact: true })).toBeVisible();
   } finally {
     await teacherContext.close();
     await studentOneContext.close();
     await studentTwoContext.close();
+  }
+});
+
+function waitForSnapshotPhase(
+  socket: Socket,
+  phase: Snapshot['phase'],
+  timeout = 30_000,
+): Promise<Snapshot> {
+  return new Promise((resolve, reject) => {
+    const timeoutHandle = setTimeout(() => {
+      socket.off('state', onState);
+      reject(new Error(`等待 ${phase} state 超時`));
+    }, timeout);
+    function onState(snapshot: Snapshot): void {
+      if (snapshot.phase !== phase) return;
+      clearTimeout(timeoutHandle);
+      socket.off('state', onState);
+      resolve(snapshot);
+    }
+    socket.on('state', onState);
+  });
+}
+
+test('10 秒自動關閉：老師、學生、訪客與投影都收到 closed', async ({ browser, baseURL }) => {
+  test.setTimeout(45_000);
+  const teacherContext = await browser.newContext();
+  const studentContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const projectorContext = await browser.newContext();
+  let guestSocket: Socket | undefined;
+
+  try {
+    const teacherPage = await teacherContext.newPage();
+    await teacherPage.goto('/teacher');
+    await teacherPage.getByLabel('老師密碼').fill(requireTeacherPassword());
+    await teacherPage.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(teacherPage.getByRole('button', { name: '開啟搶答', exact: true })).toBeVisible();
+
+    const phaseText = await teacherPage.getByText(/^目前階段：/).textContent();
+    if (phaseText?.includes('已結束')) {
+      await teacherPage.getByRole('button', { name: '重設活動' }).click();
+      await teacherPage.getByRole('button', { name: '確認重設' }).click();
+    } else if (phaseText?.includes('搶答中')) {
+      await teacherPage.getByRole('button', { name: '結束搶答' }).click();
+      await teacherPage.getByRole('button', { name: '重設活動' }).click();
+      await teacherPage.getByRole('button', { name: '確認重設' }).click();
+    }
+    await expect(teacherPage.getByText('目前階段：準備中')).toBeVisible();
+
+    const groupManager = teacherPage.getByRole('region', { name: '組別管理' });
+    await groupManager.getByLabel('新增組別名稱').fill('十秒自動組');
+    await groupManager.getByRole('button', { name: '新增組別', exact: true }).click();
+    await expect(teacherPage.getByRole('list', { name: '組別清單' })).toContainText('十秒自動組');
+    await importQuestions(teacherPage);
+
+    const studentPage = await studentContext.newPage();
+    await studentPage.goto('/student');
+    await studentPage.getByRole('button', { name: '十秒自動組', exact: true }).click();
+    await expect(studentPage.getByText('目前階段：準備中')).toBeVisible();
+
+    const guestPage = await guestContext.newPage();
+    await guestPage.goto('/student');
+    await expect(guestPage.getByRole('heading', { name: '選擇組別' })).toBeVisible();
+    guestSocket = createSocketIOClient(baseURL ?? 'http://127.0.0.1:3100', {
+      autoConnect: false,
+      forceNew: true,
+      reconnection: false,
+      transports: ['websocket'],
+    });
+    const guestInitial = new Promise<Snapshot>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('等待 guest 首份 state 超時')), 30_000);
+      guestSocket?.once('state', (snapshot) => {
+        clearTimeout(timeout);
+        resolve(snapshot as Snapshot);
+      });
+    });
+    guestSocket.connect();
+    expect((await guestInitial).role).toBe('guest');
+
+    const projectorPage = await projectorContext.newPage();
+    await projectorPage.goto('/projector');
+    await projectorPage.getByLabel('老師密碼').fill(requireTeacherPassword());
+    await projectorPage.getByRole('button', { name: '登入', exact: true }).click();
+    await expect(projectorPage.getByRole('heading', { name: '準備中' })).toBeVisible();
+
+    const phaseControl = teacherPage.getByRole('region', { name: '搶答控制' });
+    await phaseControl.getByLabel('設定倒數').check();
+    await phaseControl.getByLabel('倒數秒數').fill('10');
+    const guestClosed = waitForSnapshotPhase(guestSocket, 'closed');
+    await phaseControl.getByRole('button', { name: '開啟搶答' }).click();
+    await expect(teacherPage.getByText('目前階段：搶答中')).toBeVisible();
+    await expect(studentPage.getByText('目前階段：搶答中')).toBeVisible();
+    await expect(projectorPage.getByRole('heading', { name: '搶答中' })).toBeVisible();
+
+    // 真瀏覽器與真計時器；比契約要求的 2 秒從寬，工具寫入慢不當成延遲失敗。
+    await expect(teacherPage.getByText('目前階段：已結束')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(studentPage.getByText('目前階段：已結束')).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(projectorPage.getByRole('heading', { name: '已結束' })).toBeVisible({
+      timeout: 15_000,
+    });
+    expect((await guestClosed).phase).toBe('closed');
+    await expect(guestPage.getByRole('heading', { name: '選擇組別' })).toBeVisible();
+  } finally {
+    guestSocket?.removeAllListeners();
+    guestSocket?.disconnect();
+    await teacherContext.close();
+    await studentContext.close();
+    await guestContext.close();
+    await projectorContext.close();
   }
 });
