@@ -144,33 +144,9 @@
   display: grid;
   justify-items: start;
   gap: 0;
-}
-
-/* 題號是這面牆上最大的字。 */
-.revealNumberValue {
-  font-family: var(--font-family-display);
+  /* Q1／Q2 是這面牆上最大的字。 */
   font-size: var(--font-size-display);
-  font-weight: 600;
   line-height: var(--line-height-display);
-}
-
-.revealNumberUnit {
-  font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
-  letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
-}
-
-/* 只給螢幕閱讀器看的「第 N 題」，畫面上不顯示。 */
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 .revealWinner {

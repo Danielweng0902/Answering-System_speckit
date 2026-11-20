@@ -1,4 +1,5 @@
 import type { StudentClosedSnapshot, StudentQuestion } from '@classroom/shared';
+import { QuestionNumber } from '../shared/QuestionNumber';
 import styles from './StudentResults.module.css';
 
 export type StudentResultsProps = {
@@ -62,7 +63,7 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                   id={`result-${question.number}-title`}
                   className={styles.questionTitle}
                 >
-                  第 {question.number} 題
+                  <QuestionNumber number={question.number} />
                 </h3>
                 {/* 內容放在同一個欄位裡：題號欄固定、內容欄自適應，
                     內容多一行（例如「本題因公平順位改判」）也不會擠到隔壁欄。 */}

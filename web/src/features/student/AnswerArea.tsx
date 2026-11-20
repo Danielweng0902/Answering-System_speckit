@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { StudentOpenAnswer, StudentOpenSnapshot, StudentQuestion } from '@classroom/shared';
 import { sendCommand } from '../../lib/socket';
+import { QuestionNumber } from '../shared/QuestionNumber';
 import { activateDraftSession, writeAnswerDrafts, type AnswerDraftMap } from './answerDrafts';
 import styles from './AnswerArea.module.css';
 
@@ -168,12 +169,8 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                 aria-labelledby={`question-${question.number}-title`}
               >
                 <h3 id={`question-${question.number}-title`} className={styles.questionTitle}>
-                  {/* 語意標籤只給螢幕閱讀器；視覺上是試卷上的大題號。 */}
-                  <span className={styles.visuallyHidden}>{`第 ${question.number} 題`}</span>
-                  <span className={styles.questionNumber} aria-hidden="true">
-                    <span className={styles.questionNumberValue}>{question.number}</span>
-                    <span className={styles.questionNumberUnit}>題</span>
-                  </span>
+                  {/* 語意標籤只給螢幕閱讀器；視覺上是 Q1／Q2。 */}
+                  <QuestionNumber number={question.number} />
                 </h3>
                 {/* 內容固定在右欄：題號欄不會被內容擠開（2026-11-19 review）。 */}
                 <div className={styles.questionBody}>
@@ -283,11 +280,27 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                     void submit(question);
                   }}
                 >
-                  {isSubmitted
-                    ? '已送出'
-                    : isSubmitting
-                      ? `送出第 ${question.number} 題中…`
-                      : `送出第 ${question.number} 題`}
+                  {/*
+                   * 可讀名稱維持中文「送出第 N 題」，視覺上是「送出 Q N」；
+                   * 已送出的狀態文字則原樣顯示（螢幕閱讀器讀「已送出」）。
+                   */}
+                  {isSubmitted ? (
+                    '已送出'
+                  ) : isSubmitting ? (
+                    <>
+                      <span className="visually-hidden">
+                        {`送出第 ${question.number} 題中…`}
+                      </span>
+                      <span aria-hidden="true">{`送出 Q${question.number} 中…`}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="visually-hidden">
+                        {`送出第 ${question.number} 題`}
+                      </span>
+                      <span aria-hidden="true">{`送出 Q${question.number}`}</span>
+                    </>
+                  )}
                 </button>
                 </div>
               </section>

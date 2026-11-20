@@ -54,6 +54,9 @@
 .questionTitle {
   grid-column: 1;
   grid-row: 1;
+  /* Q1／Q2 是這張紙上最大的字。 */
+  font-size: var(--font-size-display);
+  line-height: var(--line-height-display);
 }
 
 .questionBody {
@@ -63,39 +66,6 @@
   gap: var(--space-2);
   justify-items: stretch;
   min-width: 0;
-}
-
-/* 題號：大字襯線數字 + 小單位「題」。 */
-.questionNumber {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-0);
-}
-
-.questionNumberValue {
-  font-family: var(--font-family-display);
-  font-size: var(--font-size-display);
-  font-weight: 600;
-  line-height: var(--line-height-display);
-}
-
-.questionNumberUnit {
-  font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
-  letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
-}
-
-/* 只給螢幕閱讀器看的文字（題號的語意標籤）。 */
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 .prompt {
@@ -192,7 +162,7 @@
     gap: var(--space-2) var(--space-3);
   }
 
-  .questionNumberValue {
+  .questionTitle {
     font-size: var(--font-size-headline);
   }
 

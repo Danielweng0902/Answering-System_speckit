@@ -1,0 +1,23 @@
+/*
+ * 題號標記：視覺上是 Q1／Q2（拉丁襯線），螢幕閱讀器讀「第 1 題」。
+ * Q 比數字小一級、同一個襯線字型，看起來像編輯體的題號（2026-11-19 review：
+ * 題號改成國際通用的 Q 編號，與「去掉中華感」一致）。
+ */
+.mark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.04em;
+  font-family: var(--font-family-display);
+  font-variant-numeric: lining-nums;
+  white-space: nowrap;
+}
+
+.q {
+  font-size: 0.58em;
+  font-weight: 400;
+}
+
+.n {
+  font-size: 1em;
+  font-weight: 600;
+}

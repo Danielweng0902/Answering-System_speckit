@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AnswerBoardCell, TeacherSnapshot } from '@classroom/shared';
 import { sendCommand } from '../../lib/socket';
+import { QuestionNumber } from '../shared/QuestionNumber';
 import styles from './AnswerBoard.module.css';
 
 export type AnswerBoardProps = {
@@ -131,7 +132,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                 {snapshot.board.map((question) => (
                   <tr key={question.questionNumber}>
                     <th scope="row" className={styles.questionCell}>
-                      第 {question.questionNumber} 題
+                      <QuestionNumber number={question.questionNumber} />
                     </th>
                     {question.cells.map((cell) => {
                       const key = cellKey(cell);
@@ -237,7 +238,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
             <ul className={styles.progressList} aria-label="每一題已送出的組數">
               {snapshot.progress.perQuestion.map((entry) => (
                 <li key={entry.questionNumber}>
-                  第 {entry.questionNumber} 題：
+                  {`第 ${entry.questionNumber} 題：`}
                   {entry.submittedGroupCount} 組送出
                 </li>
               ))}
