@@ -164,7 +164,7 @@ describe('005 投影看板（US3；T023）', () => {
     });
     const projectorInitial = waitForState(projector);
     projector.connect();
-    await projectorInitial;
+    const initialProjectorState = await projectorInitial;
 
     const studentToken = issueSession(target.db, {
       role: 'student',
@@ -180,14 +180,26 @@ describe('005 投影看板（US3；T023）', () => {
     // 學生送出答案 → 伺服器會用 broadcastSubmissionChanged 廣播給老師連線。
     // 這條路徑以前送「一般老師快照」給投影連線，前端因此跳回登入畫面，
     // 而且一般快照含作答資訊（FR-015／FR-022：投影連線只收投影快照）。
-    const projectorState = waitForState(projector);
+    //
+    // 2026-11-21 資安審計後：**作答事件完全不推給投影連線**（推了也沒用，
+    // 投影的 revision 不含作答次數 → 前端會因 revision 沒變而忽略），
+    // 所以改成斷言「投影不會收到任何 state」。
+    // 學生進場的 presence 廣播先落地，再開始監聽（避免把在線狀態算成作答事件）。
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    let received: Snapshot | null = null;
+    projector.on('state', (state: Snapshot) => {
+      received = state;
+    });
     const ack = await sendCommand(student, 'answer:submit', {
       questionNumber: 1,
       answers: ['答案 A'],
     });
     expect(ack).toEqual({ ok: true });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(received).toBeNull();
 
-    const state = await projectorState;
+    // 檢查投影連線手上那份快照：必須是投影快照，且不含任何作答資訊。
+    const state = initialProjectorState;
     expect(state.role).toBe('projector');
     const serialized = JSON.stringify(state);
     expect(serialized).not.toContain('"answers"');

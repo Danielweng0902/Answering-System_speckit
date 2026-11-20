@@ -133,7 +133,15 @@ export function createApp(options: HttpAppOptions): Express {
   });
 
   app.use(
-    (error: unknown, _request: Request, response: Response) => {
+    // 四個參數是 Express 辨識錯誤中介層的必要條件（少一個就會被當成一般中介層）；
+    // 第四個參數雖然不用，但必須留著。
+    (
+      error: unknown,
+      _request: Request,
+      response: Response,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _next: NextFunction,
+    ) => {
       if (isJsonParseError(error)) {
         response.status(400).json(errorBody('INVALID_INPUT'));
         return;
