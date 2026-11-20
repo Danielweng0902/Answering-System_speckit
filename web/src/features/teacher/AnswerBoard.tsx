@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import { useState } from 'react';
 import type { AnswerBoardCell, TeacherSnapshot } from '@classroom/shared';
 import { sendCommand } from '../../lib/socket';
@@ -29,6 +30,7 @@ function confirmationSignature(phase: TeacherSnapshot['phase'], cell: AnswerBoar
  * 「第 1 格」「第 2 格」等位置標示，不顯示原前綴。單題維持原樣。
  */
 function CellAnswers({ label, answers }: { label: string; answers: AnswerBoardCell['answers'] }) {
+  const { t } = useI18n();
   if (answers.length <= 1) {
     return (
       <span>
@@ -42,7 +44,7 @@ function CellAnswers({ label, answers }: { label: string; answers: AnswerBoardCe
       <span>{label}</span>
       {answers.map((answer, index) => (
         <span key={index} className={styles.blank}>
-          第 {index + 1} 格：{answer}
+          {t('board.blank', { number: index + 1, answer })}
         </span>
       ))}
     </>
@@ -56,6 +58,7 @@ function CellAnswers({ label, answers }: { label: string; answers: AnswerBoardCe
  * 作廢操作（T053）只在 open 的有效作答顯示，並經確認／取消後才送指令。
  */
 export function AnswerBoard({ snapshot }: AnswerBoardProps) {
+  const { t } = useI18n();
   const groupNames = new Map(snapshot.groups.map((group) => [group.id, group.name]));
   const [confirmingCell, setConfirmingCell] = useState<ActiveVoidConfirmation | null>(null);
   const [voidingCell, setVoidingCell] = useState<string | null>(null);
@@ -105,22 +108,22 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
   return (
     <section className={styles.board} aria-labelledby="answer-board-title">
       <h2 id="answer-board-title" className={styles.title}>
-        作答看板
+        {t('board.title')}
       </h2>
-      <p className={styles.description}>每一題、每一組的送出狀態、答案與順位；搶答中即時更新。</p>
+      <p className={styles.description}>{t('board.description')}</p>
       {snapshot.fairRankingEnabled && (
-        <p className={styles.muted}>本場使用公平順位：同批作答依已成功題數排序。</p>
+        <p className={styles.muted}>{t('board.fairNote')}</p>
       )}
 
       {snapshot.board.length === 0 ? (
-        <p className={styles.empty}>尚未匯入題目，看板會在匯入後顯示每題各組的作答狀態。</p>
+        <p className={styles.empty}>{t('board.empty')}</p>
       ) : (
         <>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th scope="col">題目</th>
+                  <th scope="col">{t('board.colQuestion')}</th>
                   {snapshot.groups.map((group) => (
                     <th key={group.id} scope="col">
                       {group.name}
@@ -150,23 +153,25 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                       return (
                         <td key={cell.groupId} className={styles.cell}>
                           {cell.state === 'not_submitted' && (
-                            <span className={styles.muted}>未送出</span>
+                            <span className={styles.muted}>{t('board.notSubmitted')}</span>
                           )}
                           {cell.state === 'submitted' && (
                             <>
-                              <CellAnswers label="已送出：" answers={cell.answers} />
+                              <CellAnswers label={t('board.submitted')} answers={cell.answers} />
                               {cell.rank !== null && (
-                                <span className={styles.muted}>第 {cell.rank} 順位</span>
+                                <span className={styles.muted}>
+                                  {t('board.rank', { rank: cell.rank })}
+                                </span>
                               )}
                               {question.settling ? (
-                                <span className={styles.muted}>判定中</span>
+                                <span className={styles.muted}>{t('board.settling')}</span>
                               ) : (
                                 question.winnerGroupId === cell.groupId && (
-                                  <span className={styles.winner}>搶答成功</span>
+                                  <span className={styles.winner}>{t('board.winner')}</span>
                                 )
                               )}
                               {question.fairnessApplied && (
-                                <span className={styles.muted}>公平順位改判</span>
+                                <span className={styles.muted}>{t('board.fairnessAdjusted')}</span>
                               )}
                               {snapshot.phase === 'open' &&
                                 (isCurrentConfirmation ? (
@@ -179,7 +184,9 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                         void confirmVoid(cell);
                                       }}
                                     >
-                                      {voidingCell === key ? '作廢中…' : '確認作廢'}
+                                      {voidingCell === key
+                                        ? t('board.voiding')
+                                        : t('board.voidConfirm')}
                                     </button>
                                     <button
                                       className={styles.voidButton}
@@ -189,7 +196,7 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                         setConfirmingCell(null);
                                       }}
                                     >
-                                      取消
+                                      {t('board.cancel')}
                                     </button>
                                   </div>
                                 ) : (
@@ -204,16 +211,18 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
                                       });
                                     }}
                                   >
-                                    作廢
+                                    {t('board.void')}
                                   </button>
                                 ))}
                             </>
                           )}
                           {cell.state === 'voided' && (
                             <>
-                              <CellAnswers label="已作廢：" answers={cell.answers} />
+                              <CellAnswers label={t('board.voided')} answers={cell.answers} />
                               {cell.rank !== null && (
-                                <span className={styles.muted}>原第 {cell.rank} 順位</span>
+                                <span className={styles.muted}>
+                                  {t('board.formerRank', { rank: cell.rank })}
+                                </span>
                               )}
                             </>
                           )}
@@ -233,21 +242,25 @@ export function AnswerBoard({ snapshot }: AnswerBoardProps) {
 
           <section className={styles.progress} aria-labelledby="answer-progress-title">
             <h3 id="answer-progress-title" className={styles.progressTitle}>
-              作答進度
+              {t('board.progressTitle')}
             </h3>
-            <ul className={styles.progressList} aria-label="每一題已送出的組數">
+            <ul className={styles.progressList} aria-label={t('board.progressListLabel')}>
               {snapshot.progress.perQuestion.map((entry) => (
                 <li key={entry.questionNumber}>
-                  {`第 ${entry.questionNumber} 題：`}
-                  {entry.submittedGroupCount} 組送出
+                  {t('board.progressEntry', {
+                    number: entry.questionNumber,
+                    count: entry.submittedGroupCount,
+                  })}
                 </li>
               ))}
             </ul>
-            <ul className={styles.progressList} aria-label="每一組已送出的題數">
+            <ul className={styles.progressList} aria-label={t('board.byGroupListLabel')}>
               {snapshot.progress.perGroup.map((entry) => (
                 <li key={entry.groupId}>
-                  {groupNames.get(entry.groupId) ?? entry.groupId}：已送出{' '}
-                  {entry.submittedQuestionCount} 題
+                  {t('board.byGroupEntry', {
+                    group: groupNames.get(entry.groupId) ?? entry.groupId,
+                    count: entry.submittedQuestionCount,
+                  })}
                 </li>
               ))}
             </ul>

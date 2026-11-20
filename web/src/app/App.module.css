@@ -14,6 +14,14 @@
   gap: var(--space-10);
 }
 
+.homeHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 /* 分塊用上下細線，不用卡片與陰影（design/DESIGN.md §5）。 */
 .card {
   padding: var(--space-6) 0;

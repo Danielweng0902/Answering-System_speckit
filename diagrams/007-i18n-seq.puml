@@ -1,0 +1,37 @@
+@startuml
+!pragma layout smetana
+title 007 介面語言切換：時序圖（開啟頁面與切換）
+
+actor 使用者
+participant 瀏覽器
+participant "語言模組" as Lang
+participant "語言提供者" as Provider
+participant "訊息表" as Messages
+participant "畫面元件" as UI
+
+使用者 -> 瀏覽器 : 開啟學生端／老師端／投影看板
+瀏覽器 -> Lang : 偵測語言()
+Lang -> Lang : 讀 localStorage（用戶選過？）
+Lang -> 瀏覽器 : navigator.languages
+Lang --> Provider : 初始語言（en* → 英文、zh* → 繁中、其他 → 繁中）
+Provider -> Messages : 載入對應語言的訊息表
+Provider -> UI : 提供 t(key, params)
+UI --> 使用者 : 以該語言顯示介面
+
+使用者 -> UI : 按「中文」或「EN」
+UI -> Provider : setLanguage(語言)
+Provider -> Lang : 儲存到 localStorage
+Provider -> Messages : 切換訊息表
+Provider -> UI : 重新渲染
+UI --> 使用者 : 介面立刻換語言
+
+使用者 -> 瀏覽器 : 重新整理
+瀏覽器 -> Lang : 讀 localStorage（繁中／英文）
+Lang --> Provider : 初始語言（沿用上次選擇）
+Provider -> UI : 以該語言顯示介面
+
+note over Lang
+  語言只影響顯示，不改變任何行為契約
+  作答流程、順位判定、寫回邏輯完全不變
+end note
+@enduml

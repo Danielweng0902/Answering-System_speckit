@@ -6,12 +6,34 @@ import {
   type StudentJoinResponse,
   type TeacherLoginResponse,
 } from '@classroom/shared';
+import { localizeErrorMessage } from './i18n/errors';
+import { getCurrentLanguage } from './i18n/language';
 import { getToken } from './session';
 
-const GENERIC_LOGIN_ERROR = '目前無法登入，請稍後再試';
-const GENERIC_JOIN_ERROR = '目前無法進場，請稍後再試';
-const GENERIC_IMPORT_ERROR = '目前無法讀取學習單，請稍後再試';
-const GENERIC_EXPORT_ERROR = '目前無法匯出結果，請稍後再試';
+/**
+ * 007 i18n：前端自己產生的錯誤（伺服器沒回應、格式不符）沒有錯誤代碼，
+ * 所以直接依語言挑一份。
+ */
+const GENERIC_ERRORS = {
+  'zh-TW': {
+    login: '目前無法登入，請稍後再試',
+    join: '目前無法進場，請稍後再試',
+    import: '目前無法讀取學習單，請稍後再試',
+    export: '目前無法匯出結果，請稍後再試',
+  },
+  en: {
+    login: 'Cannot sign in right now, please try again later',
+    join: 'Cannot join right now, please try again later',
+    import: 'Cannot read the worksheet right now, please try again later',
+    export: 'Cannot export the results right now, please try again later',
+  },
+} as const;
+
+type GenericErrorKey = keyof (typeof GENERIC_ERRORS)['zh-TW'];
+
+function genericError(key: GenericErrorKey): string {
+  return GENERIC_ERRORS[getCurrentLanguage()][key];
+}
 
 export type LoginTeacherResult =
   | { ok: true; token: string }
@@ -43,6 +65,16 @@ export type DownloadExportResult =
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/** 007 i18n：伺服器回繁體中文，英文版在客戶端翻譯（共用契約不動）。 */
+function localizeApiError(
+  error: ApiErrorResponse['error'],
+): ApiErrorResponse['error'] {
+  return {
+    code: error.code,
+    message: localizeErrorMessage(error.code, error.message),
+  };
 }
 
 function isApiErrorResponse(value: unknown): value is ApiErrorResponse {
@@ -104,7 +136,7 @@ export async function loginTeacher(
   } catch {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_LOGIN_ERROR },
+      error: { code: null, message: genericError('login') },
     };
   }
 
@@ -120,15 +152,15 @@ export async function loginTeacher(
     return {
       ok: false,
       error: isApiErrorResponse(body)
-        ? body.error
-        : { code: null, message: GENERIC_LOGIN_ERROR },
+        ? localizeApiError(body.error)
+        : { code: null, message: genericError('login') },
     };
   }
 
   if (!isTeacherLoginResponse(body)) {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_LOGIN_ERROR },
+      error: { code: null, message: genericError('login') },
     };
   }
 
@@ -148,7 +180,7 @@ export async function joinStudent(groupId: string): Promise<JoinStudentResult> {
   } catch {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_JOIN_ERROR },
+      error: { code: null, message: genericError('join') },
     };
   }
 
@@ -164,15 +196,15 @@ export async function joinStudent(groupId: string): Promise<JoinStudentResult> {
     return {
       ok: false,
       error: isApiErrorResponse(body)
-        ? body.error
-        : { code: null, message: GENERIC_JOIN_ERROR },
+        ? localizeApiError(body.error)
+        : { code: null, message: genericError('join') },
     };
   }
 
   if (!isStudentJoinResponse(body)) {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_JOIN_ERROR },
+      error: { code: null, message: genericError('join') },
     };
   }
 
@@ -189,7 +221,7 @@ async function readQuestionsImport(
   } catch {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_IMPORT_ERROR },
+      error: { code: null, message: genericError('import') },
     };
   }
 
@@ -205,15 +237,15 @@ async function readQuestionsImport(
     return {
       ok: false,
       error: isApiErrorResponse(body)
-        ? body.error
-        : { code: null, message: GENERIC_IMPORT_ERROR },
+        ? localizeApiError(body.error)
+        : { code: null, message: genericError('import') },
     };
   }
 
   if (!isImportSummary(body)) {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_IMPORT_ERROR },
+      error: { code: null, message: genericError('import') },
     };
   }
 
@@ -292,7 +324,7 @@ async function downloadExport(
   } catch {
     return {
       ok: false,
-      error: { code: null, message: GENERIC_EXPORT_ERROR },
+      error: { code: null, message: genericError('export') },
     };
   }
 
@@ -306,8 +338,8 @@ async function downloadExport(
     return {
       ok: false,
       error: isApiErrorResponse(body)
-        ? body.error
-        : { code: null, message: GENERIC_EXPORT_ERROR },
+        ? localizeApiError(body.error)
+        : { code: null, message: genericError('export') },
     };
   }
 
@@ -377,7 +409,7 @@ export async function writeBackGuidedNotes(): Promise<WriteBackResult> {
     return {
       ok: false,
       error: isApiErrorResponse(body)
-        ? body.error
+        ? localizeApiError(body.error)
         : { code: null, message: GENERIC_WRITEBACK_ERROR },
     };
   }

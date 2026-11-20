@@ -1,5 +1,6 @@
 import { ERROR_MESSAGES, type GroupSummary } from '@classroom/shared';
 import { useState } from 'react';
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import { joinStudent } from '../../lib/api';
 import { saveToken } from '../../lib/session';
 import { connectSocket } from '../../lib/socket';
@@ -12,6 +13,7 @@ export type GroupPickerProps = {
 };
 
 export function GroupPicker({ groups, sessionInvalid }: GroupPickerProps) {
+  const { t } = useI18n();
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -39,7 +41,7 @@ export function GroupPicker({ groups, sessionInvalid }: GroupPickerProps) {
   return (
     <section className={styles.card} aria-labelledby="group-picker-title">
       <h2 id="group-picker-title" className={styles.title}>
-        選擇組別
+        {t('picker.title')}
       </h2>
       {sessionInvalid && (
         <p className={styles.notice} role="alert">
@@ -53,10 +55,10 @@ export function GroupPicker({ groups, sessionInvalid }: GroupPickerProps) {
       )}
       {groups.length === 0 ? (
         <p className={styles.description} role="status">
-          老師尚未建立組別
+          {t('picker.empty')}
         </p>
       ) : (
-        <ul className={styles.list} aria-label="可選組別">
+        <ul className={styles.list} aria-label={t('picker.listLabel')}>
           {groups.map((group) => (
             <li key={group.id}>
               <button

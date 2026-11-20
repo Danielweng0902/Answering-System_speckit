@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import styles from './QuestionNumber.module.css';
 
 export type QuestionNumberProps = {
@@ -12,9 +13,12 @@ export type QuestionNumberProps = {
  * 中文說法保留在隱藏文字裡，所以語意與無障礙不受影響。
  */
 export function QuestionNumber({ number }: QuestionNumberProps) {
+  const { t } = useI18n();
   return (
     <>
-      <span className="visually-hidden">{`第 ${number} 題`}</span>
+      <span className="visually-hidden">
+        {t('question.sr', { number })}
+      </span>
       <span className={styles.mark} aria-hidden="true">
         <span className={styles.q}>Q</span>
         <span className={styles.n}>{number}</span>

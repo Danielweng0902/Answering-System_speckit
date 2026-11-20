@@ -1,0 +1,47 @@
+@startuml
+!pragma layout smetana
+title 007 介面語言切換：組件圖（概念層）
+
+actor 使用者
+component "瀏覽器語言清單\n(navigator.languages)" as Detect
+component "語言提供者\n(LanguageProvider)" as Provider
+component "訊息表\n(zh-TW / en)" as Messages
+component "語言切換器\n(右上角)" as Switch
+component "學生端畫面" as StudentUI
+component "老師端畫面" as TeacherUI
+component "投影看板畫面" as ProjectorUI
+component "API 錯誤處理\n(lib/api.ts、lib/socket.ts)" as Api
+component "伺服器錯誤代碼對照表" as Errors
+component "伺服器\n(維持回繁體中文)" as Server
+
+使用者 --> Detect : 開啟頁面
+Detect --> Provider : 判定初始語言
+使用者 --> Switch : 切換語言
+Switch --> Provider : setLanguage()
+Provider --> Messages : 取對應語言的訊息
+Provider --> StudentUI
+Provider --> TeacherUI
+Provider --> ProjectorUI
+Messages --> StudentUI
+Messages --> TeacherUI
+Messages --> ProjectorUI
+
+StudentUI --> Api : 送出／查詢
+TeacherUI --> Api
+Api --> Server : 請求（不帶語言偏好）
+Server --> Api : 繁體中文錯誤訊息 + 錯誤代碼
+Api --> Errors : 英文版依錯誤代碼對應
+Errors --> Api : 英文訊息
+Api --> StudentUI : 顯示（中文或英文）
+Api --> TeacherUI : 顯示（中文或英文）
+
+note bottom of Provider
+  選擇記在 localStorage，重新載入後保留
+  同一個瀏覽器的其他分頁跟著變（storage 事件）
+end note
+
+note bottom of Server
+  伺服器不改成多語言：共用契約 D1～D25 不動
+  錯誤訊息在客戶端翻譯，兩組系統行為一致
+end note
+@enduml

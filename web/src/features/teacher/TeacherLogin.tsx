@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import { useId, useState, type FormEvent } from 'react';
 import { loginTeacher } from '../../lib/api';
 import { saveToken } from '../../lib/session';
@@ -9,6 +10,7 @@ export type TeacherLoginProps = {
 };
 
 export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
+  const { t } = useI18n();
   const passwordId = useId();
   const errorId = useId();
   const [password, setPassword] = useState('');
@@ -41,7 +43,7 @@ export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
   return (
     <section className={styles.card} aria-labelledby="teacher-login-title">
       <h2 id="teacher-login-title" className={styles.title}>
-        老師登入
+        {t('login.title')}
       </h2>
       <form
         className={styles.form}
@@ -51,7 +53,7 @@ export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
       >
         <div className={styles.field}>
           <label className={styles.label} htmlFor={passwordId}>
-            老師密碼
+            {t('login.passwordLabel')}
           </label>
           <input
             id={passwordId}
@@ -78,7 +80,7 @@ export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
           </p>
         )}
         <button className={styles.button} type="submit" disabled={isSubmitting}>
-          {isSubmitting ? '登入中…' : '登入'}
+          {isSubmitting ? t('login.submitting') : t('login.submit')}
         </button>
       </form>
     </section>

@@ -9,6 +9,15 @@
   gap: var(--space-1);
   padding-block-end: var(--space-4);
   border-block-end: var(--border-width-thin) solid var(--color-ink);
+  align-items: start;
+}
+
+/* 標題與語言切換同一列，切換器靠右（007 i18n）。 */
+.headerTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .title {

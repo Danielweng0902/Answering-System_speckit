@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import styles from './Countdown.module.css';
 
 export type CountdownProps = {
@@ -22,6 +23,7 @@ function formatRemainingSeconds(totalSeconds: number): string {
 
 /** 顯示以伺服器時間為準的剩餘時間，避免受使用者裝置時鐘影響。 */
 export function Countdown({ serverNow, countdownEndsAt }: CountdownProps) {
+  const { t } = useI18n();
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(() => {
     if (countdownEndsAt === null) {
       return null;
@@ -64,10 +66,10 @@ export function Countdown({ serverNow, countdownEndsAt }: CountdownProps) {
       className={styles.timer}
       role="timer"
       aria-live="off"
-      aria-label={`剩餘時間 ${formattedRemainingSeconds}`}
+      aria-label={t('countdown.label', { time: formattedRemainingSeconds })}
     >
-      {/* 視覺上小字標籤＋大數字；文字內容維持「剩餘時間 00:00」不變。 */}
-      <span className={styles.timerCaption}>{'剩餘時間 '}</span>
+      {/* 視覺上小字標籤＋大數字。 */}
+      <span className={styles.timerCaption}>{`${t('countdown.caption')} `}</span>
       <span className={styles.timerValue}>{formattedRemainingSeconds}</span>
     </div>
   );
