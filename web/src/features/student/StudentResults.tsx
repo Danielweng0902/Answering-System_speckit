@@ -1,4 +1,5 @@
 import type { StudentClosedSnapshot, StudentQuestion } from '@classroom/shared';
+import { QuestionNumber } from '../shared/QuestionNumber';
 import styles from './StudentResults.module.css';
 
 export type StudentResultsProps = {
@@ -7,7 +8,7 @@ export type StudentResultsProps = {
 
 /**
  * 題組（一題多空格）的每格答案以原前綴標示、依前綴順序逐格顯示
- * （003 US5；T040；AC-003-25），例如「（1）甲、（2）乙」。
+ * （003 US5；T040；AC-003-25），例如「（1）A、（2）B」。
  * 單題維持原有的「、」合併顯示；blanks 與 answers 同為 blank position
  * 順序（T038 整合測試保證），以 index 對應，與 AnswerArea 相同慣例。
  */
@@ -62,8 +63,11 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                   id={`result-${question.number}-title`}
                   className={styles.questionTitle}
                 >
-                  第 {question.number} 題
+                  <QuestionNumber number={question.number} />
                 </h3>
+                {/* 內容放在同一個欄位裡：題號欄固定、內容欄自適應，
+                    內容多一行（例如「本題因公平順位改判」）也不會擠到隔壁欄。 */}
+                <div className={styles.questionBody}>
                 {question.prompt !== '' && (
                   <p className={styles.prompt}>{question.prompt}</p>
                 )}
@@ -106,6 +110,7 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                   myAnswer.state === 'not_submitted') && (
                   <p className={styles.mine}>本組未作答</p>
                 )}
+                </div>
               </section>
             </li>
           );

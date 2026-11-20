@@ -21,7 +21,7 @@ const socket = io({ auth: { token: sessionStorage.getItem('classroom.session.tok
 const snapshot = await new Promise((resolve) => socket.once('state', resolve));
 
 // 2. 送指令（questionNumber 是題號；answer:submit 不得帶 groupId，組別由身分決定）
-await socket.timeout(5000).emitWithAck('answer:submit', { questionNumber: 1, answers: ['甲', '乙'] });
+await socket.timeout(5000).emitWithAck('answer:submit', { questionNumber: 1, answers: ['A', 'B'] });
 await socket.timeout(5000).emitWithAck('answer:void', { groupId: snapshot.groups[0].id, questionNumber: 1 });
 
 // 4. 清理：中斷測試連線（不影響該分頁正式 UI）

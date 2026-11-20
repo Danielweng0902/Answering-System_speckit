@@ -1,15 +1,21 @@
 .section {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding-block: var(--space-6);
+  /*
+   * 只保留下框線：每個區塊都畫上下兩條線的話，區塊之間會出現兩條線
+   * （2026-11-19 review：像「雙下巴」）。第一個區塊的上線由頁首的分隔線代替。
+   */
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
 
 .title {
   margin: var(--space-0);
+  font-family: var(--font-family-utility);
   font-size: var(--font-size-large);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink);
 }
 
 .status,
@@ -17,25 +23,49 @@
   margin: var(--space-0);
 }
 
+/*
+ * .status 只留排版：**不要在這裡設 color**。
+ * 階段顏色由共用的 phaseStyle 決定（準備中＝墨灰／搶答中＝朱紅／已結束＝藍）；
+ * 本地規則與共用 class 同樣是單一 class 選擇器，誰在 bundle 裡後面誰贏，
+ * 在這裡設色會蓋掉階段色（2026-11-19 review）。
+ */
+.status {
+  font-size: var(--font-size-small);
+}
+
 .error {
-  padding: var(--space-3);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  background: var(--color-paper-raised);
   font-size: var(--font-size-small);
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
+/* 主要動作：墨黑底、方角、無陰影。 */
 .button {
-  padding: var(--space-2) var(--space-3);
-  color: var(--color-text);
-  background: var(--color-background);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-6);
+  color: var(--color-paper);
+  background: var(--color-ink);
+  border: var(--border-width-thin) solid var(--color-ink);
+  transition:
+    background var(--transition-quick),
+    color var(--transition-quick);
+}
+
+.button:hover:not(:disabled) {
+  color: var(--color-ink);
+  background: transparent;
+}
+
+.button:disabled {
+  color: var(--color-ink-muted);
+  background: transparent;
+  border-color: var(--color-rule);
 }
 
 .countdownControls,
@@ -43,7 +73,15 @@
   display: flex;
   flex-wrap: wrap;
   align-items: end;
-  gap: var(--space-3);
+  gap: var(--space-4);
+}
+
+/* 公平順位那一列：勾選框與右側說明垂直置中對齊（2026-11-19 review）。 */
+.fairRankingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
 }
 
 .field {
@@ -55,29 +93,41 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  font-size: var(--font-size-small);
+  line-height: 1.4;
+}
+
+.checkboxLabel input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
 }
 
 .label {
-  font-size: var(--font-size-small);
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
 }
 
 .input {
   padding: var(--space-2) var(--space-3);
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+  border: var(--border-width-thin) solid var(--color-ink);
+  border-radius: 0;
 }
 
 .confirmation {
   display: grid;
   justify-items: start;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-4);
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  background: var(--color-paper-raised);
 }
 
 .confirmationText {
   margin: var(--space-0);
+  font-size: var(--font-size-small);
 }

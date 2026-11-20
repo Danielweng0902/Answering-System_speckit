@@ -146,10 +146,20 @@ describe('StudentPage', () => {
     fetchMock.mockReset();
   });
 
-  const phaseCases: Array<{ phase: Phase; label: string; heading: string }> = [
-    { phase: 'preparing', label: '準備中', heading: '等待老師開啟搶答' },
-    { phase: 'open', label: '搶答中', heading: '作答區' },
-    { phase: 'closed', label: '已結束', heading: '結果區' },
+  const phaseCases: Array<{
+    phase: Phase;
+    label: string;
+    heading: string;
+    phaseClass: string;
+  }> = [
+    {
+      phase: 'preparing',
+      label: '準備中',
+      heading: '等待老師開啟搶答',
+      phaseClass: 'preparing',
+    },
+    { phase: 'open', label: '搶答中', heading: '作答區', phaseClass: 'open' },
+    { phase: 'closed', label: '已結束', heading: '結果區', phaseClass: 'closed' },
   ];
 
   it.each(phaseCases)('$phase 顯示正確畫面、目前階段與組名', (testCase) => {
@@ -160,6 +170,10 @@ describe('StudentPage', () => {
     expect(
       screen.getByRole('heading', { name: testCase.heading }),
     ).toBeDefined();
+    // 階段文字必須帶上共用的階段色 class（三個畫面一致，2026-11-19 review）。
+    expect(
+      screen.getByText(`目前階段：${testCase.label}`).className,
+    ).toMatch(new RegExp(`_${testCase.phaseClass}_`));
   });
 
   it('搶答中有倒數結束時間時顯示倒數', () => {

@@ -201,23 +201,23 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
       await expect(teacherPage.getByText('目前階段：準備中')).toBeVisible();
     }
 
-    // 步驟 4：新增「甲組」「乙組」（用新組名避免與前面的測試重複），
+    // 步驟 4：新增「A 組」「B 組」（用新組名避免與前面的測試重複），
     // B、C 的組別選單在 2 秒內出現兩組（AC-001-14、06）。
     const groupManager = teacherPage.getByRole('region', { name: '組別管理' });
-    await groupManager.getByLabel('新增組別名稱').fill('甲組');
+    await groupManager.getByLabel('新增組別名稱').fill('A 組');
     await groupManager
       .getByRole('button', { name: '新增組別', exact: true })
       .click();
-    await expect(groupList).toContainText('甲組');
-    await groupManager.getByLabel('新增組別名稱').fill('乙組');
+    await expect(groupList).toContainText('A 組');
+    await groupManager.getByLabel('新增組別名稱').fill('B 組');
     await groupManager
       .getByRole('button', { name: '新增組別', exact: true })
       .click();
-    await expect(groupList).toContainText('乙組');
+    await expect(groupList).toContainText('B 組');
     for (const page of [studentOnePage, studentTwoPage]) {
       const picker = page.getByRole('list', { name: '可選組別' });
-      await expect(picker).toContainText('甲組');
-      await expect(picker).toContainText('乙組');
+      await expect(picker).toContainText('A 組');
+      await expect(picker).toContainText('B 組');
     }
 
     // 步驟 5：空白、重複、超過 30 字的組名各自被拒絕並說明原因（AC-001-15）。
@@ -227,7 +227,7 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
       .click();
     await expect(groupManager.getByRole('alert')).toContainText('請輸入組名');
 
-    await groupManager.getByLabel('新增組別名稱').fill('甲組');
+    await groupManager.getByLabel('新增組別名稱').fill('A 組');
     await groupManager
       .getByRole('button', { name: '新增組別', exact: true })
       .click();
@@ -243,19 +243,19 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
       '組名最多 30 個字',
     );
 
-    // 步驟 6：B 選甲組、C 選乙組，各自顯示組名與「準備中」（AC-001-07）。
+    // 步驟 6：B 選A 組、C 選B 組，各自顯示組名與「準備中」（AC-001-07）。
     await studentOnePage
-      .getByRole('button', { name: '甲組', exact: true })
+      .getByRole('button', { name: 'A 組', exact: true })
       .click();
     await expect(
-      studentOnePage.getByText('甲組', { exact: true }),
+      studentOnePage.getByText('A 組', { exact: true }),
     ).toBeVisible();
     await expect(studentOnePage.getByText('目前階段：準備中')).toBeVisible();
     await studentTwoPage
-      .getByRole('button', { name: '乙組', exact: true })
+      .getByRole('button', { name: 'B 組', exact: true })
       .click();
     await expect(
-      studentTwoPage.getByText('乙組', { exact: true }),
+      studentTwoPage.getByText('B 組', { exact: true }),
     ).toBeVisible();
     await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
 
@@ -274,10 +274,10 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
       );
     }
 
-    // 步驟 8：B 重新整理頁面，仍是甲組、搶答中（AC-001-18）。
+    // 步驟 8：B 重新整理頁面，仍是A 組、搶答中（AC-001-18）。
     await studentOnePage.reload();
     await expect(
-      studentOnePage.getByText('甲組', { exact: true }),
+      studentOnePage.getByText('A 組', { exact: true }),
     ).toBeVisible();
     await expect(studentOnePage.getByText('目前階段：搶答中')).toBeVisible();
 
@@ -287,8 +287,8 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     await expect(
       groupManager.getByRole('button', { name: '新增組別', exact: true }),
     ).toBeDisabled();
-    await expect(groupList).toContainText('甲組');
-    await expect(groupList).toContainText('乙組');
+    await expect(groupList).toContainText('A 組');
+    await expect(groupList).toContainText('B 組');
 
     // 步驟 10（調整）：quickstart 為等 30 秒倒數歸零自動結束；為節省 e2e
     // 時間改由老師按「結束搶答」，三個畫面 2 秒內顯示已結束（AC-001-02、24）。
@@ -307,13 +307,13 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     for (const page of [teacherPage, studentOnePage, studentTwoPage]) {
       await expect(page.getByText('目前階段：準備中')).toBeVisible();
     }
-    await expect(groupList).toContainText('甲組');
-    await expect(groupList).toContainText('乙組');
+    await expect(groupList).toContainText('A 組');
+    await expect(groupList).toContainText('B 組');
     await expect(
-      studentOnePage.getByText('甲組', { exact: true }),
+      studentOnePage.getByText('A 組', { exact: true }),
     ).toBeVisible();
     await expect(
-      studentTwoPage.getByText('乙組', { exact: true }),
+      studentTwoPage.getByText('B 組', { exact: true }),
     ).toBeVisible();
   } finally {
     await teacherContext.close();

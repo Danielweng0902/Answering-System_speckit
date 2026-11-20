@@ -4,6 +4,7 @@ import type { UseSnapshotResult } from '../../lib/useSnapshot';
 import { clearToken } from '../../lib/session';
 import { connectSocket, sendCommand } from '../../lib/socket';
 import { Countdown } from '../shared/Countdown';
+import { phaseStyleClass } from '../shared/phaseStyle';
 import { AnswerArea } from './AnswerArea';
 import { GroupPicker } from './GroupPicker';
 import { StudentResults } from './StudentResults';
@@ -17,10 +18,7 @@ const PHASE_LABELS: Record<Phase, string> = {
 
 export type StudentPageProps = UseSnapshotResult;
 
-export function StudentPage({
-  snapshot,
-  sessionInvalid,
-}: StudentPageProps) {
+export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
   const [isLeaving, setIsLeaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -51,17 +49,12 @@ export function StudentPage({
             學生端
           </h1>
         </header>
-        <GroupPicker
-          groups={snapshot?.groups ?? []}
-          sessionInvalid={sessionInvalid}
-        />
+        <GroupPicker groups={snapshot?.groups ?? []} sessionInvalid={sessionInvalid} />
       </section>
     );
   }
 
-  const myGroup = snapshot.groups.find(
-    (group) => group.id === snapshot.myGroupId,
-  );
+  const myGroup = snapshot.groups.find((group) => group.id === snapshot.myGroupId);
 
   return (
     <section className={styles.page} aria-labelledby="student-page-title">
@@ -69,11 +62,14 @@ export function StudentPage({
         <h1 id="student-page-title" className={styles.title}>
           學生端
         </h1>
-        <p className={styles.status}>
+        <p className={styles.groupStatus}>
           目前組別：<strong>{myGroup?.name ?? '未知組別'}</strong>
         </p>
-        <p className={styles.status}>
-          目前階段：{PHASE_LABELS[snapshot.phase]}
+        {/* 文字維持單一節點，螢幕閱讀器與測試讀到的都是「目前階段：搶答中」。 */}
+        <p
+          className={`${styles.phaseStatus} ${phaseStyleClass(snapshot.phase)}`}
+        >
+          {`目前階段：${PHASE_LABELS[snapshot.phase]}`}
         </p>
       </header>
 
@@ -84,10 +80,7 @@ export function StudentPage({
       )}
 
       {snapshot.phase === 'open' && (
-        <Countdown
-          serverNow={snapshot.serverNow}
-          countdownEndsAt={snapshot.countdownEndsAt}
-        />
+        <Countdown serverNow={snapshot.serverNow} countdownEndsAt={snapshot.countdownEndsAt} />
       )}
 
       {snapshot.phase === 'preparing' && (
@@ -111,22 +104,12 @@ type PreparingViewProps = {
 
 function PreparingView({ isLeaving, onLeave }: PreparingViewProps) {
   return (
-    <section
-      className={styles.phaseCard}
-      aria-labelledby="student-preparing-title"
-    >
+    <section className={styles.phaseCard} aria-labelledby="student-preparing-title">
       <h2 id="student-preparing-title" className={styles.phaseTitle}>
         等待老師開啟搶答
       </h2>
-      <p className={styles.description}>
-        請留在這個畫面，老師開始後會自動更新。
-      </p>
-      <button
-        className={styles.button}
-        type="button"
-        disabled={isLeaving}
-        onClick={onLeave}
-      >
+      <p className={styles.description}>請留在這個畫面，老師開始後會自動更新。</p>
+      <button className={styles.button} type="button" disabled={isLeaving} onClick={onLeave}>
         更換組別
       </button>
     </section>

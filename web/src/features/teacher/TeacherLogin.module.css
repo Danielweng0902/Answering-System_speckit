@@ -1,15 +1,15 @@
 .card {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding-block: var(--space-6);
+  border-block: var(--border-width-thin) solid var(--color-rule);
+  max-width: 24rem;
 }
 
 .title {
   margin: var(--space-0);
-  font-size: var(--font-size-large);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
 }
 
 .form {
@@ -23,30 +23,46 @@
 }
 
 .label {
-  font-size: var(--font-size-small);
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
 }
 
 .input {
   padding: var(--space-2) var(--space-3);
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+  border: var(--border-width-thin) solid var(--color-ink);
+  border-radius: 0;
 }
 
 .button {
   justify-self: start;
-  padding: var(--space-2) var(--space-4);
-  color: var(--color-text);
-  background: var(--color-background);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-8);
+  color: var(--color-paper);
+  background: var(--color-ink);
+  border: var(--border-width-thin) solid var(--color-ink);
+  transition:
+    background var(--transition-quick),
+    color var(--transition-quick);
+}
+
+.button:hover:not(:disabled) {
+  color: var(--color-ink);
+  background: transparent;
+}
+
+.button:disabled {
+  color: var(--color-ink-muted);
+  background: transparent;
+  border-color: var(--color-rule);
 }
 
 .error {
   margin: var(--space-0);
-  padding: var(--space-3);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  background: var(--color-paper-raised);
   font-size: var(--font-size-small);
 }

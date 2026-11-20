@@ -165,14 +165,14 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
       questionId: 'q-2',
       groupId: 'group-1',
       rank: 1,
-      answers: ['甲', '乙'],
+      answers: ['A', 'B'],
     });
 
     const targets = await resolveGuidedNotesTargets(database);
 
     expect(targets?.writes).toEqual([
-      { cell: 'G7', content: '（1）甲' },
-      { cell: 'G8', content: '（2）乙' },
+      { cell: 'G7', content: '（1）A' },
+      { cell: 'G8', content: '（2）B' },
     ]);
   });
 
@@ -192,8 +192,8 @@ describe('006 寫回線上 Google 試算表（US1）', () => {
     expect(requests[0]?.spreadsheetId).toBe('sheet-id-123');
     expect(requests[0]?.sheetName).toBe('學習單');
     expect(requests[0]?.updates).toEqual([
-      { cell: 'H5', value: '甲答案' },
-      { cell: 'H6', value: '乙答案' },
+      { cell: 'H5', value: '答案 A' },
+      { cell: 'H6', value: '答案 B' },
     ]);
   });
 

@@ -85,7 +85,7 @@ export async function seedOfficialGroupLinkStructure(
     groupId: 'group-1',
     rank: 1,
     receivedAt: '2026-11-17T09:30:00.000Z',
-    answers: overrides.submissionAnswers ?? ['甲答案', '乙答案'],
+    answers: overrides.submissionAnswers ?? ['答案 A', '答案 B'],
   });
 }
 

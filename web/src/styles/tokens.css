@@ -1,25 +1,69 @@
-/* 暫定，待 design/DESIGN.md 定案。 */
+/*
+ * 設計 token（正本：design/DESIGN.md，2026-11-19 v1.0）。
+ *
+ * 視覺概念：整個系統是一份「會即時更新的試卷」——紙、墨、朱紅、藍四色，
+ * 髮絲細線分隔，方角無陰影，襯線字體做大字與數字。
+ * 改這裡等於改全站外觀；不要在個別模組寫死顏色或圓角。
+ */
 :root {
   color-scheme: light;
 
-  /* 色彩 */
-  --color-background: #f7f7f8;
-  --color-surface: #ffffff;
-  --color-text: #2c3033;
-  --color-text-muted: #5f656b;
-  --color-border: #d7dade;
-  --color-focus: #69717a;
+  /* 色彩：紙與墨 */
+  --color-paper: #f2eee3;
+  --color-paper-raised: #f8f5ec;
+  --color-ink: #16130e;
+  --color-ink-muted: #6a6154;
+  --color-rule: #c9c2b0;
+  --color-vermilion: #bf3b2b;
+  --color-indigo: #1f3a93;
 
-  /* 字體 */
+  /*
+   * 階段語意色（design/DESIGN.md §3 的階段對照表）：
+   * 準備中＝墨灰、搶答中＝朱紅（此刻正在發生）、已結束＝藍（已完成）。
+   * 三個畫面（老師端、學生端、投影看板）都用這組語意色。
+   */
+  --phase-preparing: var(--color-ink-muted);
+  --phase-open: var(--color-vermilion);
+  --phase-closed: var(--color-indigo);
+
+  /* 舊名稱保留對應，讓各模組不必同時改寫 */
+  --color-background: var(--color-paper);
+  --color-surface: var(--color-paper-raised);
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-ink-muted);
+  --color-border: var(--color-rule);
+  --color-focus: var(--color-ink);
+
+  /*
+   * 字體：拉丁襯線（數字、英文、Q1 這類標記）＋ 中文黑體，**逐字 fallback 混排**。
+   * 襯線字沒有中文字，所以中文會自動落到後面的黑體 → 數字與英文有襯線的
+   * 編輯感、中文是乾淨的黑體，不會出現明體／宋體那種「中文報紙」的味道
+   * （2026-11-19 review：要去掉中華感，但保留紙與細線的骨架）。
+   */
+  --font-family-display:
+    'Iowan Old Style', 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman',
+    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-family-base:
-    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-size-small: 0.875rem;
+    'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', 'Heiti TC', 'Helvetica Neue', Arial,
+    system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-family-utility: var(--font-family-base);
+  /* 只有純拉丁的小標才拉字距。 */
+  --letter-spacing-latin: 0.16em;
+
+  --font-size-caption: 0.75rem;
+  --font-size-small: 0.8125rem;
   --font-size-base: 1rem;
-  --font-size-large: 1.25rem;
-  /* 005 投影看板：教室後排也要看得清楚的大字。 */
-  --font-size-headline: 2rem;
-  --font-size-display: 3rem;
+  --font-size-large: 1.125rem;
+  --font-size-question: 1.375rem;
+  --font-size-headline: 1.75rem;
+  --font-size-display: 2.75rem;
+  /* 題號、倒數、組別名：試卷上最大的字 */
+  --font-size-mega: 4.5rem;
   --line-height-base: 1.5;
+  --line-height-question: 1.6;
+  --line-height-display: 1.1;
+  /* 欄標字距：中文幾乎不拉，拉開就會變成中文印刷的排法。 */
+  --letter-spacing-utility: 0.02em;
 
   /* 間距 */
   --space-0: 0;
@@ -29,12 +73,24 @@
   --space-4: 1rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --space-10: 3rem;
+  --space-12: 4rem;
 
   /* 結構 */
   --page-min-height: 100vh;
   --content-max-width: 72rem;
-  --radius-medium: 0.375rem;
-  --border-width-thin: 0.0625rem;
-  --focus-outline-width: 0.125rem;
-  --focus-outline-offset: 0.125rem;
+  /* 學生端試卷的閱讀寬度 */
+  --sheet-max-width: 46rem;
+  /* 投影看板 */
+  --board-max-width: 100rem;
+
+  /* 線與角：方角、無陰影是硬規定 */
+  --border-width-thin: 1px;
+  --border-width-strong: 2px;
+  --radius-medium: 0;
+  --focus-outline-width: 2px;
+  --focus-outline-offset: 2px;
+
+  /* 動態：只留狀態轉換，且尊重 prefers-reduced-motion */
+  --transition-quick: 140ms ease-out;
 }

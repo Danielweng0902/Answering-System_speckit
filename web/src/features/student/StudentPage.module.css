@@ -1,50 +1,108 @@
+/* 學生端＝一張試卷：報頭在上、作答區在下，欄寬固定在一張紙的閱讀寬度。 */
 .page {
   display: grid;
   gap: var(--space-6);
+  max-width: var(--sheet-max-width);
+  margin-inline: auto;
 }
 
-.header,
-.phaseCard {
+.header {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-1);
+  padding-block-end: var(--space-4);
+  border-block-end: var(--border-width-thin) solid var(--color-ink);
 }
 
 .title,
-.status,
+.groupStatus,
+.phaseStatus,
 .phaseTitle,
 .description,
 .notice {
   margin: var(--space-0);
 }
 
-.title,
-.phaseTitle {
-  font-size: var(--font-size-large);
+/* 「學生端」是報頭小標，不是頁面主標。 */
+.title {
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
 }
 
+/* 組別這行是次要資訊，用墨灰。 */
+.groupStatus {
+  font-size: var(--font-size-small);
+  color: var(--color-ink-muted);
+}
+
+/*
+ * 階段這行只留排版，**不要設 color**：階段顏色由共用的 phaseStyle 決定，
+ * 在這裡設色會蓋掉它（與老師端同一個規則，2026-11-19 review）。
+ */
+.phaseStatus {
+  font-size: var(--font-size-small);
+}
+
+/* 組別名是這張試卷上最大的字。 */
+.groupStatus strong {
+  display: block;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-display);
+  font-weight: 600;
+  line-height: var(--line-height-display);
+  color: var(--color-ink);
+}
+
+/* 階段顏色由共用的 phaseStyle 提供（準備中＝墨灰／搶答中＝朱紅／已結束＝藍）。 */
+
 .phaseCard {
+  display: grid;
   justify-items: start;
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  border-block: var(--border-width-thin) solid var(--color-rule);
+}
+
+.phaseTitle {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
+  font-weight: 600;
 }
 
 .description {
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
 }
 
 .notice {
-  padding: var(--space-3);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  background: var(--color-paper-raised);
   font-size: var(--font-size-small);
 }
 
 .button {
-  padding: var(--space-2) var(--space-4);
-  color: var(--color-text);
-  background: var(--color-background);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-6);
+  color: var(--color-ink);
+  background: transparent;
+  border: var(--border-width-thin) solid var(--color-ink);
+  transition:
+    background var(--transition-quick),
+    color var(--transition-quick);
+}
+
+.button:hover:not(:disabled) {
+  color: var(--color-paper);
+  background: var(--color-ink);
+}
+
+.button:disabled {
+  color: var(--color-ink-muted);
+  border-color: var(--color-rule);
+}
+
+@media (max-width: 30rem) {
+  .status strong {
+    font-size: var(--font-size-headline);
+  }
 }

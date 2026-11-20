@@ -47,8 +47,8 @@ describe('006 寫回前的版面比對與自動對位（2026-11-19 review / T029
 
     expect(result).toEqual({ ok: true, writtenCells: 2, remapped: false });
     expect(requests[0]?.updates).toEqual([
-      { cell: 'H5', value: '甲答案' },
-      { cell: 'H6', value: '乙答案' },
+      { cell: 'H5', value: '答案 A' },
+      { cell: 'H6', value: '答案 B' },
     ]);
   });
 
@@ -67,8 +67,8 @@ describe('006 寫回前的版面比對與自動對位（2026-11-19 review / T029
 
     expect(result).toEqual({ ok: true, writtenCells: 2, remapped: true });
     expect(requests[0]?.updates).toEqual([
-      { cell: 'H6', value: '甲答案' },
-      { cell: 'H7', value: '乙答案' },
+      { cell: 'H6', value: '答案 A' },
+      { cell: 'H7', value: '答案 B' },
     ]);
   });
 
@@ -162,7 +162,7 @@ describe('006 寫回前的版面比對與自動對位（2026-11-19 review / T029
     database = openDatabase(':memory:');
     // 直接給一筆答案數對不上的作答（正常流程不會產生，防守用）。
     await seedOfficialGroupLinkStructure(database, {
-      submissionAnswers: ['甲', '乙', '丙'],
+      submissionAnswers: ['A', 'B', 'C'],
     });
     const { writer, requests } = recordingWriter();
 

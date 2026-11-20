@@ -5,10 +5,6 @@
 
 .results {
   gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
 }
 
 .title,
@@ -24,31 +20,52 @@
 }
 
 .title {
-  font-size: var(--font-size-large);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
 }
 
-.description,
-.prompt {
-  color: var(--color-text-muted);
+.description {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-small);
 }
 
 .questions {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-0);
   padding: var(--space-0);
+  border-block-start: var(--border-width-thin) solid var(--color-ink);
   list-style: none;
 }
 
 .question {
-  justify-items: start;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  grid-template-columns: 3.5rem minmax(0, 1fr);
+  gap: var(--space-1) var(--space-4);
+  padding-block: var(--space-5);
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
+  align-items: start;
 }
 
+/* 題號欄固定一欄，內容全部在右邊那一欄（內容多幾行也不會擠到隔壁欄）。 */
 .questionTitle {
-  font-size: var(--font-size-base);
+  grid-column: 1;
+  grid-row: 1;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-headline);
+  line-height: var(--line-height-display);
+}
+
+.questionBody {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.prompt {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
+  line-height: var(--line-height-question);
 }
 
 .noAnswer,
@@ -58,13 +75,34 @@
 }
 
 .noAnswer {
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
 }
 
 .winner {
-  font-size: var(--font-size-base);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-large);
+  color: var(--color-vermilion);
+}
+
+.answers {
+  color: var(--color-indigo);
 }
 
 .mine {
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
+}
+
+@media (max-width: 30rem) {
+  .question {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .questionTitle {
+    font-size: var(--font-size-headline);
+  }
+
+  .prompt {
+    font-size: var(--font-size-large);
+  }
 }

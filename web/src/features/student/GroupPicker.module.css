@@ -1,10 +1,8 @@
 .card {
   display: grid;
   gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--color-surface);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding-block: var(--space-6);
+  border-block: var(--border-width-thin) solid var(--color-rule);
 }
 
 .title,
@@ -14,32 +12,44 @@
 }
 
 .title {
-  font-size: var(--font-size-large);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
 }
 
 .description {
-  color: var(--color-text-muted);
+  color: var(--color-ink-muted);
 }
 
 .notice {
-  padding: var(--space-3);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  padding: var(--space-3) var(--space-4);
+  border-inline-start: var(--border-width-strong) solid var(--color-vermilion);
+  background: var(--color-paper-raised);
   font-size: var(--font-size-small);
 }
 
 .list {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-0);
   margin: var(--space-0);
   padding: var(--space-0);
   list-style: none;
+  border-block-start: var(--border-width-thin) solid var(--color-rule);
 }
 
 .button {
-  padding: var(--space-3) var(--space-4);
-  color: var(--color-text);
-  background: var(--color-background);
-  border: var(--border-width-thin) solid var(--color-border);
-  border-radius: var(--radius-medium);
+  display: block;
+  width: 100%;
+  padding: var(--space-4) var(--space-4);
+  color: var(--color-ink);
+  background: transparent;
+  border: 0;
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-question);
+  text-align: start;
+  transition: background var(--transition-quick);
+}
+
+.button:hover {
+  background: var(--color-paper-raised);
 }

@@ -78,8 +78,8 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     await resetToPreparing(teacherPage);
 
     const suffix = String(Date.now()).slice(-6);
-    const firstGroup = `公平甲組${suffix}`;
-    const secondGroup = `公平乙組${suffix}`;
+    const firstGroup = `公平A 組${suffix}`;
+    const secondGroup = `公平B 組${suffix}`;
     await addGroup(teacherPage, firstGroup);
     await addGroup(teacherPage, secondGroup);
     await importGroupQuestions(teacherPage);
@@ -118,17 +118,50 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     // 02 的第 1 題是題組（兩個空格），整題填完才能送出。
     await questionOne
       .getByLabel('第 1 題（1）答案', { exact: true })
-      .fill('甲答案一');
+      .fill('答案 A1');
     await questionOne
       .getByLabel('第 1 題（2）答案', { exact: true })
-      .fill('甲答案二');
+      .fill('答案 A2');
     await questionOne.getByRole('button', { name: '送出第 1 題', exact: true }).click();
     await expect(
-      questionOne.getByText('本組已送出：甲答案一、甲答案二', { exact: true }),
+      questionOne.getByText('本組已送出：答案 A1、答案 A2', { exact: true }),
     ).toBeVisible({ timeout: 2_000 });
 
+    // 公平順位改判：兩組在 3 秒內都答第 2 題，成功題數較少的第二組勝出，
+    // 因此第 2 題是「改判」（2026-11-19 review：學生端結果頁的改判說明曾把
+    // 「本組順位」擠到題號欄，下面會用座標斷言守住同一欄）。
+    const questionTwoOne = studentOne.getByRole('region', {
+      name: '第 2 題',
+      exact: true,
+    });
+    const questionTwoTwo = studentTwo.getByRole('region', {
+      name: '第 2 題',
+      exact: true,
+    });
+    await questionTwoOne
+      .getByLabel('第 2 題（1）答案', { exact: true })
+      .fill('答案 A1');
+    await questionTwoOne
+      .getByLabel('第 2 題（2）答案', { exact: true })
+      .fill('答案 A2');
+    await questionTwoOne
+      .getByRole('button', { name: '送出第 2 題', exact: true })
+      .click();
+    await questionTwoTwo
+      .getByLabel('第 2 題（1）答案', { exact: true })
+      .fill('答案 B1');
+    await questionTwoTwo
+      .getByLabel('第 2 題（2）答案', { exact: true })
+      .fill('答案 B2');
+    await questionTwoTwo
+      .getByRole('button', { name: '送出第 2 題', exact: true })
+      .click();
+    await expect(
+      questionTwoOne.getByText('本組已送出：答案 A1、答案 A2', { exact: true }),
+    ).toBeVisible();
+
     // 投影頁在搶答中不得出現任何答案或作答狀態（FR-015、SC-004）。
-    await expect(projectorPage.getByText('甲答案一')).toHaveCount(0);
+    await expect(projectorPage.getByText('答案 A1')).toHaveCount(0);
     await expect(projectorPage.getByText('搶答結果')).toHaveCount(0);
     // 學生送出答案後，投影頁仍要停留在看板：廣播路徑以前送「一般老師快照」
     // 給投影連線，前端看到 role 變掉就跳回登入畫面（2026-11-19 review 發現）。
@@ -150,6 +183,19 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     // 結果畫面標示本場使用公平順位。
     await expect(studentOne.getByText('本場使用公平順位')).toBeVisible();
 
+    // 改判說明出現，而且它與「本組順位」必須在同一欄（x 座標相同）——
+    // 舊的排法會讓「本組順位」被擠到題號欄（2026-11-19 review）。
+    const fairnessNote = studentOne.getByText('本題因公平順位改判');
+    await expect(fairnessNote).toBeVisible();
+    const noteBox = await fairnessNote.boundingBox();
+    const rankBox = await studentOne
+      .getByText(/本組順位：第/)
+      .first()
+      .boundingBox();
+    expect(noteBox).not.toBeNull();
+    expect(rankBox).not.toBeNull();
+    expect(Math.abs((noteBox?.x ?? 0) - (rankBox?.x ?? 0))).toBeLessThan(2);
+
     // 逐題揭曉：依題號順序，第一次只出現第 1 題。
     await teacherPage.getByRole('button', { name: '揭曉下一題', exact: true }).click();
     await expect(projectorPage.getByText('第 1 題')).toBeVisible();
@@ -162,6 +208,12 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
     await mkdir(verificationDirectory, { recursive: true });
     await projectorPage.screenshot({
       path: join(verificationDirectory, 'projector-revealed.png'),
+      fullPage: true,
+    });
+    // 學生端結果頁（含「本題因公平順位改判」那一行）：2026-11-19 review 指出
+    // 這裡曾有「本組順位」被擠到題號欄的版面問題，修完後補一張截圖當證據。
+    await studentOne.screenshot({
+      path: join(verificationDirectory, 'student-results-fairness.png'),
       fullPage: true,
     });
   } finally {

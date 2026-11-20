@@ -112,7 +112,7 @@ describe('作答的錯誤訊息與 Enter 送出（003 人工驗證建議；2026-
     render(<AnswerArea snapshot={snapshot()} />);
 
     fireEvent.change(screen.getByLabelText('第 2 題（1）答案'), {
-      target: { value: '甲' },
+      target: { value: 'A' },
     });
     fireEvent.click(screen.getByRole('button', { name: '送出第 2 題' }));
 
@@ -126,13 +126,13 @@ describe('作答的錯誤訊息與 Enter 送出（003 人工驗證建議；2026-
     render(<AnswerArea snapshot={snapshot()} />);
 
     const input = screen.getByLabelText('第 1 題答案');
-    fireEvent.change(input, { target: { value: '甲答案' } });
+    fireEvent.change(input, { target: { value: '答案 A' } });
     pressEnter(input);
 
     await waitFor(() => {
       expect(sendCommand).toHaveBeenCalledWith('answer:submit', {
         questionNumber: 1,
-        answers: ['甲答案'],
+        answers: ['答案 A'],
       });
     });
   });
@@ -141,7 +141,7 @@ describe('作答的錯誤訊息與 Enter 送出（003 人工驗證建議；2026-
     render(<AnswerArea snapshot={snapshot()} />);
 
     const input = screen.getByLabelText('第 1 題答案');
-    fireEvent.change(input, { target: { value: '甲答案' } });
+    fireEvent.change(input, { target: { value: '答案 A' } });
 
     // isComposing：正在用輸入法組字。
     pressEnter(input, { isComposing: true });
@@ -156,7 +156,7 @@ describe('作答的錯誤訊息與 Enter 送出（003 人工驗證建議；2026-
 
     const first = screen.getByLabelText('第 2 題（1）答案');
     const second = screen.getByLabelText('第 2 題（2）答案');
-    fireEvent.change(first, { target: { value: '甲' } });
+    fireEvent.change(first, { target: { value: 'A' } });
     pressEnter(first);
 
     await waitFor(() => {
@@ -180,8 +180,9 @@ describe('作答的錯誤訊息與 Enter 送出（003 人工驗證建議；2026-
     render(<AnswerArea snapshot={snapshot()} />);
 
     const input = screen.getByLabelText('第 1 題答案');
-    fireEvent.change(input, { target: { value: '甲答案' } });
+    fireEvent.change(input, { target: { value: '答案 A' } });
 
-    expect(screen.getByText('3／200')).toBeDefined();
+    // 「答案 A」是 4 個字（含半形空白）。
+    expect(screen.getByText('4／200')).toBeDefined();
   });
 });

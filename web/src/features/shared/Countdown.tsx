@@ -8,10 +8,7 @@ export type CountdownProps = {
   countdownEndsAt: string | null;
 };
 
-function calculateRemainingSeconds(
-  clockOffsetMs: number,
-  countdownEndsAt: string,
-): number {
+function calculateRemainingSeconds(clockOffsetMs: number, countdownEndsAt: string): number {
   const correctedNowMs = Date.now() + clockOffsetMs;
   const remainingMs = Date.parse(countdownEndsAt) - correctedNowMs;
   return Math.max(0, Math.ceil(remainingMs / 1000));
@@ -20,10 +17,7 @@ function calculateRemainingSeconds(
 function formatRemainingSeconds(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(
-    2,
-    '0',
-  )}`;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 /** 顯示以伺服器時間為準的剩餘時間，避免受使用者裝置時鐘影響。 */
@@ -46,9 +40,7 @@ export function Countdown({ serverNow, countdownEndsAt }: CountdownProps) {
     // 收到新快照時重新計算與伺服器的時間差（FR-024）。
     const clockOffsetMs = Date.parse(serverNow) - Date.now();
     const updateRemainingSeconds = () => {
-      setRemainingSeconds(
-        calculateRemainingSeconds(clockOffsetMs, countdownEndsAt),
-      );
+      setRemainingSeconds(calculateRemainingSeconds(clockOffsetMs, countdownEndsAt));
     };
 
     // 不在 effect 本體同步 setState；第一次更新排在下一個 tick。
@@ -74,7 +66,9 @@ export function Countdown({ serverNow, countdownEndsAt }: CountdownProps) {
       aria-live="off"
       aria-label={`剩餘時間 ${formattedRemainingSeconds}`}
     >
-      {`剩餘時間 ${formattedRemainingSeconds}`}
+      {/* 視覺上小字標籤＋大數字；文字內容維持「剩餘時間 00:00」不變。 */}
+      <span className={styles.timerCaption}>{'剩餘時間 '}</span>
+      <span className={styles.timerValue}>{formattedRemainingSeconds}</span>
     </div>
   );
 }

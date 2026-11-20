@@ -1,4 +1,5 @@
 import type { QuestionKind, QuestionSummary } from '@classroom/shared';
+import { QuestionNumber } from '../shared/QuestionNumber';
 import styles from './QuestionList.module.css';
 
 export type QuestionListProps = {
@@ -21,7 +22,9 @@ export function QuestionList({ questions }: QuestionListProps) {
         <ol className={styles.list} aria-label="已匯入題目">
           {questions.map((question) => (
             <li className={styles.question} key={question.number}>
-              <strong>{`第 ${question.number} 題`}</strong>
+              <strong>
+                <QuestionNumber number={question.number} />
+              </strong>
               <span className={styles.meta}>
                 {`${QUESTION_KIND_LABELS[question.kind]}，${question.blankCount} 個空格`}
               </span>

@@ -95,8 +95,8 @@ describe('answer:submit 可見範圍（US2；AC-003-09–12、SC-002）', () => 
   it('作答事件只送老師與送出組，其他組與 guest 的封包數與 revision 不改變', async () => {
     const target = await startTestServer();
     server = target;
-    insertGroup(target.db, { id: 'group-a', name: '甲組', position: 1 });
-    insertGroup(target.db, { id: 'group-b', name: '乙組', position: 2 });
+    insertGroup(target.db, { id: 'group-a', name: 'A 組', position: 1 });
+    insertGroup(target.db, { id: 'group-b', name: 'B 組', position: 2 });
     seedQuestions(target.db, [{ number: 1, prompt: '第一題題目' }]);
 
     const teacher = target.connect({
@@ -173,7 +173,7 @@ describe('answer:submit 可見範圍（US2；AC-003-09–12、SC-002）', () => 
     ]);
     expect(await sendCommand(studentA, 'answer:submit', {
       questionNumber: 1,
-      answers: ['甲組秘密答案'],
+      answers: ['A 組秘密答案'],
     })).toEqual({ ok: true });
     await expectedDirected;
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -206,7 +206,7 @@ describe('answer:submit 可見範圍（US2；AC-003-09–12、SC-002）', () => 
     ]);
     const bAck: Ack = await sendCommand(studentB, 'answer:submit', {
       questionNumber: 1,
-      answers: ['乙組自己的答案'],
+      answers: ['B 組自己的答案'],
     });
     expect(bAck).toEqual({ ok: true });
     expect(bAck).not.toHaveProperty('rank');
@@ -226,10 +226,10 @@ describe('answer:submit 可見範圍（US2；AC-003-09–12、SC-002）', () => 
       {
         questionNumber: 1,
         state: 'submitted',
-        answers: ['乙組自己的答案'],
+        answers: ['B 組自己的答案'],
       },
     ]);
-    expect(JSON.stringify(bSnapshot)).not.toContain('甲組秘密答案');
+    expect(JSON.stringify(bSnapshot)).not.toContain('A 組秘密答案');
     expectNoRankKey(bSnapshot);
     expect(bSnapshot).not.toHaveProperty('board');
     expect(bSnapshot).not.toHaveProperty('progress');
@@ -246,7 +246,7 @@ describe('answer:submit 可見範圍（US2；AC-003-09–12、SC-002）', () => 
     expect(
       await sendCommand(studentB, 'answer:submit', {
         questionNumber: 2,
-        answers: ['企圖代替甲組'],
+        answers: ['企圖代替A 組'],
         groupId: 'group-a',
       }),
     ).toMatchObject({ ok: false, error: { code: 'INVALID_INPUT' } });
@@ -274,8 +274,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
   it('送出後老師快照即時更新 board 與 progress，closed 維持結束內容；學生與 guest 快照沒有 board/progress', async () => {
     const target = await startTestServer();
     server = target;
-    insertGroup(target.db, { id: 'group-a', name: '甲組', position: 1 });
-    insertGroup(target.db, { id: 'group-b', name: '乙組', position: 2 });
+    insertGroup(target.db, { id: 'group-a', name: 'A 組', position: 1 });
+    insertGroup(target.db, { id: 'group-b', name: 'B 組', position: 2 });
     seedQuestions(target.db, [
       {
         number: 1,
@@ -343,8 +343,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
         settling: false,
         fairnessApplied: false,
         cells: [
-          notSubmittedCell(1, 'group-a', '甲組'),
-          notSubmittedCell(1, 'group-b', '乙組'),
+          notSubmittedCell(1, 'group-a', 'A 組'),
+          notSubmittedCell(1, 'group-b', 'B 組'),
         ],
       },
       {
@@ -353,8 +353,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
         settling: false,
         fairnessApplied: false,
         cells: [
-          notSubmittedCell(2, 'group-a', '甲組'),
-          notSubmittedCell(2, 'group-b', '乙組'),
+          notSubmittedCell(2, 'group-a', 'A 組'),
+          notSubmittedCell(2, 'group-b', 'B 組'),
         ],
       },
     ]);
@@ -375,13 +375,13 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       expect(snapshot).not.toHaveProperty('progress');
     }
 
-    // 甲組送出第 1 題（兩空格）：waitForState 的 2 秒逾時即 SC-003／FR-021
+    // A 組送出第 1 題（兩空格）：waitForState 的 2 秒逾時即 SC-003／FR-021
     // 的即時更新驗證；answers 依 blank position 排列（AC-003-25 老師側）。
     const afterA = waitForState(teacher);
     expect(
       await sendCommand(studentA, 'answer:submit', {
         questionNumber: 1,
-        answers: ['甲組第一格', '甲組第二格'],
+        answers: ['A 組第一格', 'A 組第二格'],
       }),
     ).toEqual({ ok: true });
     const teacherAfterA = await afterA;
@@ -396,12 +396,12 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
           {
             questionNumber: 1,
             groupId: 'group-a',
-            groupName: '甲組',
+            groupName: 'A 組',
             state: 'submitted',
-            answers: ['甲組第一格', '甲組第二格'],
+            answers: ['A 組第一格', 'A 組第二格'],
             rank: 1,
           },
-          notSubmittedCell(1, 'group-b', '乙組'),
+          notSubmittedCell(1, 'group-b', 'B 組'),
         ],
       },
       {
@@ -410,8 +410,8 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
         settling: false,
         fairnessApplied: false,
         cells: [
-          notSubmittedCell(2, 'group-a', '甲組'),
-          notSubmittedCell(2, 'group-b', '乙組'),
+          notSubmittedCell(2, 'group-a', 'A 組'),
+          notSubmittedCell(2, 'group-b', 'B 組'),
         ],
       },
     ];
@@ -427,12 +427,12 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
       ],
     });
 
-    // 乙組送出第 1 題：rank 2、winner 仍是甲組（decideWinner 取最小有效 rank）。
+    // B 組送出第 1 題：rank 2、winner 仍是A 組（decideWinner 取最小有效 rank）。
     const afterBFirst = waitForState(teacher);
     expect(
       await sendCommand(studentB, 'answer:submit', {
         questionNumber: 1,
-        answers: ['乙組第一格', '乙組第二格'],
+        answers: ['B 組第一格', 'B 組第二格'],
       }),
     ).toEqual({ ok: true });
     const teacherAfterBFirst = await afterBFirst;
@@ -448,9 +448,9 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
           {
             questionNumber: 1,
             groupId: 'group-b',
-            groupName: '乙組',
+            groupName: 'B 組',
             state: 'submitted',
-            answers: ['乙組第一格', '乙組第二格'],
+            answers: ['B 組第一格', 'B 組第二格'],
             rank: 2,
           },
         ],
@@ -459,12 +459,12 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
     ];
     expect(teacherAfterBFirst.board).toEqual(expectedAfterBFirst);
 
-    // 乙組再送第 2 題：各題 rank 獨立（rank 1），progress 每組題數更新。
+    // B 組再送第 2 題：各題 rank 獨立（rank 1），progress 每組題數更新。
     const afterBSecond = waitForState(teacher);
     expect(
       await sendCommand(studentB, 'answer:submit', {
         questionNumber: 2,
-        answers: ['乙組第二題答案'],
+        answers: ['B 組第二題答案'],
       }),
     ).toEqual({ ok: true });
     const teacherAfterBSecond = await afterBSecond;
@@ -477,13 +477,13 @@ describe('老師看板與進度（US3；T027；AC-003-13–16、FR-019–FR-022�
         settling: false,
         fairnessApplied: false,
         cells: [
-          notSubmittedCell(2, 'group-a', '甲組'),
+          notSubmittedCell(2, 'group-a', 'A 組'),
           {
             questionNumber: 2,
             groupId: 'group-b',
-            groupName: '乙組',
+            groupName: 'B 組',
             state: 'submitted',
-            answers: ['乙組第二題答案'],
+            answers: ['B 組第二題答案'],
             rank: 1,
           },
         ],
@@ -528,8 +528,8 @@ describe('answer:void 可見範圍（US3；T026；FR-030；SC-002）', () => {
   it('作廢只送老師與該組；其他組與 guest 封包數為 0，兩個 counter 各 +1 而 activity.revision 不變', async () => {
     const target = await startTestServer();
     server = target;
-    insertGroup(target.db, { id: 'group-a', name: '甲組', position: 1 });
-    insertGroup(target.db, { id: 'group-b', name: '乙組', position: 2 });
+    insertGroup(target.db, { id: 'group-a', name: 'A 組', position: 1 });
+    insertGroup(target.db, { id: 'group-b', name: 'B 組', position: 2 });
     seedQuestions(target.db, [{ number: 1, prompt: '第一題題目' }]);
 
     const teacher = target.connect({
@@ -569,7 +569,7 @@ describe('answer:void 可見範圍（US3；T026；FR-030；SC-002）', () => {
     expect(
       await sendCommand(studentA, 'answer:submit', {
         questionNumber: 1,
-        answers: ['甲組將被作廢的答案'],
+        answers: ['A 組將被作廢的答案'],
       }),
     ).toEqual({ ok: true });
     await afterSubmit;
@@ -618,13 +618,13 @@ describe('answer:void 可見範圍（US3；T026；FR-030；SC-002）', () => {
     expect(activity(target).revision).toBe(baseActivity.revision);
 
     const aVoided = aPackets.latest;
-    if (!aVoided) throw new Error('甲組沒有收到作廢快照');
+    if (!aVoided) throw new Error('A 組沒有收到作廢快照');
     expectStudentSnapshotIsOpen(aVoided);
     expect(aVoided.myAnswers).toEqual([
       {
         questionNumber: 1,
         state: 'voided',
-        answers: ['甲組將被作廢的答案'],
+        answers: ['A 組將被作廢的答案'],
       },
     ]);
   });

@@ -12,11 +12,12 @@ html {
 body {
   min-height: var(--page-min-height);
   margin: var(--space-0);
-  background: var(--color-background);
-  color: var(--color-text);
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-family-base);
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -32,7 +33,7 @@ textarea {
  */
 input[type='checkbox'],
 input[type='radio'] {
-  accent-color: var(--color-focus);
+  accent-color: var(--color-vermilion);
 }
 
 #root,
@@ -41,6 +42,58 @@ input[type='radio'] {
 }
 
 :focus-visible {
-  outline: var(--focus-outline-width) solid var(--color-focus);
+  outline: var(--focus-outline-width) solid var(--color-ink);
   outline-offset: var(--focus-outline-offset);
+}
+
+/* 選取文字也要像「被畫上來的」，不要預設藍底。 */
+::selection {
+  background: var(--color-vermilion);
+  color: var(--color-paper);
+}
+
+/*
+ * 規則線是這個設計的骨架：共用一份細線樣式，避免各模組各寫各的。
+ */
+.hairline-top {
+  border-block-start: var(--border-width-thin) solid var(--color-rule);
+}
+
+.hairline-bottom {
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
+}
+
+/* 只給螢幕閱讀器看的文字（視覺上不出現，但可讀）。 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 欄標：小字、墨灰。中文不拉字距（拉了就有中文印刷的味道）。 */
+.utility-caption {
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-utility);
+  color: var(--color-ink-muted);
+}
+
+/* 純拉丁的小標（Q1、PROJECTOR 這類）才拉字距。 */
+.utility-caption--latin {
+  letter-spacing: var(--letter-spacing-latin);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

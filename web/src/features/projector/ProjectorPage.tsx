@@ -1,6 +1,8 @@
 import type { Phase, ProjectorSnapshot, Snapshot } from '@classroom/shared';
 import { Link } from 'react-router';
 import { Countdown } from '../shared/Countdown';
+import { phaseStyleClass } from '../shared/phaseStyle';
+import { QuestionNumber } from '../shared/QuestionNumber';
 import { TeacherLogin } from '../teacher/TeacherLogin';
 import styles from './ProjectorPage.module.css';
 
@@ -21,7 +23,6 @@ export type ProjectorPageProps = {
  * （搶答中只有階段、倒數與各組是否在線）；這裡只負責把內容大字呈現。
  */
 export function ProjectorPage({ snapshot }: ProjectorPageProps) {
-
   if (snapshot === null) {
     return (
       <section className={styles.page} aria-labelledby="projector-title">
@@ -57,7 +58,10 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
   return (
     <section className={styles.page} aria-labelledby="projector-title">
       <header className={styles.header}>
-        <h1 id="projector-title" className={styles.title}>
+        <h1
+          id="projector-title"
+          className={`${styles.title} ${phaseStyleClass(projector.phase)}`}
+        >
           {PHASE_LABELS[projector.phase]}
         </h1>
         <p className={styles.rule}>
@@ -66,17 +70,11 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
       </header>
 
       {projector.phase === 'open' && projector.countdownEndsAt !== null && (
-        <Countdown
-          serverNow={projector.serverNow}
-          countdownEndsAt={projector.countdownEndsAt}
-        />
+        <Countdown serverNow={projector.serverNow} countdownEndsAt={projector.countdownEndsAt} />
       )}
 
       {projector.phase !== 'closed' && (
-        <section
-          className={styles.groupSection}
-          aria-labelledby="projector-groups-title"
-        >
+        <section className={styles.groupSection} aria-labelledby="projector-groups-title">
           <h2 id="projector-groups-title" className={styles.sectionTitle}>
             組別在線狀態
           </h2>
@@ -84,9 +82,7 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
             {projector.groupStatus.map((group) => (
               <li key={group.id} className={styles.groupItem}>
                 <span className={styles.groupName}>{group.name}</span>
-                <span
-                  className={group.online ? styles.online : styles.offline}
-                >
+                <span className={group.online ? styles.online : styles.offline}>
                   {group.online ? '在線' : '離線'}
                 </span>
               </li>
@@ -96,10 +92,7 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
       )}
 
       {projector.phase === 'closed' && (
-        <section
-          className={styles.revealSection}
-          aria-labelledby="projector-reveal-title"
-        >
+        <section className={styles.revealSection} aria-labelledby="projector-reveal-title">
           <h2 id="projector-reveal-title" className={styles.sectionTitle}>
             搶答結果
           </h2>
@@ -110,27 +103,26 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
               {projector.reveal.questions.map((entry) => (
                 <li key={entry.questionNumber} className={styles.revealItem}>
                   <span className={styles.revealNumber}>
-                    {`第 ${entry.questionNumber} 題`}
+                    <QuestionNumber number={entry.questionNumber} />
                   </span>
-                  <span className={styles.revealWinner}>
-                    {entry.winnerGroupName === null
-                      ? '無人作答'
-                      : entry.winnerGroupName}
+                  <span
+                    className={
+                      entry.winnerGroupName === null
+                        ? `${styles.revealWinner} ${styles.revealWinnerEmpty}`
+                        : styles.revealWinner
+                    }
+                  >
+                    {entry.winnerGroupName === null ? '無人作答' : entry.winnerGroupName}
                   </span>
                   {entry.winnerAnswers.length > 0 && (
-                    <span className={styles.revealAnswers}>
-                      {entry.winnerAnswers.join('／')}
-                    </span>
+                    <span className={styles.revealAnswers}>{entry.winnerAnswers.join('／')}</span>
                   )}
                 </li>
               ))}
             </ol>
           )}
           {projector.reveal.groupWinCounts !== null && (
-            <section
-              className={styles.winCountSection}
-              aria-labelledby="projector-wincount-title"
-            >
+            <section className={styles.winCountSection} aria-labelledby="projector-wincount-title">
               <h3 id="projector-wincount-title" className={styles.sectionTitle}>
                 各組搶答成功題數
               </h3>

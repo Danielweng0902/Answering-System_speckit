@@ -45,7 +45,7 @@ npm run check     # 型別、lint 與 PlantUML 圖檔檢查
    // 學生送出答案（questionNumber 是題號；answers 每空格一個，長度需等於該題空格數）
    await socket.timeout(5000).emitWithAck('answer:submit', {
      questionNumber: 1,
-     answers: ['甲', '乙'],
+     answers: ['A', 'B'],
    });
 
    // 老師作廢某組某題（groupId 由上一步 snapshot.groups 對照）

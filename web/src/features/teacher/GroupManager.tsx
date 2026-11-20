@@ -48,10 +48,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
     setRenameName('');
   }
 
-  async function renameGroup(
-    event: FormEvent<HTMLFormElement>,
-    groupId: string,
-  ): Promise<void> {
+  async function renameGroup(event: FormEvent<HTMLFormElement>, groupId: string): Promise<void> {
     event.preventDefault();
     setErrorMessage(null);
     setIsSending(true);
@@ -97,11 +94,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
         組別管理
       </h2>
 
-      {!isPreparing && (
-        <p className={styles.explanation}>
-          組別只能在準備中新增、改名或刪除。
-        </p>
-      )}
+      {!isPreparing && <p className={styles.explanation}>組別只能在準備中新增、改名或刪除。</p>}
       {errorMessage !== null && (
         <p className={styles.error} role="alert">
           {errorMessage}
@@ -130,11 +123,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
             }}
           />
         </div>
-        <button
-          className={styles.button}
-          type="submit"
-          disabled={controlsDisabled}
-        >
+        <button className={styles.button} type="submit" disabled={controlsDisabled}>
           新增組別
         </button>
       </form>
@@ -151,7 +140,13 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
               <li className={styles.group} key={group.id}>
                 <div className={styles.groupHeader}>
                   <strong>{group.name}</strong>
-                  <span className={styles.presence}>
+                  <span
+                    className={
+                      onlineCount > 0
+                        ? `${styles.presence} ${styles.presenceOnline}`
+                        : styles.presence
+                    }
+                  >
                     {onlineCount > 0 ? `在線 ${onlineCount} 人` : '離線'}
                   </span>
                 </div>
@@ -179,11 +174,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                         }}
                       />
                     </div>
-                    <button
-                      className={styles.button}
-                      type="submit"
-                      disabled={controlsDisabled}
-                    >
+                    <button className={styles.button} type="submit" disabled={controlsDisabled}>
                       儲存
                     </button>
                     <button
