@@ -42,14 +42,24 @@
   gap: var(--space-1) var(--space-4);
   padding-block: var(--space-5);
   border-block-end: var(--border-width-thin) solid var(--color-rule);
-  justify-items: stretch;
+  align-items: start;
 }
 
+/* 題號欄固定一欄，內容全部在右邊那一欄（內容多幾行也不會擠到隔壁欄）。 */
 .questionTitle {
-  grid-row: 1 / span 5;
+  grid-column: 1;
+  grid-row: 1;
   font-family: var(--font-family-display);
   font-size: var(--font-size-headline);
   line-height: var(--line-height-display);
+}
+
+.questionBody {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
 }
 
 .prompt {

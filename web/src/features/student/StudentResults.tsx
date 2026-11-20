@@ -64,6 +64,9 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                 >
                   第 {question.number} 題
                 </h3>
+                {/* 內容放在同一個欄位裡：題號欄固定、內容欄自適應，
+                    內容多一行（例如「本題因公平順位改判」）也不會擠到隔壁欄。 */}
+                <div className={styles.questionBody}>
                 {question.prompt !== '' && (
                   <p className={styles.prompt}>{question.prompt}</p>
                 )}
@@ -106,6 +109,7 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                   myAnswer.state === 'not_submitted') && (
                   <p className={styles.mine}>本組未作答</p>
                 )}
+                </div>
               </section>
             </li>
           );

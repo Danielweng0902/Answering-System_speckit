@@ -3,7 +3,11 @@
   display: grid;
   gap: var(--space-4);
   padding-block: var(--space-6);
-  border-block: var(--border-width-thin) solid var(--color-rule);
+  /*
+   * 只保留下框線：每個區塊都畫上下兩條線的話，區塊之間會出現兩條線
+   * （2026-11-19 review：像「雙下巴」）。第一個區塊的上線由頁首的分隔線代替。
+   */
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
 
 .title,

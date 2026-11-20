@@ -175,6 +175,8 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                     <span className={styles.questionNumberUnit}>題</span>
                   </span>
                 </h3>
+                {/* 內容固定在右欄：題號欄不會被內容擠開（2026-11-19 review）。 */}
+                <div className={styles.questionBody}>
                 {question.prompt !== '' && <p className={styles.prompt}>{question.prompt}</p>}
                 {question.blanks.map((blank, index) => {
                   const answerText = answers[index] ?? '';
@@ -287,6 +289,7 @@ function AnswerAreaContent({ snapshot }: AnswerAreaProps) {
                       ? `送出第 ${question.number} 題中…`
                       : `送出第 ${question.number} 題`}
                 </button>
+                </div>
               </section>
             </li>
           );

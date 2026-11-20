@@ -35,7 +35,11 @@
   justify-items: start;
   gap: var(--space-4);
   padding-block: var(--space-6);
-  border-block: var(--border-width-thin) solid var(--color-rule);
+  /*
+   * 只保留下框線：每個區塊都畫上下兩條線的話，區塊之間會出現兩條線
+   * （2026-11-19 review：像「雙下巴」）。第一個區塊的上線由頁首的分隔線代替。
+   */
+  border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
 
 .exportTitle,
@@ -46,9 +50,10 @@
 
 .exportTitle {
   font-family: var(--font-family-utility);
-  font-size: var(--font-size-caption);
+  font-size: var(--font-size-large);
+  font-weight: 600;
   letter-spacing: var(--letter-spacing-utility);
-  color: var(--color-ink-muted);
+  color: var(--color-ink);
 }
 
 .exportActions {
@@ -58,8 +63,9 @@
 }
 
 /* 次要動作：透明底＋墨色框。 */
+/* 次要動作：四邊留白與主要動作一致（2026-11-19 review 指出這裡漏改）。 */
 .exportButton {
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   color: var(--color-ink);
   background: transparent;
   border: var(--border-width-thin) solid var(--color-ink);
