@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { normalizeRateLimitSource } from '../../src/infra/http/authRoutes.js';
 import {
   startTestServer,
   waitForState,
@@ -89,6 +90,23 @@ describe('POST /api/teacher/login', () => {
     const blocked = await login(server, TEACHER_PW);
     expect(blocked.status).toBe(429);
     await blocked.arrayBuffer();
+  });
+
+  it('速率限制的來源位址已正規化（IPv4 與 IPv6 不再是兩個 key）', () => {
+    // 2026-11-21 資安審計：原本直接用 request.ip，127.0.0.1 與 ::1 會被當成
+    // 兩個來源 → 換一種位址表示法就能完全繞過限流（實測：猜 10 次 → 429；
+    // 改用 [::1] 立刻恢復可猜）。
+    expect(normalizeRateLimitSource('127.0.0.1')).toBe('127.0.0.1');
+    expect(normalizeRateLimitSource('::ffff:127.0.0.1')).toBe('127.0.0.1');
+    expect(normalizeRateLimitSource('::1')).toBe('127.0.0.1');
+    expect(normalizeRateLimitSource('0:0:0:0:0:0:0:1')).toBe('127.0.0.1');
+    expect(normalizeRateLimitSource('2001:db8:1:2:3:4::5')).toBe(
+      '2001:db8:1:2::/64',
+    );
+    expect(normalizeRateLimitSource('2001:db8:1234:5678::9')).toBe(
+      '2001:db8:1234:5678::/64',
+    );
+    expect(normalizeRateLimitSource('unknown')).toBe('unknown');
   });
 
   it('never logs nor returns the password or token', async () => {
