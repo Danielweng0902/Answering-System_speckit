@@ -1,17 +1,26 @@
 /**
- * 負載測試共用的 HTTP 發送器（只用 node:http，無第三方相依）。
+ * 負載測試共用的 HTTP／HTTPS 發送器（只用 node:http／node:https，無第三方相依）。
  *
  * timedRequest 以單調時鐘（performance.now()）記錄每個請求的延遲，逾時採
  * 「整體 deadline」而非 socket 閒置時間：送出後 timeoutMs 內沒有完整收到
  * 回應就算逾時，並主動 destroy 請求。
  */
 import { Buffer } from 'node:buffer';
-import { request } from 'node:http';
+import { Agent as HttpAgent, request as httpRequest } from 'node:http';
+import { Agent as HttpsAgent, request as httpsRequest } from 'node:https';
 import { performance } from 'node:perf_hooks';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { URL } from 'node:url';
 
 const MAX_BODY_BYTES = 1 << 20;
+
+/** 建立與目標 protocol 相符的 agent，避免 HTTPS attach 時誤用 HTTP agent。 */
+export function createAgentForUrl(url, options = {}) {
+  const protocol = new URL(url).protocol;
+  if (protocol === 'https:') return new HttpsAgent(options);
+  if (protocol === 'http:') return new HttpAgent(options);
+  throw new Error(`client 只支援 HTTP／HTTPS：${protocol}`);
+}
 
 /**
  * 發送一次請求並記錄樣本。永遠 resolve（不 throw），結果包含：
@@ -33,6 +42,19 @@ export function timedRequest({ url, method = 'GET', headers = {}, body, agent, t
       clearTimeout(deadline);
       resolve(result);
     };
+
+    const protocol = new URL(url).protocol;
+    const request =
+      protocol === 'https:' ? httpsRequest : protocol === 'http:' ? httpRequest : null;
+    if (request === null) {
+      settle({
+        sample: { scheduledAt, completedAt: performance.now(), status: 'ok' },
+        statusCode: null,
+        error: 'network',
+        body: null,
+      });
+      return;
+    }
 
     const req = request(url, { method, headers, agent }, (response) => {
       const chunks = [];

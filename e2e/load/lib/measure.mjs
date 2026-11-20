@@ -8,8 +8,9 @@
  * - status：'ok' 只代表「未逾時」（HTTP 非 2xx、連線失敗也算完成，錯誤率由
  *   呼叫方另行統計）；'timeout' 代表在逾時上限內沒有完整回應。
  *
- * 逾時樣本計入 sampleCount 分母，並以 timeoutCount／timeoutRate 另外呈現；
- * 分位數與最大值只對未逾時（有實際延遲值）的樣本計算，空集合時回 null。
+ * 主要 p50/p95/p99/max 皆以「全部樣本」計算：逾時樣本以呼叫方提供的
+ * timeoutMs（逾時上限）作為保守下界，避免存活者偏差。completedOnly 另提供
+ * 未逾時樣本的分位數作為對照，但不作為門檻判定的主要欄位。
  */
 
 /**
@@ -26,13 +27,25 @@ export function percentile(sortedValues, p) {
   return sortedValues[clamped - 1];
 }
 
+function latencyStats(durations) {
+  return {
+    p50Ms: percentile(durations, 0.5),
+    p95Ms: percentile(durations, 0.95),
+    p99Ms: percentile(durations, 0.99),
+    maxMs: durations.length === 0 ? null : durations[durations.length - 1],
+  };
+}
+
 /**
- * 彙整樣本：{ sampleCount, successCount, timeoutCount, timeoutRate,
- * p50Ms, p95Ms, p99Ms, maxMs }。
+ * 彙整樣本。flat 的 p50/p95/p99/max 是全部樣本；completedOnly 是僅成功
+ * （未逾時）樣本的對照組。有逾時樣本時，timeoutMs 必須是正數，否則無法
+ * 可靠地將「逾時」換算成保守延遲下界。
+ *
  * 單調時間不得倒退：任何 completedAt（非 null）小於 scheduledAt 時 throw。
  */
-export function summarizeSamples(samples) {
-  const durations = [];
+export function summarizeSamples(samples, { timeoutMs } = {}) {
+  const completedDurations = [];
+  const allDurations = [];
   let timeoutCount = 0;
 
   for (const sample of samples) {
@@ -52,7 +65,11 @@ export function summarizeSamples(samples) {
     }
 
     if (status === 'timeout') {
+      if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+        throw new Error(`算出全部樣本分位數需要正數 timeoutMs，實際為 ${timeoutMs}`);
+      }
       timeoutCount += 1;
+      allDurations.push(timeoutMs);
       continue;
     }
     if (status !== 'ok') {
@@ -61,21 +78,21 @@ export function summarizeSamples(samples) {
     if (completedAt === null) {
       throw new Error(`status 'ok' 的樣本必須有完成時間（completedAt 不得為 null）`);
     }
-    durations.push(completedAt - scheduledAt);
+    const duration = completedAt - scheduledAt;
+    completedDurations.push(duration);
+    allDurations.push(duration);
   }
 
-  durations.sort((a, b) => a - b);
+  completedDurations.sort((left, right) => left - right);
+  allDurations.sort((left, right) => left - right);
 
   const sampleCount = samples.length;
-  const successCount = durations.length;
   return {
     sampleCount,
-    successCount,
+    successCount: completedDurations.length,
     timeoutCount,
     timeoutRate: sampleCount === 0 ? null : timeoutCount / sampleCount,
-    p50Ms: percentile(durations, 0.5),
-    p95Ms: percentile(durations, 0.95),
-    p99Ms: percentile(durations, 0.99),
-    maxMs: successCount === 0 ? null : durations[successCount - 1],
+    ...latencyStats(allDurations),
+    completedOnly: latencyStats(completedDurations),
   };
 }

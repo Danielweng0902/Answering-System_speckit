@@ -1,0 +1,413 @@
+{
+  "tool": "e2e/load/http.mjs",
+  "node": "v26.7.0",
+  "startedAt": "2026-11-20T20:12:17.339Z",
+  "platform": "darwin",
+  "target": {
+    "mode": "managed",
+    "url": "http://127.0.0.1:58419"
+  },
+  "config": {
+    "rates": [10, 25, 50],
+    "seconds": 10,
+    "warmupSeconds": 2,
+    "timeoutMs": 5000,
+    "students": 50,
+    "allowRemote": false
+  },
+  "statistics": {
+    "thresholdBasis": "全部樣本；逾時以 timeoutMs 作為延遲下界",
+    "completedOnly": "summary.completedOnly 另供對照，不用作門檻"
+  },
+  "scenarios": [
+    {
+      "name": "health",
+      "rate": 10,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 100,
+        "successCount": 100,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 2.1239999999997963,
+        "p95Ms": 2.562667000000147,
+        "p99Ms": 2.771958999999697,
+        "maxMs": 2.8186249999998836,
+        "completedOnly": {
+          "p50Ms": 2.1239999999997963,
+          "p95Ms": 2.562667000000147,
+          "p99Ms": 2.771958999999697,
+          "maxMs": 2.8186249999998836
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 100,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 100
+        }
+      }
+    },
+    {
+      "name": "join",
+      "rate": 10,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 100,
+        "successCount": 100,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 5.717709000000468,
+        "p95Ms": 6.67162499999904,
+        "p99Ms": 6.790291999997862,
+        "maxMs": 7.364207999999053,
+        "completedOnly": {
+          "p50Ms": 5.717709000000468,
+          "p95Ms": 6.67162499999904,
+          "p99Ms": 6.790291999997862,
+          "maxMs": 7.364207999999053
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 100,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 100
+        }
+      }
+    },
+    {
+      "name": "health-full-room",
+      "rate": 10,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 100,
+        "successCount": 100,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 15.756790999999794,
+        "p95Ms": 18.617292000002635,
+        "p99Ms": 19.44804199999635,
+        "maxMs": 20.306250000001455,
+        "completedOnly": {
+          "p50Ms": 15.756790999999794,
+          "p95Ms": 18.617292000002635,
+          "p99Ms": 19.44804199999635,
+          "maxMs": 20.306250000001455
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 100,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 100
+        }
+      },
+      "prejoin": {
+        "joined": 50,
+        "failed": 0
+      },
+      "backgroundAnswers": {
+        "counters": {
+          "total": 120,
+          "error": 0,
+          "timeout": 0,
+          "cycles": 0,
+          "commandErrorCodes": {}
+        },
+        "summary": {
+          "sampleCount": 120,
+          "successCount": 120,
+          "timeoutCount": 0,
+          "timeoutRate": 0,
+          "p50Ms": 16.661000000000058,
+          "p95Ms": 19.054917000001296,
+          "p99Ms": 19.68537500000093,
+          "maxMs": 20.433875000002445,
+          "completedOnly": {
+            "p50Ms": 16.661000000000058,
+            "p95Ms": 19.054917000001296,
+            "p99Ms": 19.68537500000093,
+            "maxMs": 20.433875000002445
+          }
+        }
+      },
+      "note": "health 探測同時以 WebSocket 老師／投影／學生連線進行 answer:submit；背景作答同速率，未用 join 冒充作答壓力"
+    },
+    {
+      "name": "health",
+      "rate": 25,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 250,
+        "successCount": 250,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 1.4537909999999101,
+        "p95Ms": 2.1571250000051805,
+        "p99Ms": 2.3388749999940046,
+        "maxMs": 3.2127500000060536,
+        "completedOnly": {
+          "p50Ms": 1.4537909999999101,
+          "p95Ms": 2.1571250000051805,
+          "p99Ms": 2.3388749999940046,
+          "maxMs": 3.2127500000060536
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 250,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 250
+        }
+      }
+    },
+    {
+      "name": "join",
+      "rate": 25,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 250,
+        "successCount": 250,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 4.693458000001556,
+        "p95Ms": 5.705041000001074,
+        "p99Ms": 6.06091600000218,
+        "maxMs": 6.230834000001778,
+        "completedOnly": {
+          "p50Ms": 4.693458000001556,
+          "p95Ms": 5.705041000001074,
+          "p99Ms": 6.06091600000218,
+          "maxMs": 6.230834000001778
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 250,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 250
+        }
+      }
+    },
+    {
+      "name": "health-full-room",
+      "rate": 25,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 250,
+        "successCount": 250,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 0.7232909999875119,
+        "p95Ms": 13.457458000004408,
+        "p99Ms": 14.026167000003625,
+        "maxMs": 17.231333999996423,
+        "completedOnly": {
+          "p50Ms": 0.7232909999875119,
+          "p95Ms": 13.457458000004408,
+          "p99Ms": 14.026167000003625,
+          "maxMs": 17.231333999996423
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 250,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 250
+        }
+      },
+      "prejoin": {
+        "joined": 50,
+        "failed": 0
+      },
+      "backgroundAnswers": {
+        "counters": {
+          "total": 300,
+          "error": 0,
+          "timeout": 0,
+          "cycles": 0,
+          "commandErrorCodes": {}
+        },
+        "summary": {
+          "sampleCount": 300,
+          "successCount": 300,
+          "timeoutCount": 0,
+          "timeoutRate": 0,
+          "p50Ms": 12.53233299999556,
+          "p95Ms": 13.662917000008747,
+          "p99Ms": 14.558707999996841,
+          "maxMs": 54.675957999992534,
+          "completedOnly": {
+            "p50Ms": 12.53233299999556,
+            "p95Ms": 13.662917000008747,
+            "p99Ms": 14.558707999996841,
+            "maxMs": 54.675957999992534
+          }
+        }
+      },
+      "note": "health 探測同時以 WebSocket 老師／投影／學生連線進行 answer:submit；背景作答同速率，未用 join 冒充作答壓力"
+    },
+    {
+      "name": "health",
+      "rate": 50,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 500,
+        "successCount": 500,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 1.1440830000065034,
+        "p95Ms": 1.7328330000018468,
+        "p99Ms": 2.493417000005138,
+        "maxMs": 8.065749999994296,
+        "completedOnly": {
+          "p50Ms": 1.1440830000065034,
+          "p95Ms": 1.7328330000018468,
+          "p99Ms": 2.493417000005138,
+          "maxMs": 8.065749999994296
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 500,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 500
+        }
+      }
+    },
+    {
+      "name": "join",
+      "rate": 50,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 500,
+        "successCount": 500,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 3.744334000002709,
+        "p95Ms": 4.683625000005122,
+        "p99Ms": 5.420958000002429,
+        "maxMs": 6.778540999992401,
+        "completedOnly": {
+          "p50Ms": 3.744334000002709,
+          "p95Ms": 4.683625000005122,
+          "p99Ms": 5.420958000002429,
+          "maxMs": 6.778540999992401
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 500,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 500
+        }
+      }
+    },
+    {
+      "name": "health-full-room",
+      "rate": 50,
+      "warmupSeconds": 2,
+      "seconds": 10,
+      "timeoutMs": 5000,
+      "summary": {
+        "sampleCount": 500,
+        "successCount": 500,
+        "timeoutCount": 0,
+        "timeoutRate": 0,
+        "p50Ms": 0.4038330000039423,
+        "p95Ms": 10.350500000000466,
+        "p99Ms": 10.987250000005588,
+        "maxMs": 31.072375000003376,
+        "completedOnly": {
+          "p50Ms": 0.4038330000039423,
+          "p95Ms": 10.350500000000466,
+          "p99Ms": 10.987250000005588,
+          "maxMs": 31.072375000003376
+        }
+      },
+      "errorCount": 0,
+      "errorRate": 0,
+      "counters": {
+        "total": 500,
+        "error": 0,
+        "timeout": 0,
+        "statusCounts": {
+          "200": 500
+        }
+      },
+      "prejoin": {
+        "joined": 50,
+        "failed": 0
+      },
+      "backgroundAnswers": {
+        "counters": {
+          "total": 600,
+          "error": 0,
+          "timeout": 0,
+          "cycles": 0,
+          "commandErrorCodes": {}
+        },
+        "summary": {
+          "sampleCount": 600,
+          "successCount": 600,
+          "timeoutCount": 0,
+          "timeoutRate": 0,
+          "p50Ms": 8.110124999991967,
+          "p95Ms": 10.57445899999584,
+          "p99Ms": 11.070375000010245,
+          "maxMs": 47.34079200000269,
+          "completedOnly": {
+            "p50Ms": 8.110124999991967,
+            "p95Ms": 10.57445899999584,
+            "p99Ms": 11.070375000010245,
+            "maxMs": 47.34079200000269
+          }
+        }
+      },
+      "note": "health 探測同時以 WebSocket 老師／投影／學生連線進行 answer:submit；背景作答同速率，未用 join 冒充作答壓力"
+    }
+  ],
+  "skipped": [],
+  "finishedAt": "2026-11-20T20:14:08.702Z"
+}

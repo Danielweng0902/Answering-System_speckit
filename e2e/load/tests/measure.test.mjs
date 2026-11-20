@@ -1,11 +1,13 @@
 /**
  * e2e/load/lib/measure.mjs 的單元測試（node:test + node:assert）。
- * 執行：node --test e2e/load/tests/
+ * 執行：node --test 'e2e/load/tests/*.mjs'
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { percentile, summarizeSamples } from '../lib/measure.mjs';
+
+const TIMEOUT_MS = 1000;
 
 /** 快速造樣本：durations 對應延遲，timeouts 為逾時樣本數。 */
 function makeSamples(durations, timeouts = 0) {
@@ -18,6 +20,10 @@ function makeSamples(durations, timeouts = 0) {
     samples.push({ scheduledAt: 1000, completedAt: null, status: 'timeout' });
   }
   return samples;
+}
+
+function summarize(samples, timeoutMs = TIMEOUT_MS) {
+  return summarizeSamples(samples, { timeoutMs });
 }
 
 test('percentile：最近秩法，ceil(p × n) 名、空樣本回 null、p 越界時夾在邊界', () => {
@@ -35,9 +41,9 @@ test('percentile：最近秩法，ceil(p × n) 名、空樣本回 null、p 越�
   assert.equal(percentile([7], 0.95), 7);
 });
 
-test('summarizeSamples：p50/p95/p99/max 使用最近秩，輸入不必先排序', () => {
+test('summarizeSamples：全部樣本分位數使用最近秩，輸入不必先排序', () => {
   const durations = Array.from({ length: 100 }, (_, i) => 100 - i); // 100..1 倒序
-  const summary = summarizeSamples(makeSamples(durations));
+  const summary = summarize(makeSamples(durations));
   assert.equal(summary.sampleCount, 100);
   assert.equal(summary.successCount, 100);
   assert.equal(summary.timeoutCount, 0);
@@ -46,24 +52,35 @@ test('summarizeSamples：p50/p95/p99/max 使用最近秩，輸入不必先排序
   assert.equal(summary.p95Ms, 95);
   assert.equal(summary.p99Ms, 99);
   assert.equal(summary.maxMs, 100);
+  assert.deepEqual(summary.completedOnly, {
+    p50Ms: 50,
+    p95Ms: 95,
+    p99Ms: 99,
+    maxMs: 100,
+  });
 });
 
-test('summarizeSamples：逾時計入分母並給出逾時率與逾時數', () => {
-  // 3 個完成（10/20/30ms）＋1 個逾時 → 分母 4
-  const summary = summarizeSamples(makeSamples([30, 10, 20], 1));
+test('summarizeSamples：逾時以逾時上限計入全部樣本分位數，並另存僅完成樣本', () => {
+  // 3 個完成（10/20/30ms）＋1 個逾時 → 全體分位數不得有存活者偏差。
+  const summary = summarize(makeSamples([30, 10, 20], 1));
   assert.equal(summary.sampleCount, 4);
   assert.equal(summary.successCount, 3);
   assert.equal(summary.timeoutCount, 1);
   assert.equal(summary.timeoutRate, 0.25);
-  // 分位數只對完成的 3 個樣本算：p50=20、p95=30、p99=30
   assert.equal(summary.p50Ms, 20);
-  assert.equal(summary.p95Ms, 30);
-  assert.equal(summary.p99Ms, 30);
-  assert.equal(summary.maxMs, 30);
+  assert.equal(summary.p95Ms, TIMEOUT_MS);
+  assert.equal(summary.p99Ms, TIMEOUT_MS);
+  assert.equal(summary.maxMs, TIMEOUT_MS);
+  assert.deepEqual(summary.completedOnly, {
+    p50Ms: 20,
+    p95Ms: 30,
+    p99Ms: 30,
+    maxMs: 30,
+  });
 });
 
 test('summarizeSamples：空樣本時各項統計回 null、計數為 0', () => {
-  const summary = summarizeSamples([]);
+  const summary = summarize([]);
   assert.deepEqual(summary, {
     sampleCount: 0,
     successCount: 0,
@@ -73,37 +90,50 @@ test('summarizeSamples：空樣本時各項統計回 null、計數為 0', () => 
     p95Ms: null,
     p99Ms: null,
     maxMs: null,
+    completedOnly: {
+      p50Ms: null,
+      p95Ms: null,
+      p99Ms: null,
+      maxMs: null,
+    },
   });
 });
 
-test('summarizeSamples：全部逾時時分位數回 null、逾時率為 1', () => {
-  const summary = summarizeSamples(makeSamples([], 5));
+test('summarizeSamples：全部逾時時，全部樣本分位數與最大值都是逾時上限', () => {
+  const summary = summarize(makeSamples([], 5));
   assert.equal(summary.sampleCount, 5);
   assert.equal(summary.successCount, 0);
   assert.equal(summary.timeoutCount, 5);
   assert.equal(summary.timeoutRate, 1);
-  assert.equal(summary.p50Ms, null);
-  assert.equal(summary.p95Ms, null);
-  assert.equal(summary.p99Ms, null);
-  assert.equal(summary.maxMs, null);
+  assert.equal(summary.p50Ms, TIMEOUT_MS);
+  assert.equal(summary.p95Ms, TIMEOUT_MS);
+  assert.equal(summary.p99Ms, TIMEOUT_MS);
+  assert.equal(summary.maxMs, TIMEOUT_MS);
+  assert.deepEqual(summary.completedOnly, {
+    p50Ms: null,
+    p95Ms: null,
+    p99Ms: null,
+    maxMs: null,
+  });
+});
+
+test('summarizeSamples：有逾時樣本時必須明確提供逾時上限', () => {
+  assert.throws(() => summarizeSamples(makeSamples([10], 1), { timeoutMs: 0 }), /timeoutMs/);
 });
 
 test('summarizeSamples：單調時間倒退要 throw（含「單調時間」字樣）', () => {
   const regressing = [{ scheduledAt: 1000, completedAt: 999, status: 'ok' }];
-  assert.throws(() => summarizeSamples(regressing), /單調時間/);
+  assert.throws(() => summarize(regressing), /單調時間/);
 
   // 逾時樣本卻帶了倒退的 completedAt，一樣要 throw。
   const timeoutRegressing = [{ scheduledAt: 1000, completedAt: 500, status: 'timeout' }];
-  assert.throws(() => summarizeSamples(timeoutRegressing), /單調時間/);
+  assert.throws(() => summarize(timeoutRegressing), /單調時間/);
 });
 
 test('summarizeSamples：ok 樣本缺少完成時間或狀態未知要 throw', () => {
+  assert.throws(() => summarize([{ scheduledAt: 1, completedAt: null, status: 'ok' }]), /完成時間/);
   assert.throws(
-    () => summarizeSamples([{ scheduledAt: 1, completedAt: null, status: 'ok' }]),
-    /完成時間/,
-  );
-  assert.throws(
-    () => summarizeSamples([{ scheduledAt: 1, completedAt: 2, status: 'weird' }]),
+    () => summarize([{ scheduledAt: 1, completedAt: 2, status: 'weird' }]),
     /未知的樣本狀態/,
   );
 });
