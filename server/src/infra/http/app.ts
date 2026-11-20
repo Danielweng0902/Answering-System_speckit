@@ -110,10 +110,11 @@ export function createApp(options: HttpAppOptions): Express {
 
   // A missing development build must not prevent server startup.
   if (existsSync(webDistPath)) {
-    // webDistPath 通常指向 repo 內的 build 輸出，整套目錄由部署流程控制。
-    // 若 repo 放在隱藏目錄（例如工具的 worktree），絕對路徑含 a dot-file
-    // segment；只對這個明確的靜態根目錄放行，client fallback 才能運作。
-    app.use(express.static(webDistPath, { dotfiles: 'allow', index: false }));
+    // 維持預設：靜態根目錄裡的 dotfile（例如 .env、.DS_Store）不送出，
+    // 且 / 仍由 static 提供 index.html（HEAD 也會回 200）。
+    // 2026-11-21 第二驗證（GLM）實測：先前改成 dotfiles:'allow' + index:false
+    // 會讓 web/dist 內的 .env 可被下載（回 200 與檔案內容），且 HEAD / 變 404。
+    app.use(express.static(webDistPath));
   }
 
   // Client-side routes such as /teacher and /student load index.html. This
@@ -128,6 +129,10 @@ export function createApp(options: HttpAppOptions): Express {
       return;
     }
 
+    // 只放行這一個明確的檔案（web/dist/index.html）：若 repo 放在隱藏目錄
+    // （例如工具的 worktree 在 ~/.t3/ 下），絕對路徑含 dot-file segment，
+    // send 的預設檢查會讓 client fallback 失效（所有靜態頁面 404）。
+    // 這裡不放行整個靜態根目錄，只有 index.html 這一個檔案。
     response.sendFile(indexPath, { dotfiles: 'allow' }, (error: unknown) => {
       if (error) {
         next(error);
