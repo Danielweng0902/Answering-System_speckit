@@ -9,6 +9,18 @@
   gap: var(--space-1);
   padding-block-end: var(--space-4);
   border-block-end: var(--border-width-thin) solid var(--color-ink);
+  /* 語言切換靠右（007 i18n）。 */
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.header > * {
+  grid-column: 1;
+}
+
+.header > :last-child {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .title {

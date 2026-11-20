@@ -1,19 +1,16 @@
 import type {
   CommandEvent,
   CommandPayloads,
-  Phase,
   TeacherSnapshot,
 } from '@classroom/shared';
+import { useI18n } from '../../lib/i18n/LanguageProvider';
+import { phaseLabel } from '../../lib/i18n/phase';
 import { useId, useState } from 'react';
 import { sendCommand, type CommandResult } from '../../lib/socket';
 import { phaseStyleClass } from '../shared/phaseStyle';
 import styles from './PhaseControl.module.css';
 
-const PHASE_LABELS: Record<Phase, string> = {
-  preparing: '準備中',
-  open: '搶答中',
-  closed: '已結束',
-};
+
 
 type ActivityCommandEvent = Extract<
   CommandEvent,
@@ -26,6 +23,7 @@ export type PhaseControlProps = {
 
 /** 老師端的階段顯示、倒數輸入與活動控制（T053、T066、T071）。 */
 export function PhaseControl({ snapshot }: PhaseControlProps) {
+  const { t } = useI18n();
   const countdownSecondsId = useId();
   const [countdownEnabled, setCountdownEnabled] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState('60');
@@ -73,9 +71,9 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
   return (
     <section className={styles.section} aria-labelledby="phase-control-title">
       <h2 id="phase-control-title" className={styles.title}>
-        搶答控制
+        {t('control.title')}
       </h2>
-      <p className={`${styles.status} ${phaseStyleClass(snapshot.phase)}`}>{`目前階段：${PHASE_LABELS[snapshot.phase]}`}</p>
+      <p className={`${styles.status} ${phaseStyleClass(snapshot.phase)}`}>{t('phase.current', { phase: phaseLabel(t, snapshot.phase) })}</p>
       {errorMessage !== null && (
         <p className={styles.error} role="alert">
           {errorMessage}
@@ -96,11 +94,11 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
               setCountdownEnabled(event.target.checked);
             }}
           />
-          設定倒數
+          {t('control.setCountdown')}
         </label>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={countdownSecondsId}>
-            倒數秒數
+            {t('control.countdownSeconds')}
           </label>
           <input
             id={countdownSecondsId}
@@ -125,7 +123,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             void openActivity();
           }}
         >
-          開啟搶答
+          {t('control.open')}
         </button>
         <button
           className={styles.button}
@@ -135,7 +133,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
             void send('activity:close', {});
           }}
         >
-          結束搶答
+          {t('control.close')}
         </button>
       </div>
 
@@ -155,10 +153,10 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
               });
             }}
           />
-          啟用公平順位
+          {t('control.fairness')}
         </label>
         <p className={styles.description}>
-          同一題 3 秒內送出的組別視為同批，批內依「已搶答成功題數」由少到多決定順位。
+          {t('control.fairnessHint')}
         </p>
       </div>
 
@@ -167,10 +165,10 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
           <div
             className={styles.confirmation}
             role="group"
-            aria-label="確認重設活動"
+            aria-label={t('control.resetConfirmLabel')}
           >
             <p className={styles.confirmationText}>
-              重設後回到準備中，組別保留
+              {t('control.resetHint')}
             </p>
             <div className={styles.resetActions}>
               <button
@@ -181,7 +179,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
                   void resetActivity();
                 }}
               >
-                確認重設
+                {t('control.resetConfirm')}
               </button>
               <button
                 className={styles.button}
@@ -191,7 +189,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
                   setIsShowingResetConfirmation(false);
                 }}
               >
-                取消
+                {t('control.resetCancel')}
               </button>
             </div>
           </div>
@@ -204,7 +202,7 @@ export function PhaseControl({ snapshot }: PhaseControlProps) {
               setIsShowingResetConfirmation(true);
             }}
           >
-            重設活動
+            {t('control.resetActivity')}
           </button>
         ))}
     </section>

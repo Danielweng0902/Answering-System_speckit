@@ -27,6 +27,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:3100',
     trace: 'retain-on-failure',
+    // 007 i18n：介面預設依**系統語言**，所以 e2e 的瀏覽器語系要固定，
+    // 否則預設語系（en-US）會讓介面變成英文、中文斷言全部失效。
+    // 英文版的行為由 tests/007-i18n.spec.ts 另外用 en-US 的 context 驗。
+    locale: 'zh-TW',
   },
   projects: [
     {

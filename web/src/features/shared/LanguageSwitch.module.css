@@ -1,0 +1,32 @@
+/*
+ * 語言切換：兩個方角的小按鈕，目前選中的填墨色。
+ * 尺寸刻意做小（欄標大小），不搶走主要動作的視線。
+ */
+.switch {
+  display: inline-flex;
+  border: var(--border-width-thin) solid var(--color-ink);
+}
+
+.option,
+.active {
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  border: 0;
+  font-family: var(--font-family-utility);
+  font-size: var(--font-size-caption);
+  letter-spacing: var(--letter-spacing-latin);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition:
+    background var(--transition-quick),
+    color var(--transition-quick);
+}
+
+.option:hover {
+  background: var(--color-paper-raised);
+}
+
+.active {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}

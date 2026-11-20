@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import type { TeacherSnapshot } from '@classroom/shared';
 import { useId, useState, type FormEvent } from 'react';
 import { sendCommand } from '../../lib/socket';
@@ -8,6 +9,7 @@ export type GroupManagerProps = {
 };
 
 export function GroupManager({ snapshot }: GroupManagerProps) {
+  const { t } = useI18n();
   const newNameId = useId();
   const renameNameId = useId();
   const [newName, setNewName] = useState('');
@@ -70,7 +72,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
   }
 
   async function deleteGroup(groupId: string, groupName: string): Promise<void> {
-    if (!window.confirm(`確定要刪除「${groupName}」嗎？`)) {
+    if (!window.confirm(t('groups.deleteConfirm', { name: groupName }))) {
       return;
     }
 
@@ -91,10 +93,10 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
   return (
     <section className={styles.section} aria-labelledby="group-manager-title">
       <h2 id="group-manager-title" className={styles.title}>
-        組別管理
+        {t('groups.title')}
       </h2>
 
-      {!isPreparing && <p className={styles.explanation}>組別只能在準備中新增、改名或刪除。</p>}
+      {!isPreparing && <p className={styles.explanation}>{t('groups.locked')}</p>}
       {errorMessage !== null && (
         <p className={styles.error} role="alert">
           {errorMessage}
@@ -109,7 +111,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
       >
         <div className={styles.field}>
           <label className={styles.label} htmlFor={newNameId}>
-            新增組別名稱
+            {t('groups.nameLabel')}
           </label>
           <input
             id={newNameId}
@@ -124,14 +126,14 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
           />
         </div>
         <button className={styles.button} type="submit" disabled={controlsDisabled}>
-          新增組別
+          {t('groups.add')}
         </button>
       </form>
 
       {snapshot.groups.length === 0 ? (
-        <p className={styles.empty}>尚未建立組別。</p>
+        <p className={styles.empty}>{t('groups.empty')}</p>
       ) : (
-        <ul className={styles.list} aria-label="組別清單">
+        <ul className={styles.list} aria-label={t('groups.listLabel')}>
           {snapshot.groups.map((group) => {
             const onlineCount = snapshot.presence[group.id] ?? 0;
             const isEditing = editingGroupId === group.id;
@@ -147,7 +149,9 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                         : styles.presence
                     }
                   >
-                    {onlineCount > 0 ? `在線 ${onlineCount} 人` : '離線'}
+                    {onlineCount > 0
+                      ? t('groups.online', { count: onlineCount })
+                      : t('groups.offline')}
                   </span>
                 </div>
 
@@ -160,7 +164,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                   >
                     <div className={styles.field}>
                       <label className={styles.label} htmlFor={renameNameId}>
-                        {`組別 ${group.name} 的新名稱`}
+                        {t('groups.renameLabel', { name: group.name })}
                       </label>
                       <input
                         id={renameNameId}
@@ -175,7 +179,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                       />
                     </div>
                     <button className={styles.button} type="submit" disabled={controlsDisabled}>
-                      儲存
+                      {t('groups.save')}
                     </button>
                     <button
                       className={styles.button}
@@ -183,7 +187,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                       disabled={controlsDisabled}
                       onClick={cancelRename}
                     >
-                      取消
+                      {t('groups.cancel')}
                     </button>
                   </form>
                 ) : (
@@ -192,23 +196,23 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                       className={styles.button}
                       type="button"
                       disabled={controlsDisabled}
-                      aria-label={`改名 ${group.name}`}
+                      aria-label={t('groups.renameAria', { name: group.name })}
                       onClick={() => {
                         startRename(group.id, group.name);
                       }}
                     >
-                      改名
+                      {t('groups.rename')}
                     </button>
                     <button
                       className={styles.button}
                       type="button"
                       disabled={controlsDisabled}
-                      aria-label={`刪除 ${group.name}`}
+                      aria-label={t('groups.deleteAria', { name: group.name })}
                       onClick={() => {
                         void deleteGroup(group.id, group.name);
                       }}
                     >
-                      刪除
+                      {t('groups.delete')}
                     </button>
                   </div>
                 )}

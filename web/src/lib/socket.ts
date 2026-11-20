@@ -1,6 +1,8 @@
 import type { Ack, CommandEvent, CommandPayloads } from '@classroom/shared';
 import { io, type Socket } from 'socket.io-client';
 import { getToken } from './session';
+import { localizeErrorMessage } from './i18n/errors';
+import { getCurrentLanguage } from './i18n/language';
 
 let currentToken: string | null = getToken();
 /** 005：投影頁以 view='projector' 連線，伺服器改送不含作答資訊的投影快照。 */
@@ -67,7 +69,11 @@ export function disconnectSocket(): void {
 /** 等待伺服器回覆的上限；超過就讓畫面恢復可操作，避免按鈕永久停用。 */
 export const COMMAND_TIMEOUT_MS = 10_000;
 
-const NO_RESPONSE_MESSAGE = '伺服器沒有回應，請稍後再試';
+/** 007 i18n：伺服器沒回應時的訊息（依語言）。 */
+const NO_RESPONSE_MESSAGES = {
+  'zh-TW': '伺服器沒有回應，請稍後再試',
+  en: 'The server did not respond, please try again later',
+} as const;
 
 /**
  * 指令結果：伺服器的 Ack，或前端自己判定的失敗（逾時、斷線）。
@@ -82,8 +88,27 @@ export async function sendCommand<E extends CommandEvent>(
   payload: CommandPayloads[E],
 ): Promise<CommandResult> {
   try {
-    return (await connectSocket().timeout(COMMAND_TIMEOUT_MS).emitWithAck(event, payload)) as Ack;
+    const ack = (await connectSocket()
+      .timeout(COMMAND_TIMEOUT_MS)
+      .emitWithAck(event, payload)) as Ack;
+    // 007 i18n：伺服器回繁中，英文版在客戶端依錯誤代碼翻譯。
+    if (!ack.ok) {
+      return {
+        ok: false,
+        error: {
+          code: ack.error.code,
+          message: localizeErrorMessage(ack.error.code, ack.error.message),
+        },
+      };
+    }
+    return ack;
   } catch {
-    return { ok: false, error: { code: null, message: NO_RESPONSE_MESSAGE } };
+    return {
+      ok: false,
+      error: {
+        code: null,
+        message: NO_RESPONSE_MESSAGES[getCurrentLanguage()],
+      },
+    };
   }
 }

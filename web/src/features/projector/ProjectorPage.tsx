@@ -1,16 +1,13 @@
-import type { Phase, ProjectorSnapshot, Snapshot } from '@classroom/shared';
+import { useI18n } from '../../lib/i18n/LanguageProvider';
+import { phaseLabel } from '../../lib/i18n/phase';
+import type { ProjectorSnapshot, Snapshot } from '@classroom/shared';
 import { Link } from 'react-router';
 import { Countdown } from '../shared/Countdown';
+import { LanguageSwitch } from '../shared/LanguageSwitch';
 import { phaseStyleClass } from '../shared/phaseStyle';
 import { QuestionNumber } from '../shared/QuestionNumber';
 import { TeacherLogin } from '../teacher/TeacherLogin';
 import styles from './ProjectorPage.module.css';
-
-const PHASE_LABELS: Record<Phase, string> = {
-  preparing: '準備中',
-  open: '搶答中',
-  closed: '已結束',
-};
 
 export type ProjectorPageProps = {
   snapshot: Snapshot | null;
@@ -23,13 +20,14 @@ export type ProjectorPageProps = {
  * （搶答中只有階段、倒數與各組是否在線）；這裡只負責把內容大字呈現。
  */
 export function ProjectorPage({ snapshot }: ProjectorPageProps) {
+  const { t } = useI18n();
   if (snapshot === null) {
     return (
       <section className={styles.page} aria-labelledby="projector-title">
         <h1 id="projector-title" className={styles.title}>
-          投影看板
+          {t('projector.title')}
         </h1>
-        <p className={styles.hint}>連線中…</p>
+        <p className={styles.hint}>{t('projector.connecting')}</p>
       </section>
     );
   }
@@ -38,15 +36,15 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
     return (
       <section className={styles.page} aria-labelledby="projector-title">
         <h1 id="projector-title" className={styles.title}>
-          投影看板
+          {t('projector.title')}
         </h1>
         <p className={styles.hint} role="status">
-          請先以老師身分登入，才能使用投影看板。
+          {t('projector.loginHint')}
         </p>
         <TeacherLogin />
         <p className={styles.hint}>
           <Link className={styles.link} to="/teacher">
-            前往老師端
+            {t('projector.toTeacher')}
           </Link>
         </p>
       </section>
@@ -62,11 +60,14 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
           id="projector-title"
           className={`${styles.title} ${phaseStyleClass(projector.phase)}`}
         >
-          {PHASE_LABELS[projector.phase]}
+          {phaseLabel(t, projector.phase)}
         </h1>
         <p className={styles.rule}>
-          {projector.fairRankingEnabled ? '本場使用公平順位' : '本場先到先得'}
+          {projector.fairRankingEnabled
+            ? t('projector.ruleFair')
+            : t('projector.ruleFirstCome')}
         </p>
+        <LanguageSwitch />
       </header>
 
       {projector.phase === 'open' && projector.countdownEndsAt !== null && (
@@ -76,14 +77,14 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
       {projector.phase !== 'closed' && (
         <section className={styles.groupSection} aria-labelledby="projector-groups-title">
           <h2 id="projector-groups-title" className={styles.sectionTitle}>
-            組別在線狀態
+            {t('projector.groupStatus')}
           </h2>
           <ul className={styles.groupList}>
             {projector.groupStatus.map((group) => (
               <li key={group.id} className={styles.groupItem}>
                 <span className={styles.groupName}>{group.name}</span>
                 <span className={group.online ? styles.online : styles.offline}>
-                  {group.online ? '在線' : '離線'}
+                  {group.online ? t('projector.online') : t('projector.offline')}
                 </span>
               </li>
             ))}
@@ -94,10 +95,10 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
       {projector.phase === 'closed' && (
         <section className={styles.revealSection} aria-labelledby="projector-reveal-title">
           <h2 id="projector-reveal-title" className={styles.sectionTitle}>
-            搶答結果
+            {t('projector.revealTitle')}
           </h2>
           {projector.reveal.questions.length === 0 ? (
-            <p className={styles.hint}>尚未揭曉任何題目。</p>
+            <p className={styles.hint}>{t('projector.noReveal')}</p>
           ) : (
             <ol className={styles.revealList}>
               {projector.reveal.questions.map((entry) => (
@@ -112,7 +113,9 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
                         : styles.revealWinner
                     }
                   >
-                    {entry.winnerGroupName === null ? '無人作答' : entry.winnerGroupName}
+                    {entry.winnerGroupName === null
+                      ? t('projector.noWinner')
+                      : entry.winnerGroupName}
                   </span>
                   {entry.winnerAnswers.length > 0 && (
                     <span className={styles.revealAnswers}>{entry.winnerAnswers.join('／')}</span>
@@ -124,13 +127,15 @@ export function ProjectorPage({ snapshot }: ProjectorPageProps) {
           {projector.reveal.groupWinCounts !== null && (
             <section className={styles.winCountSection} aria-labelledby="projector-wincount-title">
               <h3 id="projector-wincount-title" className={styles.sectionTitle}>
-                各組搶答成功題數
+                {t('projector.winCounts')}
               </h3>
               <ul className={styles.groupList}>
                 {projector.reveal.groupWinCounts.map((entry) => (
                   <li key={entry.groupId} className={styles.groupItem}>
                     <span className={styles.groupName}>{entry.groupName}</span>
-                    <span className={styles.winCount}>{`${entry.count} 題`}</span>
+                    <span className={styles.winCount}>
+                      {t('projector.winCount', { count: entry.count })}
+                    </span>
                   </li>
                 ))}
               </ul>

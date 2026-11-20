@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import type { Snapshot } from '@classroom/shared';
 import { useState } from 'react';
 import {
@@ -7,6 +8,7 @@ import {
   type DownloadExportResult,
 } from '../../lib/api';
 import { Countdown } from '../shared/Countdown';
+import { LanguageSwitch } from '../shared/LanguageSwitch';
 import { sendCommand } from '../../lib/socket';
 import { AnswerBoard } from './AnswerBoard';
 import { GroupManager } from './GroupManager';
@@ -21,6 +23,7 @@ export type TeacherPageProps = {
 };
 
 export function TeacherPage({ snapshot }: TeacherPageProps) {
+  const { t } = useI18n();
   const [isAwaitingTeacherSnapshot, setIsAwaitingTeacherSnapshot] =
     useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -67,13 +70,13 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
       }
       setWriteBackMessage(
         result.writtenCells === 0
-          ? '這場沒有搶答成功的答案，沒有需要寫回的儲存格。'
+          ? t('teacher.writeBackNone')
           : result.remapped
             // 成功訊息只講「這次做了什麼」；「沒人作答的題目不會被清除」是
             // 使用限制，寫在 quickstart，不要每次都跳出來（2026-11-19 review：
             // 每次都出現容易讓老師誤以為有殘留或系統沒清除成功）。
-            ? `線上試算表的版面位置有變動，答案已自動對到現在的位置，共寫回 ${String(result.writtenCells)} 格。`
-            : `已寫回 ${String(result.writtenCells)} 格答案到 Google 試算表。`,
+            ? t('teacher.writeBackRemapped', { count: result.writtenCells })
+            : t('teacher.writeBackDone', { count: result.writtenCells }),
       );
     } finally {
       setIsWritingBack(false);
@@ -101,8 +104,9 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
       <section className={styles.page} aria-labelledby="teacher-page-title">
         <header className={styles.header}>
           <h1 id="teacher-page-title" className={styles.title}>
-            老師端
+            {t('teacher.title')}
           </h1>
+          <LanguageSwitch />
         </header>
         <TeacherLogin
           onLoginSuccess={() => {
@@ -111,7 +115,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
         />
         {isAwaitingTeacherSnapshot && (
           <p className={styles.notice} role="status">
-            已送出登入資訊，等待同步老師狀態。
+            {t('teacher.loginPending')}
           </p>
         )}
       </section>
@@ -148,8 +152,9 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
     <section className={styles.page} aria-labelledby="teacher-page-title">
       <header className={styles.header}>
         <h1 id="teacher-page-title" className={styles.title}>
-          老師端
+          {t('teacher.title')}
         </h1>
+        <LanguageSwitch />
       </header>
       <PhaseControl snapshot={snapshot} />
       {snapshot.phase === 'open' && (
@@ -164,7 +169,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
       {snapshot.phase === 'closed' && (
         <section className={styles.exportSection} aria-labelledby="export-results-title">
           <h2 id="export-results-title" className={styles.exportTitle}>
-            匯出結果
+            {t('teacher.exportTitle')}
           </h2>
           <div className={styles.exportActions}>
             <button
@@ -178,7 +183,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
                 void handleWriteBack();
               }}
             >
-              寫回 Google 試算表
+              {t('teacher.writeBack')}
             </button>
             <button
               className={styles.exportButton}
@@ -188,7 +193,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
                 void handleExport(downloadGuidedNotes);
               }}
             >
-              匯出 Guided Notes
+              {t('teacher.exportGuided')}
             </button>
             <button
               className={styles.exportButton}
@@ -198,12 +203,12 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
                 void handleExport(downloadResultCsv);
               }}
             >
-              匯出 CSV
+              {t('teacher.exportCsv')}
             </button>
           </div>
           {snapshot.guidedNotes?.sourceKind !== 'link' && (
             <p className={styles.exportError}>
-              這次的學習單是上傳的 xlsx，沒有線上試算表可以寫回；請用「匯出 Guided Notes」。
+              {t('teacher.noOnlineSheet')}
             </p>
           )}
           {writeBackMessage !== null && (
@@ -226,7 +231,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
       {/* 005（FR-013、FR-017）：投影看板與逐題揭曉。 */}
       <section className={styles.exportSection} aria-labelledby="projector-control-title">
         <h2 id="projector-control-title" className={styles.exportTitle}>
-          投影看板
+          {t('teacher.projectorTitle')}
         </h2>
         <div className={styles.exportActions}>
           <button
@@ -236,7 +241,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               window.open('/projector', '_blank', 'noopener');
             }}
           >
-            開啟投影看板
+            {t('teacher.openProjector')}
           </button>
           <button
             className={styles.exportButton}
@@ -246,7 +251,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               void sendReveal('reveal:next');
             }}
           >
-            揭曉下一題
+            {t('teacher.revealNext')}
           </button>
           <button
             className={styles.exportButton}
@@ -256,7 +261,7 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
               void sendReveal('reveal:all');
             }}
           >
-            全部揭曉
+            {t('teacher.revealAll')}
           </button>
         </div>
         {revealError !== null && (

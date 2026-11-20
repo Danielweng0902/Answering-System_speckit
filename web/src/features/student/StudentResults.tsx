@@ -1,3 +1,4 @@
+import { useI18n } from '../../lib/i18n/LanguageProvider';
 import type { StudentClosedSnapshot, StudentQuestion } from '@classroom/shared';
 import { QuestionNumber } from '../shared/QuestionNumber';
 import styles from './StudentResults.module.css';
@@ -26,6 +27,7 @@ function formatAnswers(question: StudentQuestion, answers: string[]): string {
  * React 文字節點輸出，不做任何 HTML 解析（spec Edge Cases）。
  */
 export function StudentResults({ snapshot }: StudentResultsProps) {
+  const { t } = useI18n();
   const myAnswersByNumber = new Map(
     snapshot.myAnswers.map((answer) => [answer.questionNumber, answer]),
   );
@@ -36,18 +38,18 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
   return (
     <section className={styles.results} aria-labelledby="student-results-title">
       <h2 id="student-results-title" className={styles.title}>
-        結果區
+        {t('results.title')}
       </h2>
       <p className={styles.description}>
-        搶答已結束，每一題顯示搶答成功的組別與答案，以及本組的答案與順位。
+        {t('results.description')}
       </p>
       {/* 005（AC-005-11、FR-011）：標示本場使用的順位規則與改判題目。 */}
       <p className={styles.description}>
         {snapshot.fairRankingEnabled
-          ? '本場使用公平順位：同批作答依已搶答成功題數排序。'
-          : '本場先到先得：最先送出的組別搶答成功。'}
+          ? t('results.fair')
+          : t('results.firstCome')}
       </p>
-      <ol className={styles.questions} aria-label="作答結果">
+      <ol className={styles.questions} aria-label={t('results.listLabel')}>
         {snapshot.questions.map((question) => {
           const result = resultsByNumber.get(question.number);
           const myAnswer = myAnswersByNumber.get(question.number);
@@ -73,17 +75,17 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                 )}
 
                 {winner === null ? (
-                  <p className={styles.noAnswer}>無人作答</p>
+                  <p className={styles.noAnswer}>{t('results.noAnswer')}</p>
                 ) : (
                   <>
                     <p className={styles.winner}>
-                      搶答成功：{winner.groupName}
+                      {t('results.winner', { group: winner.groupName })}
                     </p>
                     {result?.fairnessApplied === true && (
-                      <p className={styles.description}>本題因公平順位改判</p>
+                      <p className={styles.description}>{t('results.fairnessAdjusted')}</p>
                     )}
                     <p className={styles.answers}>
-                      答案：{formatAnswers(question, winner.answers)}
+                      {t('results.answer', { answers: formatAnswers(question, winner.answers) })}
                     </p>
                   </>
                 )}
@@ -91,24 +93,23 @@ export function StudentResults({ snapshot }: StudentResultsProps) {
                 {myAnswer?.state === 'submitted' && (
                   <>
                     <p className={styles.mine}>
-                      本組答案：{formatAnswers(question, myAnswer.answers)}
+                      {t('results.myAnswer', { answers: formatAnswers(question, myAnswer.answers) })}
                     </p>
                     {myAnswer.rank !== null && (
                       <p className={styles.mine}>
-                        本組順位：第 {myAnswer.rank} 順位
+                        {t('results.myRank', { rank: myAnswer.rank })}
                       </p>
                     )}
                   </>
                 )}
                 {myAnswer?.state === 'voided' && (
                   <p className={styles.mine}>
-                    本組作答已被老師作廢：
-                    {formatAnswers(question, myAnswer.answers)}
+                    {t('results.voided', { answers: formatAnswers(question, myAnswer.answers) })}
                   </p>
                 )}
                 {(myAnswer === undefined ||
                   myAnswer.state === 'not_submitted') && (
-                  <p className={styles.mine}>本組未作答</p>
+                  <p className={styles.mine}>{t('results.notSubmitted')}</p>
                 )}
                 </div>
               </section>

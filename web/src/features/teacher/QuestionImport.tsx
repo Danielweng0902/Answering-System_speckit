@@ -4,6 +4,8 @@ import type {
   ImportSummaryQuestion,
   TeacherSnapshot,
 } from '@classroom/shared';
+import { useI18n } from '../../lib/i18n/LanguageProvider';
+import type { MessageKey } from '../../lib/i18n/messages';
 import { useId, useState, type ChangeEvent, type FormEvent } from 'react';
 import {
   importFromFile,
@@ -32,17 +34,23 @@ const FILE_ERROR_CODES: readonly ErrorCode[] = [
   'FILE_TOO_LARGE',
 ];
 
-const QUESTION_KIND_LABELS: Record<ImportSummaryQuestion['kind'], string> = {
-  single: '單題',
-  group: '題組',
+const QUESTION_KIND_KEYS: Record<ImportSummaryQuestion['kind'], MessageKey> = {
+  single: 'import.kindSingle',
+  group: 'import.kindGroup',
 };
 
-function questionBlankText(question: ImportSummaryQuestion): string {
-  return `${QUESTION_KIND_LABELS[question.kind]}，${question.blankCount} 個空格`;
+type Translate = ReturnType<typeof useI18n>['t'];
+
+function questionBlankText(t: Translate, question: ImportSummaryQuestion): string {
+  return t('import.kindDetail', {
+    kind: t(QUESTION_KIND_KEYS[question.kind]),
+    blanks: question.blankCount,
+  });
 }
 
 /** 學習單讀取、摘要顯示與確認；只有確認才會送出題目變更指令。 */
 export function QuestionImport({ snapshot }: QuestionImportProps) {
+  const { t } = useI18n();
   const linkId = useId();
   const fileId = useId();
   const [link, setLink] = useState('');
@@ -127,24 +135,24 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
   return (
     <section
       className={styles.section}
-      aria-label="匯入學習單"
+      aria-label={t('import.title')}
       aria-busy={isSending}
     >
-      <h2 className={styles.title}>匯入學習單</h2>
+      <h2 className={styles.title}>{t('import.title')}</h2>
       {importError !== null && (
         <div className={styles.error} role="alert">
           <p className={styles.errorMessage}>{importError.message}</p>
           {importError.code !== null &&
             LINK_ERROR_CODES.includes(importError.code) && (
-              <ul className={styles.errorHints} aria-label="其他做法">
-                <li>把共用設定改成知道連結者可檢視</li>
-                <li>下載成 xlsx 後上傳</li>
+              <ul className={styles.errorHints} aria-label={t('import.alternativesLabel')}>
+                <li>{t('import.alternativeShare')}</li>
+                <li>{t('import.alternativeDownload')}</li>
               </ul>
             )}
           {importError.code !== null &&
             FILE_ERROR_CODES.includes(importError.code) && (
               <p className={styles.errorHint}>
-                請使用 xlsx 格式、5 MB 以內的學習單
+                {t('import.formatHint')}
               </p>
             )}
         </div>
@@ -153,7 +161,7 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
       <form className={styles.form} onSubmit={readLink}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={linkId}>
-            Google 試算表連結
+            {t('import.linkLabel')}
           </label>
           <input
             id={linkId}
@@ -172,13 +180,13 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
           type="submit"
           disabled={controlsDisabled}
         >
-          讀取
+          {t('import.read')}
         </button>
       </form>
 
       <div className={styles.field}>
         <label className={styles.label} htmlFor={fileId}>
-          上傳 xlsx 檔
+          {t('import.fileLabel')}
         </label>
         <input
           id={fileId}
@@ -192,24 +200,32 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
       </div>
 
       {summary !== null && (
-        <section className={styles.summary} aria-label="匯入摘要">
-          <h3 className={styles.summaryTitle}>匯入摘要</h3>
-          <p className={styles.text}>{`工作表：${summary.sheetName}`}</p>
+        <section className={styles.summary} aria-label={t('import.summaryTitle')}>
+          <h3 className={styles.summaryTitle}>{t('import.summaryTitle')}</h3>
+          <p className={styles.text}>{t('import.sheet', { name: summary.sheetName })}</p>
           <p className={styles.text}>
-            {`共 ${summary.questionCount} 題、${summary.blankCount} 個空格`}
+            {t('import.counts', {
+              questions: summary.questionCount,
+              blanks: summary.blankCount,
+            })}
           </p>
 
-          <ul className={styles.list} aria-label="摘要題目清單">
+          <ul className={styles.list} aria-label={t('import.questionListLabel')}>
             {summary.questions.map((question) => (
               <li key={question.number}>
-                {`第 ${question.number} 題（${questionBlankText(question)}）`}
+                {t('import.questionItem', {
+                  number: question.number,
+                  detail: questionBlankText(t, question),
+                })}
                 {question.kind === 'group' && (
                   <span className={styles.prefixes}>
-                    {`前綴：${question.blanks
-                      .map((blank) =>
-                        blank.prefix === '' ? '（無前綴）' : blank.prefix,
-                      )
-                      .join('、')}`}
+                    {t('import.prefix', {
+                      prefixes: question.blanks
+                        .map((blank) =>
+                          blank.prefix === '' ? t('import.noPrefix') : blank.prefix,
+                        )
+                        .join('、'),
+                    })}
                   </span>
                 )}
               </li>
@@ -217,13 +233,15 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
           </ul>
 
           {groupNumbers.length > 0 && (
-            <p className={styles.text}>{`第 ${groupNumbers.join('、')} 題是題組`}</p>
+            <p className={styles.text}>
+              {t('import.groupNotice', { numbers: groupNumbers.join('、') })}
+            </p>
           )}
 
           {summary.warnings.length > 0 && (
             <div className={styles.warnings}>
-              <h4 className={styles.warningsTitle}>提醒事項</h4>
-              <ul className={styles.list} aria-label="提醒事項">
+              <h4 className={styles.warningsTitle}>{t('import.warningsTitle')}</h4>
+              <ul className={styles.list} aria-label={t('import.warningsTitle')}>
                 {summary.warnings.map((warning, index) => (
                   <li key={`${warning.code}-${index}`}>{warning.message}</li>
                 ))}
@@ -232,7 +250,7 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
           )}
 
           {summary.replacesExisting && (
-            <p className={styles.notice}>確認後會取代現有題目</p>
+            <p className={styles.notice}>{t('import.replaceNotice')}</p>
           )}
 
           <div className={styles.actions}>
@@ -244,7 +262,7 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
                 void confirmImport();
               }}
             >
-              確認匯入
+              {t('import.confirm')}
             </button>
             <button
               className={styles.button}
@@ -252,7 +270,7 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
               disabled={controlsDisabled}
               onClick={cancelImport}
             >
-              取消
+              {t('import.cancel')}
             </button>
           </div>
         </section>

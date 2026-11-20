@@ -23,6 +23,11 @@
   border-block-end: var(--border-width-thin) solid var(--color-ink);
 }
 
+/* 語言切換靠右（007 i18n）。 */
+.header > :last-child {
+  margin-inline-start: auto;
+}
+
 .title {
   margin: 0;
   font-family: var(--font-family-display);

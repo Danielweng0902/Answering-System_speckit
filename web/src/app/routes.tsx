@@ -1,5 +1,7 @@
 import { Link, Route, Routes, useLocation } from 'react-router';
+import { useI18n } from '../lib/i18n/LanguageProvider';
 import { ConnectionStatus } from '../features/shared/ConnectionStatus';
+import { LanguageSwitch } from '../features/shared/LanguageSwitch';
 import { ProjectorPage } from '../features/projector/ProjectorPage';
 import { StudentPage } from '../features/student/StudentPage';
 import { TeacherPage } from '../features/teacher/TeacherPage';
@@ -7,20 +9,24 @@ import styles from './App.module.css';
 import { useSnapshot } from '../lib/useSnapshot';
 
 function HomePage() {
+  const { t } = useI18n();
   return (
     <section className={styles.page} aria-labelledby="home-title">
-      <div>
-        <h1 id="home-title" className={styles.title}>
-          選擇身分
-        </h1>
-        <p className={styles.description}>請選擇要進入老師端或學生端。</p>
+      <div className={styles.homeHeader}>
+        <div>
+          <h1 id="home-title" className={styles.title}>
+            {t('home.title')}
+          </h1>
+          <p className={styles.description}>{t('home.description')}</p>
+        </div>
+        <LanguageSwitch />
       </div>
-      <nav className={styles.roleLinks} aria-label="選擇身分">
+      <nav className={styles.roleLinks} aria-label={t('home.roleLabel')}>
         <Link className={styles.roleLink} to="/teacher">
-          老師
+          {t('home.teacher')}
         </Link>
         <Link className={styles.roleLink} to="/student">
-          學生
+          {t('home.student')}
         </Link>
       </nav>
     </section>
