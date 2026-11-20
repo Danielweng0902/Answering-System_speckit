@@ -1,6 +1,8 @@
 # Feature Contract（兩小組共同約定）
 
 > 版本 v0.6｜2026-11-17｜SpecKit 組提出；D13、D14、D16、D25 與 E3、E4 已兩組同意；**D12 依助教 2026-11-17 補充說明改版（Guided Notes 直接串接線上 Google Sheets 讀寫）**；其餘決策待 OpenSpec 組確認
+>
+> 📎 逐條決策與實作位置的對照表見 [`DECISION-MAP.md`](./DECISION-MAP.md)（2026-11-20 整理給 OpenSpec 組，含 18 條 Default 決策的實際做法與回覆事項）
 > 用途：課程規定兩小組的系統功能必須一致。這份文件只寫「使用者看得到的行為」，不寫技術選型。
 > 狀態：`Confirmed` 兩組都同意／`Default` SpecKit 組先採用，等對方確認／`Open` 未決。
 > 修改方式：行為有變動就改這份文件，兩組各至少一人同意後才生效。
