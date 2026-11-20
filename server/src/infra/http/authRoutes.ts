@@ -8,6 +8,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Router } from 'express';
+import { isIPv6 } from 'node:net';
 import {
   ERROR_MESSAGES,
   studentJoinSchema,
@@ -35,6 +36,40 @@ export type LoginRateLimiterOptions = {
   /** 可注入時鐘供測試控制。 */
   now?: () => number;
 };
+
+/**
+ * 速率限制的來源位址正規化（2026-11-21 資安審計 GLM 覆核）。
+ *
+ * 原本直接用 `request.ip` 當 key，但同一台機器的 IPv4（127.0.0.1）與
+ * IPv6（::1）是兩個不同的 key → 換一種位址表示法就能完全繞過限流（實測：
+ * 猜 10 次 → 429；改用 [::1] 立刻恢復可猜）。
+ *
+ * 規則：
+ * - IPv4（或 IPv4-mapped 的 IPv6）→ 取 IPv4 部分，維持「同一個出口位址算同一個來源」。
+ * - IPv6 → 取 /64 前綴（同一個 IPv6 網段算同一個來源）。
+ *
+ * 這與 IPv4 的既有行為一致，只是補上 IPv6 的同一性；不影響正常登入。
+ */
+export function normalizeRateLimitSource(address: string): string {
+  const trimmed = address.trim();
+  const lower = trimmed.toLowerCase();
+  const ipv4Mapped = '::ffff:';
+  if (lower.startsWith(ipv4Mapped)) {
+    return trimmed.slice(ipv4Mapped.length);
+  }
+  if (!isIPv6(trimmed)) {
+    return trimmed;
+  }
+  // IPv6 迴圈位址與 IPv4 迴圈位址是同一台機器 → 視為同一個來源，
+  // 否則攻擊者只要在 127.0.0.1 與 ::1 之間交替就能完全繞過限流
+  // （2026-11-21 資安審計實測）。
+  if (lower === '::1' || lower === '0:0:0:0:0:0:0:1') {
+    return '127.0.0.1';
+  }
+  const head = trimmed.split('::')[0] ?? '';
+  const hextets = head.split(':').filter((hextet) => hextet.length > 0);
+  return `${hextets.slice(0, 4).join(':')}::/64`;
+}
 
 export function createLoginRateLimiter(
   options: LoginRateLimiterOptions = {},
@@ -110,7 +145,7 @@ export function createAuthRouter(dependencies: AuthRoutesDependencies): Router {
       return;
     }
 
-    const source = request.ip ?? 'unknown';
+    const source = normalizeRateLimitSource(request.ip ?? 'unknown');
     if (!limiter.isAllowed(source)) {
       response.status(429).json(errorBody('TOO_MANY_ATTEMPTS'));
       return;
