@@ -47,7 +47,10 @@ type SubmissionFilter = {
  * 過濾條件由固定的幾種呼叫端組合，不接受任意 SQL 字串；LEFT JOIN 保留
  * 沒有答案明細的歷史紀錄，輸出與舊版逐筆查答案的順序完全一致。
  */
-function readAnswers(database: DatabaseSync, filter: SubmissionFilter = {}): SubmissionRecord[] {
+function readAnswers(
+  database: DatabaseSync,
+  filter: SubmissionFilter = {},
+): SubmissionRecord[] {
   const conditions: string[] = [];
   const parameters: string[] = [];
   if (filter.questionId !== undefined) {
@@ -61,7 +64,8 @@ function readAnswers(database: DatabaseSync, filter: SubmissionFilter = {}): Sub
   if (filter.validOnly === true) {
     conditions.push('s.voided_at IS NULL');
   }
-  const where = conditions.length === 0 ? '' : `WHERE ${conditions.join(' AND ')}`;
+  const where =
+    conditions.length === 0 ? '' : `WHERE ${conditions.join(' AND ')}`;
   const rows = database
     .prepare(
       `SELECT s.id, s.question_id AS questionId, q.number AS questionNumber,
@@ -99,7 +103,10 @@ function readAnswers(database: DatabaseSync, filter: SubmissionFilter = {}): Sub
 }
 
 /** A group starts at zero and persists independently of answer data resets. */
-export function getGroupAnswerRevision(database: DatabaseSync, groupId: string): number {
+export function getGroupAnswerRevision(
+  database: DatabaseSync,
+  groupId: string,
+): number {
   const row = database
     .prepare(
       `SELECT answer_revision AS answerRevision
@@ -116,7 +123,10 @@ export function clearAll(database: DatabaseSync): void {
 }
 
 /** Atomically insert the initial counter or advance an existing one. */
-export function incrementGroupAnswerRevision(database: DatabaseSync, groupId: string): void {
+export function incrementGroupAnswerRevision(
+  database: DatabaseSync,
+  groupId: string,
+): void {
   database
     .prepare(
       `INSERT INTO group_answer_revisions (group_id, answer_revision)
@@ -128,7 +138,10 @@ export function incrementGroupAnswerRevision(database: DatabaseSync, groupId: st
 }
 
 /** Atomically insert one submission and every blank answer (nested-safe). */
-export function insertSubmission(database: DatabaseSync, submission: NewSubmission): void {
+export function insertSubmission(
+  database: DatabaseSync,
+  submission: NewSubmission,
+): void {
   database.exec('SAVEPOINT submission_insert');
   try {
     database
@@ -155,7 +168,9 @@ export function insertSubmission(database: DatabaseSync, submission: NewSubmissi
     }
     database.exec('RELEASE SAVEPOINT submission_insert');
   } catch (error) {
-    database.exec('ROLLBACK TO SAVEPOINT submission_insert; RELEASE SAVEPOINT submission_insert');
+    database.exec(
+      'ROLLBACK TO SAVEPOINT submission_insert; RELEASE SAVEPOINT submission_insert',
+    );
     throw error;
   }
 }
@@ -165,7 +180,9 @@ export function findValid(
   questionId: string,
   groupId: string,
 ): SubmissionRecord | null {
-  return readAnswers(database, { questionId, groupId, validOnly: true })[0] ?? null;
+  return (
+    readAnswers(database, { questionId, groupId, validOnly: true })[0] ?? null
+  );
 }
 
 /**
@@ -181,7 +198,10 @@ export function findLatest(
 }
 
 /** 一次讀回某組全部作答與作廢歷史，仍按題目順位與空格順序排列。 */
-export function listByGroup(database: DatabaseSync, groupId: string): SubmissionRecord[] {
+export function listByGroup(
+  database: DatabaseSync,
+  groupId: string,
+): SubmissionRecord[] {
   return readAnswers(database, { groupId });
 }
 
@@ -212,7 +232,10 @@ export function maxRank(database: DatabaseSync, questionId: string): number {
   return row.maxRank;
 }
 
-export function listByQuestion(database: DatabaseSync, questionId: string): SubmissionRecord[] {
+export function listByQuestion(
+  database: DatabaseSync,
+  questionId: string,
+): SubmissionRecord[] {
   return readAnswers(database, { questionId });
 }
 
@@ -225,7 +248,10 @@ export function listAllSubmissions(database: DatabaseSync): SubmissionRecord[] {
 }
 
 /** 005：某題目前的有效作答筆數（用來判斷是不是該題的第一個答案）。 */
-export function countValidForQuestion(database: DatabaseSync, questionId: string): number {
+export function countValidForQuestion(
+  database: DatabaseSync,
+  questionId: string,
+): number {
   const row = database
     .prepare(
       `SELECT COUNT(*) AS count FROM submissions
@@ -235,7 +261,10 @@ export function countValidForQuestion(database: DatabaseSync, questionId: string
   return row.count;
 }
 
-export function listValidByGroup(database: DatabaseSync, groupId: string): SubmissionRecord[] {
+export function listValidByGroup(
+  database: DatabaseSync,
+  groupId: string,
+): SubmissionRecord[] {
   return readAnswers(database, { groupId, validOnly: true });
 }
 
@@ -245,7 +274,9 @@ export type ValidSubmissionPair = {
 };
 
 /** 老師進度只需要有效「題目×組別」，不得為了計數讀回答案文字。 */
-export function listValidSubmissionPairs(database: DatabaseSync): ValidSubmissionPair[] {
+export function listValidSubmissionPairs(
+  database: DatabaseSync,
+): ValidSubmissionPair[] {
   return database
     .prepare(
       `SELECT question_id AS questionId, group_id AS groupId
@@ -259,7 +290,9 @@ export function listValidSubmissionPairs(database: DatabaseSync): ValidSubmissio
  * 004 US3（T019）：每個有效答案一列；作廢歷史完全不送進 CSV。
  * 是否搶答成功仍由 app 的 003 result projection 判定，不在 SQL 重算。
  */
-export function listValidSubmissionsWithAnswers(database: DatabaseSync): ValidSubmissionAnswer[] {
+export function listValidSubmissionsWithAnswers(
+  database: DatabaseSync,
+): ValidSubmissionAnswer[] {
   return database
     .prepare(
       `SELECT q.number AS questionNumber,

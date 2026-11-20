@@ -75,7 +75,10 @@ describe('斷線後以同一 token 重新連線', () => {
     const teacherSawStudent = waitForState(teacherSocket);
     const studentInitial = waitForState(studentSocket);
     studentSocket.connect();
-    const [, initialStudentState] = await Promise.all([teacherSawStudent, studentInitial]);
+    const [, initialStudentState] = await Promise.all([
+      teacherSawStudent,
+      studentInitial,
+    ]);
     expect(initialStudentState).toMatchObject({
       role: 'student',
       myGroupId: 'group-1',
@@ -177,13 +180,17 @@ it('五十組重連期間結束活動：最後 presence 每組 1、各自收到 
       const token = issueSession(target.db, { role: 'student', groupId });
       tokens.push(token);
       const student = target.connect({ token, autoConnect: false });
-      const connected = [student, teacher, ...students].map((socket) => waitForState(socket));
+      const connected = [student, teacher, ...students].map((socket) =>
+        waitForState(socket),
+      );
       student.connect();
       await Promise.all(connected);
       students.push(student);
     }
 
-    const openedStates = [teacher, ...students].map((socket) => waitForState(socket));
+    const openedStates = [teacher, ...students].map((socket) =>
+      waitForState(socket),
+    );
     expect(await sendCommand(teacher, 'activity:open', {})).toEqual({
       ok: true,
     });
@@ -213,8 +220,12 @@ it('五十組重連期間結束活動：最後 presence 每組 1、各自收到 
     });
     expect((await teacherClosed).phase).toBe('closed');
 
-    const reconnected = tokens.map((token) => target.connect({ token, autoConnect: false }));
-    const firstStates = reconnected.map((student) => waitForState(student, 30_000));
+    const reconnected = tokens.map((token) =>
+      target.connect({ token, autoConnect: false }),
+    );
+    const firstStates = reconnected.map((student) =>
+      waitForState(student, 30_000),
+    );
     for (const student of reconnected) student.connect();
     const snapshots = await Promise.all(firstStates);
     for (const [index, snapshot] of snapshots.entries()) {

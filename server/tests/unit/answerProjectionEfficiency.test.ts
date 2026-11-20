@@ -73,11 +73,15 @@ function countReads(run: () => void): number {
   const originalGet = StatementSync.prototype.get;
   StatementSync.prototype.all = function (...args) {
     count += 1;
-    return Reflect.apply(originalAll, this, args) as ReturnType<StatementSync['all']>;
+    return Reflect.apply(originalAll, this, args) as ReturnType<
+      StatementSync['all']
+    >;
   };
   StatementSync.prototype.get = function (...args) {
     count += 1;
-    return Reflect.apply(originalGet, this, args) as ReturnType<StatementSync['get']>;
+    return Reflect.apply(originalGet, this, args) as ReturnType<
+      StatementSync['get']
+    >;
   };
   try {
     run();
@@ -98,7 +102,9 @@ describe('滿場作答投影的 SQL 讀取次數', () => {
       if (typeof sql === 'string' && sql.includes('FROM submissions')) {
         preparedSubmissionQuery = true;
       }
-      return Reflect.apply(originalPrepare, this, args) as ReturnType<DatabaseSync['prepare']>;
+      return Reflect.apply(originalPrepare, this, args) as ReturnType<
+        DatabaseSync['prepare']
+      >;
     };
     let snapshot: ReturnType<typeof createProjectorSnapshot>;
     try {
@@ -116,8 +122,14 @@ describe('滿場作答投影的 SQL 讀取次數', () => {
   });
 
   it.each([
-    ['open 本組作答', (target: DatabaseSync) => buildMyAnswers(target, 'group-1')],
-    ['closed 本組作答', (target: DatabaseSync) => buildClosedMyAnswers(target, 'group-1')],
+    [
+      'open 本組作答',
+      (target: DatabaseSync) => buildMyAnswers(target, 'group-1'),
+    ],
+    [
+      'closed 本組作答',
+      (target: DatabaseSync) => buildClosedMyAnswers(target, 'group-1'),
+    ],
     ['結果', (target: DatabaseSync) => buildResults(target)],
     ['看板', (target: DatabaseSync) => buildBoard(target)],
     ['進度', (target: DatabaseSync) => buildProgress(target)],

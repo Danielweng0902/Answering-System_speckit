@@ -20,7 +20,9 @@ import { listGroups } from '../infra/db/groupRepo.js';
 import { list as listQuestions } from '../infra/db/questionRepo.js';
 
 /** Shared question list projection for open and closed student snapshots. */
-export function buildStudentQuestions(database: DatabaseSync): StudentQuestion[] {
+export function buildStudentQuestions(
+  database: DatabaseSync,
+): StudentQuestion[] {
   return listQuestions(database).map((question) => ({
     number: question.number,
     kind: question.kind,
@@ -40,7 +42,9 @@ type OwnSubmissionIndex = {
 };
 
 /** open 與 closed 學生快照共用同一份本組明細，建立「最新／有效」索引。 */
-function createOwnSubmissionIndex(submissions: SubmissionRecord[]): OwnSubmissionIndex {
+function createOwnSubmissionIndex(
+  submissions: SubmissionRecord[],
+): OwnSubmissionIndex {
   const validByQuestionNumber = new Map<number, SubmissionRecord>();
   const latestByQuestionNumber = new Map<number, SubmissionRecord>();
   for (const submission of submissions) {
@@ -58,7 +62,10 @@ function createOwnSubmissionIndex(submissions: SubmissionRecord[]): OwnSubmissio
  * 最新 Submission（rank 最大）決定 submitted／voided，與 closed 投影及
  * buildBoard 的「最新」語意一致；open 快照仍不含 rank（FR-030、FR-017）。
  */
-export function buildMyAnswers(database: DatabaseSync, groupId: string): StudentOpenAnswer[] {
+export function buildMyAnswers(
+  database: DatabaseSync,
+  groupId: string,
+): StudentOpenAnswer[] {
   const own = createOwnSubmissionIndex(listByGroup(database, groupId));
   return listQuestions(database).map((question) => {
     const submission = own.latestByQuestionNumber.get(question.number);
@@ -98,7 +105,8 @@ function createSubmissionIndex(
     }
     const previous = byGroup.get(submission.groupId);
     byGroup.set(submission.groupId, {
-      valid: submission.voidedAt === null ? submission : (previous?.valid ?? null),
+      valid:
+        submission.voidedAt === null ? submission : (previous?.valid ?? null),
       latest: submission,
     });
   }
@@ -117,13 +125,19 @@ function submissionFor(
  * 結束後每題的搶答結果（003 US4；FR-023、FR-025）。winner 一律只由
  * 判定服務決定（005 FR-009、原則 VI）；無有效作答為 null。
  */
-export function buildResults(database: DatabaseSync, now: Date = new Date()): QuestionResult[] {
+export function buildResults(
+  database: DatabaseSync,
+  now: Date = new Date(),
+): QuestionResult[] {
   const groups = listGroups(database);
   const groupNames = new Map(groups.map((group) => [group.id, group.name]));
   const activity = getActivity(database);
   const submissions = listAllSubmissions(database);
   const questions = listQuestions(database);
-  const settlement = computeSettlementFromRecords({ activity, submissions, questions }, now);
+  const settlement = computeSettlementFromRecords(
+    { activity, submissions, questions },
+    now,
+  );
   const submissionIndex = createSubmissionIndex(submissions);
 
   return questions.map((question) => {
@@ -132,7 +146,8 @@ export function buildResults(database: DatabaseSync, now: Date = new Date()): Qu
     const winnerSubmission =
       winnerGroupId === null
         ? null
-        : (submissionFor(submissionIndex, question.id, winnerGroupId)?.valid ?? null);
+        : (submissionFor(submissionIndex, question.id, winnerGroupId)?.valid ??
+          null);
     return {
       questionNumber: question.number,
       winner:
@@ -173,8 +188,9 @@ export function buildClosedMyAnswers(
     const submitted = own.validByQuestionNumber.get(question.number);
     if (submitted !== undefined) {
       const rank =
-        settlement.get(question.number)?.ranks.find((entry) => entry.groupId === groupId)?.rank ??
-        null;
+        settlement
+          .get(question.number)
+          ?.ranks.find((entry) => entry.groupId === groupId)?.rank ?? null;
       return {
         questionNumber: question.number,
         state: 'submitted',
@@ -208,18 +224,26 @@ export function buildClosedMyAnswers(
  * 只有已作廢作答顯示最新一筆 voided 並保留答案與原順位；未送出為
  * not_submitted、[] 與 null。
  */
-export function buildBoard(database: DatabaseSync, now: Date = new Date()): AnswerBoardQuestion[] {
+export function buildBoard(
+  database: DatabaseSync,
+  now: Date = new Date(),
+): AnswerBoardQuestion[] {
   const groups = listGroups(database);
   const activity = getActivity(database);
   const submissions = listAllSubmissions(database);
   const questions = listQuestions(database);
-  const settlement = computeSettlementFromRecords({ activity, submissions, questions }, now);
+  const settlement = computeSettlementFromRecords(
+    { activity, submissions, questions },
+    now,
+  );
   const submissionIndex = createSubmissionIndex(submissions);
 
   return questions.map((question) => {
     const result = settlement.get(question.number);
     const winnerGroupId = result?.winnerGroupId ?? null;
-    const rankByGroup = new Map((result?.ranks ?? []).map((entry) => [entry.groupId, entry.rank]));
+    const rankByGroup = new Map(
+      (result?.ranks ?? []).map((entry) => [entry.groupId, entry.rank]),
+    );
     const cells: AnswerBoardCell[] = groups.map((group) => {
       const submission = submissionFor(submissionIndex, question.id, group.id);
       const valid = submission?.valid;
@@ -265,18 +289,23 @@ export function buildProgress(database: DatabaseSync): AnswerProgress {
   const submittedCountsByGroup = new Map<string, number>();
 
   for (const pair of submittedPairs) {
-    const submittedGroups = submittedGroupsByQuestion.get(pair.questionId) ?? new Set<string>();
+    const submittedGroups =
+      submittedGroupsByQuestion.get(pair.questionId) ?? new Set<string>();
     if (!submittedGroups.has(pair.groupId)) {
       submittedGroups.add(pair.groupId);
       submittedGroupsByQuestion.set(pair.questionId, submittedGroups);
-      submittedCountsByGroup.set(pair.groupId, (submittedCountsByGroup.get(pair.groupId) ?? 0) + 1);
+      submittedCountsByGroup.set(
+        pair.groupId,
+        (submittedCountsByGroup.get(pair.groupId) ?? 0) + 1,
+      );
     }
   }
 
   return {
     perQuestion: questions.map((question) => ({
       questionNumber: question.number,
-      submittedGroupCount: submittedGroupsByQuestion.get(question.id)?.size ?? 0,
+      submittedGroupCount:
+        submittedGroupsByQuestion.get(question.id)?.size ?? 0,
     })),
     perGroup: groups.map((group) => ({
       groupId: group.id,

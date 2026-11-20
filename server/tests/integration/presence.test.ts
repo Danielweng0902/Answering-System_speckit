@@ -72,8 +72,14 @@ describe('presence changes', () => {
   });
 });
 
-async function connectAndDrain(initial: Socket, sockets: Socket[]): Promise<SnapshotShape> {
-  const waits = [waitForState(initial), ...sockets.map((socket) => waitForState(socket))];
+async function connectAndDrain(
+  initial: Socket,
+  sockets: Socket[],
+): Promise<SnapshotShape> {
+  const waits = [
+    waitForState(initial),
+    ...sockets.map((socket) => waitForState(socket)),
+  ];
   initial.connect();
   return (await Promise.all(waits))[0] as SnapshotShape;
 }
@@ -155,7 +161,9 @@ describe('滿場 presence 覆蓋', () => {
     expect(unrelatedStates).toBe(0);
     const projectorAfterSubmit = changed[2]!;
     expect(projectorAfterSubmit.role).toBe('projector');
-    expect(JSON.stringify(projectorAfterSubmit)).not.toContain('只有第五十組的答案');
+    expect(JSON.stringify(projectorAfterSubmit)).not.toContain(
+      '只有第五十組的答案',
+    );
     expect(projectorAfterSubmit).not.toHaveProperty('board');
     expect(projectorAfterSubmit).not.toHaveProperty('results');
 
@@ -169,7 +177,9 @@ describe('滿場 presence 覆蓋', () => {
       token: tokens[49]!,
       autoConnect: false,
     });
-    const reconnectedStates = [...survivors, reconnected].map((socket) => waitForState(socket));
+    const reconnectedStates = [...survivors, reconnected].map((socket) =>
+      waitForState(socket),
+    );
     reconnected.connect();
     const finalStates = await Promise.all(reconnectedStates);
     expect(finalStates).toHaveLength(52);

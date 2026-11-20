@@ -14,8 +14,14 @@ import {
   type SettlementSubmission,
 } from '../domain/answerSettlement.js';
 import { getActivity, type Activity } from '../infra/db/activityRepo.js';
-import { listAllSubmissions, type SubmissionRecord } from '../infra/db/answerRepo.js';
-import { list as listQuestions, type StoredQuestion } from '../infra/db/questionRepo.js';
+import {
+  listAllSubmissions,
+  type SubmissionRecord,
+} from '../infra/db/answerRepo.js';
+import {
+  list as listQuestions,
+  type StoredQuestion,
+} from '../infra/db/questionRepo.js';
 
 type SettlementSource = {
   activity: Activity | null;
@@ -60,7 +66,9 @@ export function computeSettlementFromRecords(
     settled: source.activity?.phase === 'closed',
   });
 
-  return new Map(settlements.map((settlement) => [settlement.questionNumber, settlement]));
+  return new Map(
+    settlements.map((settlement) => [settlement.questionNumber, settlement]),
+  );
 }
 
 /**
