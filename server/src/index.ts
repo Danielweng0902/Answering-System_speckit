@@ -36,6 +36,11 @@ export type CreateServerOptions = {
   databasePath?: string;
   /** Use 0 to ask the OS for an available ephemeral port. */
   port?: number;
+  /**
+   * 綁定的 host；不給就維持 Node 預設（所有介面，課堂的 LAN 存取需要）。
+   * 2026-11-21 資安審計：預設對整個 LAN 開放，需要時可設成 127.0.0.1。
+   */
+  host?: string;
   teacherPassword?: string;
   webDistPath?: string;
   /** 倒數計時的時鐘與排程器（T064）；測試可注入手動時鐘。 */
@@ -60,7 +65,11 @@ export type ServerControl = Pick<StateBroadcaster, 'broadcastState'> & {
   httpServer: HttpServer;
 };
 
-function listen(httpServer: HttpServer, port: number): Promise<void> {
+function listen(
+  httpServer: HttpServer,
+  port: number,
+  host?: string | undefined,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const onError = (error: Error): void => {
       httpServer.off('listening', onListening);
@@ -73,7 +82,12 @@ function listen(httpServer: HttpServer, port: number): Promise<void> {
 
     httpServer.once('error', onError);
     httpServer.once('listening', onListening);
-    httpServer.listen(port);
+    // 未指定 HOST 時維持 Node 預設（所有介面）；指定時只綁該介面。
+    if (host === undefined) {
+      httpServer.listen(port);
+    } else {
+      httpServer.listen(port, host);
+    }
   });
 }
 
@@ -323,7 +337,16 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
   }
 
   try {
-    await listen(httpServer, options.port ?? config.port);
+    // 密碼過短不擋啟動（避免破壞既有部署），但明確提出警告
+    // （2026-11-21 資安審計：密碼沒有最小長度政策）。
+    const effectivePassword = options.teacherPassword ?? config.teacherPassword;
+    if (effectivePassword !== undefined && effectivePassword.length < 8) {
+      console.warn(
+        '[warn] 老師密碼短於 8 個字元；請改用更長的密碼（不要把密碼印出來）。',
+      );
+    }
+
+    await listen(httpServer, options.port ?? config.port, options.host ?? config.host);
   } catch (error) {
     countdown.cancel();
     await closeResources(io, database);
