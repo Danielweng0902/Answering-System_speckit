@@ -126,6 +126,12 @@ export function createSocketBroadcaster(
 
     for (const socket of io.sockets.sockets.values()) {
       const identity = getSocketIdentity(socket);
+      // 投影檢視不需要作答事件：推給它只會讓投影的 revision 隨每次作答跳動，
+      // 等於用 revision 洩漏「全場作答次數與時機」（2026-11-21 資安審計實測：
+      // 三題連續作答時投影收到 revision 7→8→9→10）。順帶也少一輪廣播成本。
+      if (socketData(socket).view === 'projector') {
+        continue;
+      }
       const receivesSubmissionChange =
         identity.role === 'teacher' ||
         (identity.role === 'student' && identity.groupId === groupId);

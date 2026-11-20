@@ -133,15 +133,17 @@ export function createApp(options: HttpAppOptions): Express {
   });
 
   app.use(
-    (error: unknown, _request: Request, response: Response, next: NextFunction) => {
+    (error: unknown, _request: Request, response: Response) => {
       if (isJsonParseError(error)) {
         response.status(400).json(errorBody('INVALID_INPUT'));
         return;
       }
 
-      // No other web errors exist in this phase; let Express use its default
-      // handler rather than inventing an error code outside the contracts.
-      next(error);
+      // 未預期的例外：回應維持 Express 預設的 500 文字，**不在 log 寫入
+      // 例外訊息或堆疊**（可能含資料庫路徑、SQL、內部路徑；原則 IV）。
+      // 只記錄固定事件字串，與 broadcaster／commandRouter 的做法一致。
+      console.error('HTTP request failed unexpectedly.');
+      response.status(500).type('text/plain').send('Internal Server Error');
     },
   );
 

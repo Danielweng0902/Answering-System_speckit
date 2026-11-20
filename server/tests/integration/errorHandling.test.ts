@@ -73,6 +73,42 @@ describe('例外處理（GLM 複查發現）', () => {
     expect(logged).not.toContain('payload-value');
   });
 
+  it('HTTP 非預期錯誤不把例外訊息或堆疊寫進 stderr（2026-11-21 資安審計）', async () => {
+    const database = new DatabaseSync(':memory:');
+    initializeDatabase(database);
+    const app = createApp({ database, teacherPassword: undefined });
+    database.close();
+    const httpServer = createHttpServer(app);
+    await new Promise<void>((resolve) => httpServer.listen(0, resolve));
+    const { port } = httpServer.address() as AddressInfo;
+
+    const logged: string[] = [];
+    const errorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation((...args: unknown[]) => {
+        logged.push(args.map(String).join('\n'));
+      });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/api/student/join`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ groupId: 'g1' }),
+      });
+      await response.arrayBuffer();
+      expect(response.status).toBe(500);
+      // stderr 只允許固定字串，不得含堆疊、資料庫路徑或 SQL。
+      const output = logged.join('\n');
+      expect(output).not.toMatch(/\bat .+\.(ts|js):\d+/);
+      expect(output).not.toContain('database');
+      expect(output).not.toContain('SQLITE');
+      expect(output).not.toContain('Error:');
+    } finally {
+      errorSpy.mockRestore();
+      await new Promise((resolve) => httpServer.close(resolve));
+    }
+  });
+
   it('HTTP 非預期錯誤不回傳堆疊', async () => {
     const database = new DatabaseSync(':memory:');
     initializeDatabase(database);

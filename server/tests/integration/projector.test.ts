@@ -26,6 +26,8 @@ type Fixture = {
   server: TestServer;
   teacher: Socket;
   projector: Socket;
+  /** 投影連線建立時收到的第一份投影快照。 */
+  projectorState: Snapshot;
 };
 
 async function startFixture(): Promise<Fixture> {
@@ -52,9 +54,9 @@ async function startFixture(): Promise<Fixture> {
   });
   const projectorInitial = waitForState(projector);
   projector.connect();
-  await projectorInitial;
+  const projectorState = await projectorInitial;
 
-  return { server: target, teacher, projector };
+  return { server: target, teacher, projector, projectorState };
 }
 
 function setPhase(
@@ -191,6 +193,53 @@ describe('005 投影看板（US3；T023）', () => {
     expect(serialized).not.toContain('"answers"');
     expect(serialized).not.toContain('"cells"');
     expect(serialized).not.toContain('答案 A');
+  });
+
+  it('學生送出答案時，投影連線不會收到新的 state、revision 也不跳動（2026-11-21 資安審計）', async () => {
+    const fixture = await startFixture();
+    setPhase(fixture.server, 'open');
+
+    // 學生進場（presence 改變）→ 投影**應該**收到在線狀態更新，先等這一份。
+    const studentToken = issueSession(fixture.server.db, {
+      role: 'student',
+      groupId: 'group-1',
+    });
+    const student = fixture.server.connect({
+      token: studentToken,
+      autoConnect: false,
+    });
+    const studentState = waitForState(student);
+    const presenceState = waitForState(fixture.projector);
+    student.connect();
+    await studentState;
+    const afterPresence = await presenceState;
+    const beforeRevision = afterPresence.revision;
+
+    // 接著才送出答案（會觸發作答事件廣播）：投影端不該再收到 state。
+    let received = false;
+    fixture.projector.on('state', () => {
+      received = true;
+    });
+    await sendCommand(student, 'answer:submit', {
+      questionNumber: 1,
+      answers: ['甲答案'],
+    });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(received).toBe(false);
+
+    // 即使之後因為階段變化而收到 state，revision 也不能跳動（否則等於用
+    // revision 洩漏作答次數）。用老師的指令觸發廣播（setPhase 只改資料庫）。
+    const afterState = waitForState(fixture.projector);
+    await sendCommand(fixture.teacher, 'activity:close', {});
+    const after = await afterState;
+    // 投影的 revision 只反映活動本身（階段、在線狀態），**不含作答次數**：
+    // 舊作法是 activity.revision + 作答事件數 → 觀察者能從 revision 跳動
+    // 數出全場作答了幾次（2026-11-21 資安審計實測 7→8→9→10）。
+    const activity = getActivity(fixture.server.db);
+    expect(activity).toBeDefined();
+    expect(after.revision).toBe(activity?.revision);
+    // 作答事件本身不該讓投影的 revision 增加。
+    expect(after.revision).toBe(beforeRevision + 1);
   });
 
   it('非老師身分連線不會取得投影快照（FR-022、AC-005-18）', async () => {
