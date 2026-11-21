@@ -1,35 +1,39 @@
 import type { DatabaseSync } from 'node:sqlite';
-import type {
-  ProjectorSnapshot,
-  Snapshot,
-  SnapshotBase,
-} from '@classroom/shared';
+import type { ProjectorSnapshot, Snapshot, SnapshotBase } from '@classroom/shared';
 import type { AccessIdentity } from './access.js';
 import {
   buildBoard,
+  buildBoardFromView,
   buildClosedMyAnswers,
+  buildClosedMyAnswersFromView,
   buildMyAnswers,
+  buildMyAnswersFromView,
   buildProgress,
+  buildProgressFromView,
   buildResults,
-  buildStudentQuestions,
+  buildResultsFromView,
+  toStudentQuestions,
+  type AnswerDataView,
 } from './answerProjections.js';
-import {
-  getActivity,
-  getAnswerEventCount,
-  getSessionId,
-} from '../infra/db/activityRepo.js';
+import { getActivity, getAnswerEventCount, getSessionId } from '../infra/db/activityRepo.js';
 import { getGroupAnswerRevision } from '../infra/db/answerRepo.js';
 import { listGroups } from '../infra/db/groupRepo.js';
-import {
-  getGuidedNotes,
-  list as listQuestions,
-} from '../infra/db/questionRepo.js';
+import { getGuidedNotes, list as listQuestions } from '../infra/db/questionRepo.js';
 
+/**
+ * 建立角色快照。
+ *
+ * 2026-11-21 冷啟效能修正 P1：正式伺服器會傳入行程內作答索引的
+ * `answersView`，看板／結果／進度與本組作答由索引組出，不再每份快照
+ * 重讀全場 submissions。未傳入時（測試、基準腳本）維持原本的直接
+ * 讀庫路徑，兩者使用同一套投影實作，輸出一致。
+ */
 export function createSnapshot(
   database: DatabaseSync,
   identity: AccessIdentity,
   presence: Readonly<Record<string, number>> = {},
   now = new Date(),
+  answersView?: AnswerDataView,
 ): Snapshot {
   const activity = getActivity(database);
   if (!activity) {
@@ -43,12 +47,13 @@ export function createSnapshot(
         ? activity.revision + getGroupAnswerRevision(database, identity.groupId)
         : activity.revision;
 
+  const groups = listGroups(database);
   const base: SnapshotBase = {
     revision,
     serverNow: now.toISOString(),
     phase: activity.phase,
     countdownEndsAt: activity.countdownEndsAt,
-    groups: listGroups(database).map((group) => ({
+    groups: groups.map((group) => ({
       id: group.id,
       name: group.name,
     })),
@@ -69,32 +74,43 @@ export function createSnapshot(
       if (activity.phase === 'preparing') {
         return { ...studentBase, phase: 'preparing' as const };
       }
+      const questions = listQuestions(database);
       if (activity.phase === 'open') {
         return {
           ...studentBase,
           phase: 'open' as const,
-          questions: buildStudentQuestions(database),
-          myAnswers: buildMyAnswers(database, identity.groupId),
+          questions: toStudentQuestions(questions),
+          myAnswers:
+            answersView !== undefined
+              ? buildMyAnswersFromView(answersView, identity.groupId, questions)
+              : buildMyAnswers(database, identity.groupId),
         };
       }
       // 003 US4（T035）：closed 學生快照含每題搶答結果與本組含順位的答案。
       return {
         ...studentBase,
         phase: 'closed' as const,
-        questions: buildStudentQuestions(database),
-        results: buildResults(database, now),
-        myAnswers: buildClosedMyAnswers(database, identity.groupId, now),
+        questions: toStudentQuestions(questions),
+        results:
+          answersView !== undefined
+            ? buildResultsFromView(answersView, groups, activity, questions, now)
+            : buildResults(database, now),
+        myAnswers:
+          answersView !== undefined
+            ? buildClosedMyAnswersFromView(answersView, identity.groupId, activity, questions, now)
+            : buildClosedMyAnswers(database, identity.groupId, now),
       };
     }
     case 'teacher': {
       // 002（FR-016）：題目摘要與學習單資訊只有老師快照有；003 學生快照
       // 的 questions 另有自己（空格 prefix）與本組作答投影（原則 VI）。
       const guidedNotes = getGuidedNotes(database);
+      const questions = listQuestions(database);
       return {
         ...base,
         role: 'teacher',
         presence: { ...presence },
-        questions: listQuestions(database).map((question) => ({
+        questions: questions.map((question) => ({
           number: question.number,
           kind: question.kind,
           prompt: question.prompt,
@@ -109,8 +125,14 @@ export function createSnapshot(
             }
           : null,
         // 003 US3（T030；FR-019–FR-022）：老師快照任何階段都輸出看板與進度。
-        board: buildBoard(database, now),
-        progress: buildProgress(database),
+        board:
+          answersView !== undefined
+            ? buildBoardFromView(answersView, groups, activity, questions, now)
+            : buildBoard(database, now),
+        progress:
+          answersView !== undefined
+            ? buildProgressFromView(answersView, groups, questions)
+            : buildProgress(database),
       };
     }
   }
@@ -127,6 +149,7 @@ export function createProjectorSnapshot(
   database: DatabaseSync,
   presence: Readonly<Record<string, number>> = {},
   now = new Date(),
+  answersView?: AnswerDataView,
 ): ProjectorSnapshot {
   const activity = getActivity(database);
   if (!activity) {
@@ -134,19 +157,17 @@ export function createProjectorSnapshot(
   }
   const groups = listGroups(database);
   // 逐題揭曉依題號順序（2026-11-17 兩組同意）。
-  const questions = [...listQuestions(database)].sort(
-    (a, b) => a.number - b.number,
-  );
-  const revealedCount = Math.min(
-    activity.revealedQuestionCount,
-    questions.length,
-  );
+  const questions = [...listQuestions(database)].sort((a, b) => a.number - b.number);
+  const revealedCount = Math.min(activity.revealedQuestionCount, questions.length);
   // 揭曉 0 題時投影不含任何作答資料，連結算與答案批讀都不進行；
   // 部分揭曉仍保留公平順位必要的跨題依賴，由 buildResults 判定。
-  const allResults = revealedCount === 0 ? [] : buildResults(database, now);
-  const results = new Map(
-    allResults.map((result) => [result.questionNumber, result]),
-  );
+  const allResults =
+    revealedCount === 0
+      ? []
+      : answersView !== undefined
+        ? buildResultsFromView(answersView, groups, activity, questions, now)
+        : buildResults(database, now);
+  const results = new Map(allResults.map((result) => [result.questionNumber, result]));
   const revealed = questions.slice(0, revealedCount).map((question) => {
     const result = results.get(question.number);
     return {
@@ -156,10 +177,7 @@ export function createProjectorSnapshot(
     };
   });
 
-  const winCounts = new Map<
-    string,
-    { groupId: string; groupName: string; count: number }
-  >();
+  const winCounts = new Map<string, { groupId: string; groupName: string; count: number }>();
   for (const result of results.values()) {
     if (result.winner === null) {
       continue;
@@ -194,8 +212,7 @@ export function createProjectorSnapshot(
       revealedQuestionCount: revealedCount,
       questions: revealed,
       // 全部揭曉後才顯示各組成功題數（FR-018）。
-      groupWinCounts:
-        revealedCount >= questions.length ? [...winCounts.values()] : null,
+      groupWinCounts: revealedCount >= questions.length ? [...winCounts.values()] : null,
     },
   };
 }

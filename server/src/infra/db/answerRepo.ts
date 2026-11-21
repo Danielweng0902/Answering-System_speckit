@@ -122,6 +122,20 @@ export function clearAll(database: DatabaseSync): void {
   database.exec('DELETE FROM submission_answers; DELETE FROM submissions;');
 }
 
+/**
+ * 2026-11-21 冷啟效能修正 P1：作答資料代際（單列計數器，見 database.ts
+ * 的 trigger）。記憶體作答索引用這個純量判斷手上的投影與 submissions
+ * 資料表是否仍然一致；任何 INSERT／UPDATE／DELETE 都會遞增它。
+ */
+export function readSubmissionGeneration(database: DatabaseSync): number {
+  const row = database
+    .prepare(
+      `SELECT generation FROM answer_data_generation WHERE id = 1`,
+    )
+    .get() as { generation: number } | undefined;
+  return row?.generation ?? 0;
+}
+
 /** Atomically insert the initial counter or advance an existing one. */
 export function incrementGroupAnswerRevision(
   database: DatabaseSync,

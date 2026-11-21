@@ -9,21 +9,14 @@ import type {
   StudentQuestion,
 } from '@classroom/shared';
 import { computeSettlementFromRecords } from './answerSettlementService.js';
-import {
-  listAllSubmissions,
-  listByGroup,
-  listValidSubmissionPairs,
-  type SubmissionRecord,
-} from '../infra/db/answerRepo.js';
-import { getActivity } from '../infra/db/activityRepo.js';
-import { listGroups } from '../infra/db/groupRepo.js';
-import { list as listQuestions } from '../infra/db/questionRepo.js';
+import { listAllSubmissions, listByGroup, type SubmissionRecord } from '../infra/db/answerRepo.js';
+import { getActivity, type Activity } from '../infra/db/activityRepo.js';
+import { listGroups, type Group } from '../infra/db/groupRepo.js';
+import { list as listQuestions, type StoredQuestion } from '../infra/db/questionRepo.js';
 
 /** Shared question list projection for open and closed student snapshots. */
-export function buildStudentQuestions(
-  database: DatabaseSync,
-): StudentQuestion[] {
-  return listQuestions(database).map((question) => ({
+export function toStudentQuestions(questions: readonly StoredQuestion[]): StudentQuestion[] {
+  return questions.map((question) => ({
     number: question.number,
     kind: question.kind,
     prompt: question.prompt,
@@ -34,42 +27,169 @@ export function buildStudentQuestions(
   }));
 }
 
-type OwnSubmissionIndex = {
-  /** 每題唯一有效作答（資料庫有部分唯一索引保證）。 */
-  validByQuestionNumber: Map<number, SubmissionRecord>;
-  /** 含作廢歷史的最新一筆；rank 最大即最新。 */
-  latestByQuestionNumber: Map<number, SubmissionRecord>;
+/** Shared question list projection for open and closed student snapshots. */
+export function buildStudentQuestions(database: DatabaseSync): StudentQuestion[] {
+  return toStudentQuestions(listQuestions(database));
+}
+
+type QuestionGroupSubmission = {
+  valid: SubmissionRecord | null;
+  latest: SubmissionRecord | null;
 };
 
-/** open 與 closed 學生快照共用同一份本組明細，建立「最新／有效」索引。 */
-function createOwnSubmissionIndex(
-  submissions: SubmissionRecord[],
-): OwnSubmissionIndex {
-  const validByQuestionNumber = new Map<number, SubmissionRecord>();
-  const latestByQuestionNumber = new Map<number, SubmissionRecord>();
-  for (const submission of submissions) {
-    if (submission.voidedAt === null) {
-      validByQuestionNumber.set(submission.questionNumber, submission);
-    }
-    // listAll/listByGroup 已依題目與 rank 排序，最後覆蓋即最新。
-    latestByQuestionNumber.set(submission.questionNumber, submission);
+export type { QuestionGroupSubmission };
+
+/**
+ * 老師看板／結果／進度與學生作答投影共用的「作答資料視圖」。
+ *
+ * 內容等同 `listAllSubmissions` 的結果（含作廢歷史、同題內依 rank 升序），
+ * 但來源可以是資料庫或行程內的增量索引；winner 一律由結算決定，視圖只
+ * 提供有哪些作答、順位與答案（原則 VI）。所有成員都是唯讀用途：
+ * 增量索引會在寫入成功後就地維護這些結構，投影不得修改它們。
+ */
+export type AnswerDataView = {
+  /** 全場作答（含作廢歷史），同題內依 rank 升序；唯讀。 */
+  readonly submissions: readonly SubmissionRecord[];
+  /** questionId → groupId → 該題該組的最新／有效作答；唯讀。 */
+  readonly byQuestionGroup: ReadonlyMap<string, ReadonlyMap<string, QuestionGroupSubmission>>;
+  /** questionId → 目前有有效作答的組別集合（老師進度用）；唯讀。 */
+  readonly validGroupIds: ReadonlyMap<string, ReadonlySet<string>>;
+  /** groupId → 目前有有效作答的題數（老師進度用）；唯讀。 */
+  readonly validQuestionCountByGroup: ReadonlyMap<string, number>;
+};
+
+/** 視圖的可變內部型別：只有建立與增量維護程式可以使用。 */
+type MutableAnswerDataView = {
+  submissions: SubmissionRecord[];
+  byQuestionGroup: Map<string, Map<string, QuestionGroupSubmission>>;
+  validGroupIds: Map<string, Set<string>>;
+  validQuestionCountByGroup: Map<string, number>;
+};
+
+/**
+ * 把一筆作答折入視圖（重建與增量插入共用同一條規則）。
+ *
+ * - latest 永遠指向最後折入的一筆（readAnswers 已依 rank 排序，插入序
+ *   在同題同組內即 rank 升序）。
+ * - 折入有效作答時更新 valid 與進度集合；折入已作廢的一筆只更新
+ *   latest，保留先前的 valid（與舊版 createSubmissionIndex 相同）。
+ * - 同一題同組只有一次有效作答（部分唯一索引保證），所以「由無有效
+ *   變成有有效」才需要把該組加入進度集合與題數計數。
+ */
+function foldSubmission(view: MutableAnswerDataView, record: SubmissionRecord): void {
+  view.submissions.push(record);
+  let byGroup = view.byQuestionGroup.get(record.questionId);
+  if (byGroup === undefined) {
+    byGroup = new Map();
+    view.byQuestionGroup.set(record.questionId, byGroup);
   }
-  return { validByQuestionNumber, latestByQuestionNumber };
+  const previous = byGroup.get(record.groupId);
+  const hadValid = previous?.valid != null;
+  byGroup.set(record.groupId, {
+    valid: record.voidedAt === null ? record : (previous?.valid ?? null),
+    latest: record,
+  });
+  if (record.voidedAt === null && !hadValid) {
+    let groups = view.validGroupIds.get(record.questionId);
+    if (groups === undefined) {
+      groups = new Set();
+      view.validGroupIds.set(record.questionId, groups);
+    }
+    if (!groups.has(record.groupId)) {
+      groups.add(record.groupId);
+      view.validQuestionCountByGroup.set(
+        record.groupId,
+        (view.validQuestionCountByGroup.get(record.groupId) ?? 0) + 1,
+      );
+    }
+  }
 }
 
 /**
- * Build the per-question own-group answer state for open student snapshots.
- * 最新 Submission（rank 最大）決定 submitted／voided，與 closed 投影及
- * buildBoard 的「最新」語意一致；open 快照仍不含 rank（FR-030、FR-017）。
+ * 讓視圖反映一筆已確認的作廢（與資料庫的 UPDATE 同步）。
+ * 找不到對應的有效紀錄代表索引與資料庫不一致，回傳 false 讓呼叫端
+ * 觸發整份重建；正常寫入路徑不會走到這裡。
  */
-export function buildMyAnswers(
-  database: DatabaseSync,
+function foldVoid(
+  view: MutableAnswerDataView,
+  questionId: string,
   groupId: string,
+  voidedAt: string,
+): boolean {
+  const entry = view.byQuestionGroup.get(questionId)?.get(groupId);
+  const valid = entry?.valid;
+  if (entry === undefined || valid == null) {
+    return false;
+  }
+  valid.voidedAt = voidedAt;
+  entry.valid = null;
+  const groups = view.validGroupIds.get(questionId);
+  if (groups?.delete(groupId) === true) {
+    const remaining = (view.validQuestionCountByGroup.get(groupId) ?? 1) - 1;
+    if (remaining <= 0) {
+      view.validQuestionCountByGroup.delete(groupId);
+    } else {
+      view.validQuestionCountByGroup.set(groupId, remaining);
+    }
+  }
+  return true;
+}
+
+/**
+ * 由完整的作答清單建立視圖（資料庫回退路徑與索引重建共用）。
+ * 傳入的可以是指定單一組別的作答（學生本組投影），規則不變。
+ */
+export function createAnswerDataView(submissions: readonly SubmissionRecord[]): AnswerDataView {
+  const view: MutableAnswerDataView = {
+    submissions: [],
+    byQuestionGroup: new Map(),
+    validGroupIds: new Map(),
+    validQuestionCountByGroup: new Map(),
+  };
+  for (const submission of submissions) {
+    foldSubmission(view, submission);
+  }
+  return view;
+}
+
+/**
+ * 行程內增量索引專用（2026-11-21 冷啟效能修正 P1）：把一筆**已 COMMIT**
+ * 的新作答折入既有視圖。一般投影不應呼叫；快照一律把視圖當唯讀。
+ */
+export function appendToAnswerDataView(view: AnswerDataView, record: SubmissionRecord): void {
+  foldSubmission(view as MutableAnswerDataView, record);
+}
+
+/**
+ * 增量索引專用：讓既有視圖反映一筆**已 COMMIT** 的作廢；找不到對應的
+ * 有效作答時回傳 false，由索引標記整份重建。
+ */
+export function voidInAnswerDataView(
+  view: AnswerDataView,
+  questionId: string,
+  groupId: string,
+  voidedAt: string,
+): boolean {
+  return foldVoid(view as MutableAnswerDataView, questionId, groupId, voidedAt);
+}
+
+function submissionFor(
+  index: AnswerDataView,
+  questionId: string,
+  groupId: string,
+): QuestionGroupSubmission | undefined {
+  return index.byQuestionGroup.get(questionId)?.get(groupId);
+}
+
+/** open 快照的本組作答：最新一筆（含已作廢）決定狀態，不含順位。 */
+export function buildMyAnswersFromView(
+  view: AnswerDataView,
+  groupId: string,
+  questions: readonly StoredQuestion[],
 ): StudentOpenAnswer[] {
-  const own = createOwnSubmissionIndex(listByGroup(database, groupId));
-  return listQuestions(database).map((question) => {
-    const submission = own.latestByQuestionNumber.get(question.number);
-    if (submission === undefined) {
+  return questions.map((question) => {
+    const submission = submissionFor(view, question.id, groupId)?.latest;
+    if (submission == null) {
       return {
         questionNumber: question.number,
         state: 'not_submitted',
@@ -84,61 +204,35 @@ export function buildMyAnswers(
   });
 }
 
-type QuestionGroupSubmission = {
-  valid: SubmissionRecord | null;
-  latest: SubmissionRecord | null;
-};
-
 /**
- * 以讀入時的題目／rank／blank 順序建立巢狀索引；有效作答仍依部分唯一
- * 索引只會一筆，latest 則保留作廢歷史。winner 不由此推斷，一律看結算。
+ * Build the per-question own-group answer state for open student snapshots.
+ * 最新 Submission（rank 最大）決定 submitted／voided，與 closed 投影及
+ * buildBoard 的「最新」語意一致；open 快照仍不含 rank（FR-030、FR-017）。
  */
-function createSubmissionIndex(
-  submissions: SubmissionRecord[],
-): Map<string, Map<string, QuestionGroupSubmission>> {
-  const index = new Map<string, Map<string, QuestionGroupSubmission>>();
-  for (const submission of submissions) {
-    let byGroup = index.get(submission.questionId);
-    if (byGroup === undefined) {
-      byGroup = new Map();
-      index.set(submission.questionId, byGroup);
-    }
-    const previous = byGroup.get(submission.groupId);
-    byGroup.set(submission.groupId, {
-      valid:
-        submission.voidedAt === null ? submission : (previous?.valid ?? null),
-      latest: submission,
-    });
-  }
-  return index;
-}
-
-function submissionFor(
-  index: Map<string, Map<string, QuestionGroupSubmission>>,
-  questionId: string,
-  groupId: string,
-): QuestionGroupSubmission | undefined {
-  return index.get(questionId)?.get(groupId);
+export function buildMyAnswers(database: DatabaseSync, groupId: string): StudentOpenAnswer[] {
+  return buildMyAnswersFromView(
+    createAnswerDataView(listByGroup(database, groupId)),
+    groupId,
+    listQuestions(database),
+  );
 }
 
 /**
  * 結束後每題的搶答結果（003 US4；FR-023、FR-025）。winner 一律只由
  * 判定服務決定（005 FR-009、原則 VI）；無有效作答為 null。
  */
-export function buildResults(
-  database: DatabaseSync,
+export function buildResultsFromView(
+  view: AnswerDataView,
+  groups: readonly Group[],
+  activity: Activity | null,
+  questions: readonly StoredQuestion[],
   now: Date = new Date(),
 ): QuestionResult[] {
-  const groups = listGroups(database);
   const groupNames = new Map(groups.map((group) => [group.id, group.name]));
-  const activity = getActivity(database);
-  const submissions = listAllSubmissions(database);
-  const questions = listQuestions(database);
   const settlement = computeSettlementFromRecords(
-    { activity, submissions, questions },
+    { activity, submissions: view.submissions, questions },
     now,
   );
-  const submissionIndex = createSubmissionIndex(submissions);
 
   return questions.map((question) => {
     const result = settlement.get(question.number);
@@ -146,8 +240,7 @@ export function buildResults(
     const winnerSubmission =
       winnerGroupId === null
         ? null
-        : (submissionFor(submissionIndex, question.id, winnerGroupId)?.valid ??
-          null);
+        : (submissionFor(view, question.id, winnerGroupId)?.valid ?? null);
     return {
       questionNumber: question.number,
       winner:
@@ -164,33 +257,43 @@ export function buildResults(
 }
 
 /**
+ * 結束後每題的搶答結果（003 US4；FR-023、FR-025）。winner 一律只由
+ * 判定服務決定（005 FR-009、原則 VI）；無有效作答為 null。
+ */
+export function buildResults(database: DatabaseSync, now: Date = new Date()): QuestionResult[] {
+  return buildResultsFromView(
+    createAnswerDataView(listAllSubmissions(database)),
+    listGroups(database),
+    getActivity(database),
+    listQuestions(database),
+    now,
+  );
+}
+
+/**
  * 結束後本組每題的答案與順位（003 US4；FR-024）。有有效作答時為其順位
  * （啟用公平順位時為公平順位，005 FR-021）；未送出或只有作廢作答時 rank
  * 為 null；作廢保留最新一筆答案供標示。
  */
-export function buildClosedMyAnswers(
-  database: DatabaseSync,
+export function buildClosedMyAnswersFromView(
+  view: AnswerDataView,
   groupId: string,
+  activity: Activity | null,
+  questions: readonly StoredQuestion[],
   now: Date = new Date(),
 ): StudentClosedAnswer[] {
-  const own = createOwnSubmissionIndex(listByGroup(database, groupId));
-  const questions = listQuestions(database);
   const settlement = computeSettlementFromRecords(
-    {
-      activity: getActivity(database),
-      submissions: listAllSubmissions(database),
-      questions,
-    },
+    { activity, submissions: view.submissions, questions },
     now,
   );
 
   return questions.map((question) => {
-    const submitted = own.validByQuestionNumber.get(question.number);
-    if (submitted !== undefined) {
+    const submission = submissionFor(view, question.id, groupId);
+    const submitted = submission?.valid;
+    if (submitted != null) {
       const rank =
-        settlement
-          .get(question.number)
-          ?.ranks.find((entry) => entry.groupId === groupId)?.rank ?? null;
+        settlement.get(question.number)?.ranks.find((entry) => entry.groupId === groupId)?.rank ??
+        null;
       return {
         questionNumber: question.number,
         state: 'submitted',
@@ -198,8 +301,8 @@ export function buildClosedMyAnswers(
         rank,
       };
     }
-    const latestVoided = own.latestByQuestionNumber.get(question.number);
-    if (latestVoided !== undefined && latestVoided.voidedAt !== null) {
+    const latestVoided = submission?.latest;
+    if (latestVoided != null && latestVoided.voidedAt !== null) {
       return {
         questionNumber: question.number,
         state: 'voided',
@@ -217,6 +320,25 @@ export function buildClosedMyAnswers(
 }
 
 /**
+ * 結束後本組每題的答案與順位（003 US4；FR-024）。有有效作答時為其順位
+ * （啟用公平順位時為公平順位，005 FR-021）；未送出或只有作廢作答時 rank
+ * 為 null；作廢保留最新一筆答案供標示。
+ */
+export function buildClosedMyAnswers(
+  database: DatabaseSync,
+  groupId: string,
+  now: Date = new Date(),
+): StudentClosedAnswer[] {
+  return buildClosedMyAnswersFromView(
+    createAnswerDataView(listAllSubmissions(database)),
+    groupId,
+    getActivity(database),
+    listQuestions(database),
+    now,
+  );
+}
+
+/**
  * 老師看板（003 US3；T029；FR-019、FR-022）：題 × 組完整矩陣，每題每組固
  * 定一筆 cell。winnerGroupId 只由判定服務決定（005 FR-009、原則 VI）。
  * cell 取該組該題最新 Submission（rank 最大＝最新，語意同 findLatest）：
@@ -224,28 +346,24 @@ export function buildClosedMyAnswers(
  * 只有已作廢作答顯示最新一筆 voided 並保留答案與原順位；未送出為
  * not_submitted、[] 與 null。
  */
-export function buildBoard(
-  database: DatabaseSync,
+export function buildBoardFromView(
+  view: AnswerDataView,
+  groups: readonly Group[],
+  activity: Activity | null,
+  questions: readonly StoredQuestion[],
   now: Date = new Date(),
 ): AnswerBoardQuestion[] {
-  const groups = listGroups(database);
-  const activity = getActivity(database);
-  const submissions = listAllSubmissions(database);
-  const questions = listQuestions(database);
   const settlement = computeSettlementFromRecords(
-    { activity, submissions, questions },
+    { activity, submissions: view.submissions, questions },
     now,
   );
-  const submissionIndex = createSubmissionIndex(submissions);
 
   return questions.map((question) => {
     const result = settlement.get(question.number);
     const winnerGroupId = result?.winnerGroupId ?? null;
-    const rankByGroup = new Map(
-      (result?.ranks ?? []).map((entry) => [entry.groupId, entry.rank]),
-    );
+    const rankByGroup = new Map((result?.ranks ?? []).map((entry) => [entry.groupId, entry.rank]));
     const cells: AnswerBoardCell[] = groups.map((group) => {
-      const submission = submissionFor(submissionIndex, question.id, group.id);
+      const submission = submissionFor(view, question.id, group.id);
       const valid = submission?.valid;
       const latest = valid ?? submission?.latest;
       return {
@@ -278,38 +396,48 @@ export function buildBoard(
 }
 
 /**
+ * 老師看板（003 US3；T029；FR-019、FR-022）：題 × 組完整矩陣，每題每組固
+ * 定一筆 cell。winnerGroupId 只由判定服務決定（005 FR-009、原則 VI）。
+ */
+export function buildBoard(database: DatabaseSync, now: Date = new Date()): AnswerBoardQuestion[] {
+  return buildBoardFromView(
+    createAnswerDataView(listAllSubmissions(database)),
+    listGroups(database),
+    getActivity(database),
+    listQuestions(database),
+    now,
+  );
+}
+
+/**
+ * 老師進度（003 US3；T029；FR-020）：每題有效送出的組數、每組有效送出的
+ * 題數，只計 voided_at IS NULL 的作答。
+ */
+export function buildProgressFromView(
+  view: AnswerDataView,
+  groups: readonly Group[],
+  questions: readonly StoredQuestion[],
+): AnswerProgress {
+  return {
+    perQuestion: questions.map((question) => ({
+      questionNumber: question.number,
+      submittedGroupCount: view.validGroupIds.get(question.id)?.size ?? 0,
+    })),
+    perGroup: groups.map((group) => ({
+      groupId: group.id,
+      submittedQuestionCount: view.validQuestionCountByGroup.get(group.id) ?? 0,
+    })),
+  };
+}
+
+/**
  * 老師進度（003 US3；T029；FR-020）：每題有效送出的組數、每組有效送出的
  * 題數，只計 voided_at IS NULL 的作答。
  */
 export function buildProgress(database: DatabaseSync): AnswerProgress {
-  const groups = listGroups(database);
-  const questions = listQuestions(database);
-  const submittedPairs = listValidSubmissionPairs(database);
-  const submittedGroupsByQuestion = new Map<string, Set<string>>();
-  const submittedCountsByGroup = new Map<string, number>();
-
-  for (const pair of submittedPairs) {
-    const submittedGroups =
-      submittedGroupsByQuestion.get(pair.questionId) ?? new Set<string>();
-    if (!submittedGroups.has(pair.groupId)) {
-      submittedGroups.add(pair.groupId);
-      submittedGroupsByQuestion.set(pair.questionId, submittedGroups);
-      submittedCountsByGroup.set(
-        pair.groupId,
-        (submittedCountsByGroup.get(pair.groupId) ?? 0) + 1,
-      );
-    }
-  }
-
-  return {
-    perQuestion: questions.map((question) => ({
-      questionNumber: question.number,
-      submittedGroupCount:
-        submittedGroupsByQuestion.get(question.id)?.size ?? 0,
-    })),
-    perGroup: groups.map((group) => ({
-      groupId: group.id,
-      submittedQuestionCount: submittedCountsByGroup.get(group.id) ?? 0,
-    })),
-  };
+  return buildProgressFromView(
+    createAnswerDataView(listAllSubmissions(database)),
+    listGroups(database),
+    listQuestions(database),
+  );
 }

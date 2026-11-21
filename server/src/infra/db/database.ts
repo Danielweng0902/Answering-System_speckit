@@ -87,7 +87,45 @@ const SCHEMA = `
 
   CREATE INDEX IF NOT EXISTS submission_answers_by_submission
     ON submission_answers(submission_id);
+
+  -- 2026-11-21 冷啟效能修正 P1：作答資料代際計數器。submissions 表的任何
+  -- INSERT／UPDATE／DELETE（含繞過應用層的直寫與 FK CASCADE 刪除）都由
+  -- trigger 遞增；記憶體作答索引以此判斷手上的投影是否仍有效，trigger
+  -- 的更新與外層交易同進退，ROLLBACK 不會留下代際變化。
+  CREATE TABLE IF NOT EXISTS answer_data_generation (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    generation INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TRIGGER IF NOT EXISTS submissions_generation_insert
+    AFTER INSERT ON submissions
+  BEGIN
+    UPDATE answer_data_generation SET generation = generation + 1 WHERE id = 1;
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS submissions_generation_update
+    AFTER UPDATE ON submissions
+  BEGIN
+    UPDATE answer_data_generation SET generation = generation + 1 WHERE id = 1;
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS submissions_generation_delete
+    AFTER DELETE ON submissions
+  BEGIN
+    UPDATE answer_data_generation SET generation = generation + 1 WHERE id = 1;
+  END;
 `;
+
+/** Seed the generation counter row; trigger updates are no-ops without it. */
+function seedAnswerDataGeneration(database: DatabaseSync): void {
+  database
+    .prepare(
+      `INSERT INTO answer_data_generation (id, generation)
+       VALUES (1, 0)
+       ON CONFLICT(id) DO NOTHING`,
+    )
+    .run();
+}
 
 type ActivityColumn = { name: string };
 
@@ -125,6 +163,7 @@ export function initializeDatabase(database: DatabaseSync): void {
   database.exec('PRAGMA foreign_keys = ON;');
   database.exec(SCHEMA);
   migrateActivityColumns(database);
+  seedAnswerDataGeneration(database);
   database
     .prepare(
       `INSERT INTO activity
