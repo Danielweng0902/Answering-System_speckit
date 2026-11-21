@@ -23,7 +23,14 @@ import { createGroupViaTeacherSocket, loginTeacher } from './socketSetup.mjs';
 
 const execFileAsync = promisify(execFile);
 
-const CHANNELS = ['senderState', 'peerState', 'teacherState', 'projectorState'];
+/**
+ * 作答事件的「必要 state 收件者」：送出者、同組成員、老師。
+ *
+ * **投影不是必要收件者**：2026-11-21 起作答事件不再推給投影連線（推了也會因為
+ * revision 不跳動而被前端忽略，而且會洩漏「全場作答次數與時機」）。
+ * 投影的送達情形仍然另外記錄（projectorState），只是不列入「必要」。
+ */
+const CHANNELS = ['senderState', 'peerState', 'teacherState'];
 
 function answerKey(groupId, questionNumber, answers) {
   return JSON.stringify([groupId, questionNumber, answers]);

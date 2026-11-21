@@ -149,9 +149,12 @@ test('createDeliveryTracker：finalizeExpired 把漏送放進分母與逾時率'
     assert.equal(report[name].timeoutCount, 1);
     assert.equal(report[name].timeoutRate, 1);
   }
-  assert.equal(report.necessaryState.sampleCount, 4);
-  assert.equal(report.necessaryState.timeoutCount, 3);
-  assert.equal(report.missingDeliveryCount, 3);
+  // 必要收件者只有送出者、同組與老師（投影自 2026-11-21 起不再收作答事件，
+  // 因此投影的逾時不列入「必要送達」的漏送）。
+  // 必要收件者三個（送出者、同組、老師）：送出者成功、同組與老師逾時。
+  assert.equal(report.necessaryState.sampleCount, 3);
+  assert.equal(report.necessaryState.timeoutCount, 2);
+  assert.equal(report.missingDeliveryCount, 2);
 });
 
 test('createDeliveryTracker：拒絕 ACK 是命令錯誤，但不偽造成逾時', () => {
