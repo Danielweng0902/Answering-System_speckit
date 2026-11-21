@@ -141,7 +141,9 @@ describe('滿場 presence 覆蓋', () => {
     });
     expect(await Promise.all(openedStates)).toHaveLength(52);
 
-    const related = [teacherSocket, students[49]!, projector];
+    // 作答事件只通知老師與送出的該組；**不通知投影**（2026-11-21 資安審計：
+    // 投影不需要作答事件，且推了會讓 revision 跳動而洩漏全場作答次數）。
+    const related = [teacherSocket, students[49]!];
     const unrelated = students.slice(0, 49);
     let unrelatedStates = 0;
     for (const socket of unrelated) {
@@ -149,6 +151,12 @@ describe('滿場 presence 覆蓋', () => {
         unrelatedStates += 1;
       });
     }
+    // 投影不該收到作答事件（2026-11-21 資安審計）：推了會讓投影的 revision
+    // 跳動，等於洩漏「全場作答次數與時機」。
+    let projectorStatesOnSubmit = 0;
+    projector.on('state', () => {
+      projectorStatesOnSubmit += 1;
+    });
     const changedStates = related.map((socket) => waitForState(socket));
     expect(
       await sendCommand(students[49]!, 'answer:submit', {
@@ -157,15 +165,10 @@ describe('滿場 presence 覆蓋', () => {
       }),
     ).toEqual({ ok: true });
     const changed = await Promise.all(changedStates);
-    expect(changed).toHaveLength(3);
+    expect(changed).toHaveLength(2);
     expect(unrelatedStates).toBe(0);
-    const projectorAfterSubmit = changed[2]!;
-    expect(projectorAfterSubmit.role).toBe('projector');
-    expect(JSON.stringify(projectorAfterSubmit)).not.toContain(
-      '只有第五十組的答案',
-    );
-    expect(projectorAfterSubmit).not.toHaveProperty('board');
-    expect(projectorAfterSubmit).not.toHaveProperty('results');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(projectorStatesOnSubmit).toBe(0);
 
     const survivors = [...unrelated, teacherSocket, projector];
     expect(survivors).toHaveLength(51);

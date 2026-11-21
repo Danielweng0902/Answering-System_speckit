@@ -210,6 +210,21 @@ describe('StudentPage', () => {
     expect(getToken()).toBeNull();
   });
 
+  it('離開組別會清掉該組的未送出草稿（共用裝置的資料外洩，2026-11-21 資安審計）', async () => {
+    const draftKey = 'classroom.buzz-in.drafts.test-session.g1';
+    window.localStorage.setItem(draftKey, JSON.stringify({ 1: ['未送出的答案'] }));
+    saveToken('student-token');
+    vi.mocked(sendCommand).mockResolvedValue({ ok: true });
+    renderPage(studentSnapshot('preparing'));
+
+    fireEvent.click(screen.getByRole('button', { name: '更換組別' }));
+
+    await waitFor(() => {
+      expect(connectSocket).toHaveBeenCalledWith(null);
+    });
+    expect(window.localStorage.getItem(draftKey)).toBeNull();
+  });
+
   it('更換組別失敗時顯示伺服器錯誤訊息', async () => {
     const ack: Ack = {
       ok: false,

@@ -69,6 +69,17 @@ export function writeAnswerDrafts(
 }
 
 /**
+ * 離開組別：清掉該組的草稿。
+ *
+ * 草稿留在 localStorage 會跨組殘留——共用裝置上（或同來源的腳本）看得到
+ * 別組未送出的內容（2026-11-21 資安審計）。「重新整理仍保留草稿」
+ * （AC-003-26）不受影響，因為重新整理不是離開。
+ */
+export function clearGroupDrafts(sessionId: string, groupId: string): void {
+  storage().removeItem(storageKey(sessionId, groupId));
+}
+
+/**
  * 進入當次活動：刪除本功能所有舊 session 的草稿（保留同 session 其他組），
  * 再讀取目前組別的草稿。這是 sessionId 更換後 R7 要求的精準清理。
  */

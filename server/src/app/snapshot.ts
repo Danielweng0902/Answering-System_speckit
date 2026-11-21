@@ -175,7 +175,11 @@ export function createProjectorSnapshot(
 
   return {
     role: 'projector',
-    revision: activity.revision + getAnswerEventCount(database),
+    // 投影的 revision **不含作答次數**：若含，觀察者即使看不到答案，也能從
+    // revision 的跳動數出全場作答了幾次、何時作答（2026-11-21 資安審計實測：
+    // 三題連續作答時投影收到 revision 7→8→9→10）。作答事件本來也不推給投影
+    // （見 broadcaster.broadcastSubmissionChanged），這裡讓 revision 與作答脫鉤。
+    revision: activity.revision,
     serverNow: now.toISOString(),
     phase: activity.phase,
     countdownEndsAt: activity.countdownEndsAt,

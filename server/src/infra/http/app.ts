@@ -141,20 +141,25 @@ export function createApp(options: HttpAppOptions): Express {
   });
 
   app.use(
+    // 四個參數是 Express 辨識錯誤中介層的必要條件（少一個就會被當成一般中介層）；
+    // 第四個參數雖然不用，但必須留著。
     (
       error: unknown,
       _request: Request,
       response: Response,
-      next: NextFunction,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _next: NextFunction,
     ) => {
       if (isJsonParseError(error)) {
         response.status(400).json(errorBody('INVALID_INPUT'));
         return;
       }
 
-      // No other web errors exist in this phase; let Express use its default
-      // handler rather than inventing an error code outside the contracts.
-      next(error);
+      // 未預期的例外：回應維持 Express 預設的 500 文字，**不在 log 寫入
+      // 例外訊息或堆疊**（可能含資料庫路徑、SQL、內部路徑；原則 IV）。
+      // 只記錄固定事件字串，與 broadcaster／commandRouter 的做法一致。
+      console.error('HTTP request failed unexpectedly.');
+      response.status(500).type('text/plain').send('Internal Server Error');
     },
   );
 

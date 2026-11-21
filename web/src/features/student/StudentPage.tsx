@@ -5,6 +5,7 @@ import type { UseSnapshotResult } from '../../lib/useSnapshot';
 import { clearToken } from '../../lib/session';
 import { connectSocket, sendCommand } from '../../lib/socket';
 import { Countdown } from '../shared/Countdown';
+import { clearGroupDrafts } from './answerDrafts';
 import { LanguageSwitch } from '../shared/LanguageSwitch';
 import { phaseStyleClass } from '../shared/phaseStyle';
 import { AnswerArea } from './AnswerArea';
@@ -20,6 +21,10 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
   const [isLeaving, setIsLeaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // 只有學生身分才有 sessionId／myGroupId（離開時清草稿用）。
+  const studentSessionId = snapshot?.role === 'student' ? snapshot.sessionId : null;
+  const studentGroupId = snapshot?.role === 'student' ? snapshot.myGroupId : null;
+
   async function leaveGroup(): Promise<void> {
     setIsLeaving(true);
     setErrorMessage(null);
@@ -32,6 +37,11 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
         return;
       }
 
+      // 離開組別就清掉該組的未送出草稿（共用裝置的資料外洩），
+      // 重新整理仍保留草稿（AC-003-26）。
+      if (studentSessionId !== null && studentGroupId !== null) {
+        clearGroupDrafts(studentSessionId, studentGroupId);
+      }
       clearToken();
       connectSocket(null);
     } finally {
