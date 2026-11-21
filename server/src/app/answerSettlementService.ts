@@ -25,8 +25,8 @@ import {
 
 type SettlementSource = {
   activity: Activity | null;
-  questions: StoredQuestion[];
-  submissions: SubmissionRecord[];
+  questions: readonly StoredQuestion[];
+  submissions: readonly SubmissionRecord[];
 };
 
 export type { SettlementSource };

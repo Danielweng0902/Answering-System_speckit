@@ -8,6 +8,7 @@ import {
 import type { AccessIdentity } from '../../app/access.js';
 import { resolveIdentity } from '../../app/access.js';
 import { recordPresenceChange } from '../../app/presence.js';
+import type { AnswerDataView } from '../../app/answerProjections.js';
 import { createProjectorSnapshot, createSnapshot } from '../../app/snapshot.js';
 import { getGroupById, listGroups } from '../db/groupRepo.js';
 
@@ -58,9 +59,18 @@ function viewFromSocket(socket: Socket): 'projector' | undefined {
   return view === 'projector' ? 'projector' : undefined;
 }
 
+export type StateBroadcasterOptions = {
+  /**
+   * 2026-11-21 冷啟效能修正 P1：每輪廣播呼叫一次，取得行程內作答索引的
+   * 視圖；未提供時快照維持直接讀庫（測試與基準腳本路徑）。
+   */
+  answersView?: (() => AnswerDataView) | undefined;
+};
+
 export function createSocketBroadcaster(
   io: Server,
   database: DatabaseSync,
+  options: StateBroadcasterOptions = {},
 ): StateBroadcaster {
   const connectedStudents = new Map<string, number>();
 
@@ -75,23 +85,49 @@ export function createSocketBroadcaster(
   /**
    * 005（FR-015、FR-022、research R6）：投影檢視模式連線只收到投影快照，
    * 內容在伺服器端就沒有作答資訊；非老師身分則維持一般快照。
+   *
+   * 2026-11-21 冷啟效能修正 P2：同一輪廣播裡，快照只由「角色種類＋（學生）
+   * 所屬組別／投影檢視」決定，與個別 socket 無關；同組學生用本組 revision、
+   * 老師用全場 revision、guest 用活動 revision，key 不同就不會混用。
+   * 因此一輪裡每個 key 只建一份，同 key 的 socket 共用同一份快照物件
+   * （emit 時各自序列化，內容與逐 socket 重建完全相同）。
    */
   function snapshotForSocket(
     socket: Socket,
     presence: Readonly<Record<string, number>>,
     now: Date,
+    answersView: AnswerDataView | undefined,
+    cache: Map<string, Snapshot>,
   ): Snapshot {
     const identity = getSocketIdentity(socket);
-    if (socketData(socket).view === 'projector' && identity.role === 'teacher') {
-      return createProjectorSnapshot(database, presence, now);
+    const isProjectorView =
+      socketData(socket).view === 'projector' && identity.role === 'teacher';
+    const key = isProjectorView
+      ? 'projector'
+      : identity.role === 'student'
+        ? `student:${identity.groupId}`
+        : identity.role;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+      return cached;
     }
-    return createSnapshot(database, identity, presence, now);
+    const snapshot = isProjectorView
+      ? createProjectorSnapshot(database, presence, now, answersView)
+      : createSnapshot(database, identity, presence, now, answersView);
+    cache.set(key, snapshot);
+    return snapshot;
   }
 
   function sendSnapshot(socket: Socket): void {
     socket.emit(
       STATE_EVENT,
-      snapshotForSocket(socket, getPresence(), new Date()),
+      snapshotForSocket(
+        socket,
+        getPresence(),
+        new Date(),
+        options.answersView?.(),
+        new Map(),
+      ),
     );
   }
 
@@ -112,10 +148,13 @@ export function createSocketBroadcaster(
   function broadcastState(): void {
     const now = new Date();
     const presence = getPresence();
+    const answersView = options.answersView?.();
+    // P2：這一輪的快照快取只活在本次廣播內；跨輪必須重建（資料已變）。
+    const cache = new Map<string, Snapshot>();
 
     for (const socket of io.sockets.sockets.values()) {
       emitSnapshotSafely(socket, () =>
-        snapshotForSocket(socket, presence, now),
+        snapshotForSocket(socket, presence, now, answersView, cache),
       );
     }
   }
@@ -123,6 +162,8 @@ export function createSocketBroadcaster(
   function broadcastSubmissionChanged(groupId: string): void {
     const now = new Date();
     const presence = getPresence();
+    const answersView = options.answersView?.();
+    const cache = new Map<string, Snapshot>();
 
     for (const socket of io.sockets.sockets.values()) {
       const identity = getSocketIdentity(socket);
@@ -144,7 +185,7 @@ export function createSocketBroadcaster(
       // 時掉出看板），而且一般快照含作答資訊，等於把答案送到投影連線
       // （2026-11-19 review 時用截圖發現：projector-buzzing.png 顯示的是登入頁）。
       emitSnapshotSafely(socket, () =>
-        snapshotForSocket(socket, presence, now),
+        snapshotForSocket(socket, presence, now, answersView, cache),
       );
     }
   }

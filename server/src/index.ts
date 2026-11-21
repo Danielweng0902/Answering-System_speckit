@@ -22,6 +22,7 @@ import { FAIR_BATCH_WINDOW_MS } from './domain/answerSettlement.js';
 import { createCountdown, type CountdownScheduler } from './app/countdown.js';
 import { createGroupCommands } from './app/groupCommands.js';
 import { createImportService } from './app/importService.js';
+import { createSubmissionIndex } from './app/submissionIndex.js';
 import { leaveGroup } from './app/studentCommands.js';
 import { getActivity } from './infra/db/activityRepo.js';
 import { countValidForQuestion } from './infra/db/answerRepo.js';
@@ -164,7 +165,14 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     }),
   );
   const io = new SocketIOServer(httpServer);
-  const broadcaster = createSocketBroadcaster(io, database);
+  // 2026-11-21 冷啟效能修正 P1：行程內作答索引。廣播改由索引投影老師
+  // 看板／結果／進度與學生本組作答，不再每次全場重讀 submissions；
+  // 索引由 answer:submit／answer:void 的 COMMIT 後掛鉤增量維護，
+  // 活動重設與換題組整份標記重建（見下方各指令註冊）。
+  const submissionIndex = createSubmissionIndex(database);
+  const broadcaster = createSocketBroadcaster(io, database, {
+    answersView: () => submissionIndex.view(),
+  });
 
   // Group and answer commands share the existing success-broadcast router.
   const commandRouter = createCommandRouter(broadcaster.broadcastState);
@@ -222,6 +230,14 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     },
   });
   const answerCommands = createAnswerCommands(database, {
+    // 冷啟效能修正 P1：作答／作廢 COMMIT 後增量更新記憶體作答索引，
+    // 索引失配時由索引自身標記重建（不影响已提交的交易）。
+    onSubmissionRecorded: (record) => {
+      submissionIndex.applyInsert(record);
+    },
+    onSubmissionVoided: (event) => {
+      submissionIndex.applyVoid(event);
+    },
     // 005（T014、FR-010）：啟用公平順位時，某題第一個答案送達後 3 秒安排
     // 一次提醒，讓老師看板從「判定中」翻成已判定；判定本身不保存結果。
     onAnswerAccepted: (questionNumber) => {
@@ -250,7 +266,15 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     commandRouter.register(socket, 'group:delete', teacherOnly, groupCommands.deleteGroup);
     commandRouter.register(socket, 'activity:open', teacherOnly, activityCommands.openActivity);
     commandRouter.register(socket, 'activity:close', teacherOnly, activityCommands.closeActivity);
-    commandRouter.register(socket, 'activity:reset', teacherOnly, activityCommands.resetActivity);
+    // activity:reset 成功會在同一交易清空全場作答（003 US6 / R8）；
+    // 作答索引無法逐筆對應這種整批改變，成功後整份標記重建。
+    commandRouter.register(socket, 'activity:reset', teacherOnly, (identity, payload) => {
+      const ack = activityCommands.resetActivity(identity, payload);
+      if (ack.ok) {
+        submissionIndex.invalidate();
+      }
+      return ack;
+    });
     // 005（FR-001）：只有老師、只有準備中能切換公平順位；成功後所有角色
     // 都會收到帶有 fairRankingEnabled 的新快照。
     commandRouter.register(
@@ -261,13 +285,15 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     );
     // 002（T024）：questions:confirm 只有老師、只在準備中；ack.ok 由路由
     // 決定是否廣播，所有老師分頁同步收到新的題目摘要（research R6）。
-    commandRouter.register(
-      socket,
-      'questions:confirm',
-      teacherOnly,
-      (_identity, payload) =>
-        importService.confirm((payload as QuestionsConfirmPayload).importId),
-    );
+    // 換題組後題目 id 全新，作答索引標記整份重建（此時作答必為空，
+    // 重建成本為零；標記是防禦性的語意保證）。
+    commandRouter.register(socket, 'questions:confirm', teacherOnly, (_identity, payload) => {
+      const ack = importService.confirm((payload as QuestionsConfirmPayload).importId);
+      if (ack.ok) {
+        submissionIndex.invalidate();
+      }
+      return ack;
+    });
     // 003 US1/US2：學生身分與 groupId 由 stored connection identity 決定；
     // open 階段、答案格式、重複與順位由用例在同一 transaction 判定；成功後
     // 只通知所有老師與送出的該組，其他組與 guest 不收到 state（research R4）。
