@@ -339,3 +339,85 @@ describe('啟動還原倒數（T059、research R7）', () => {
     }
   });
 });
+
+describe('滿場倒數兩個端點', () => {
+  let fullServer: TestServer | undefined;
+  const fullManual = createManualScheduler(START);
+
+  afterEach(async () => {
+    await fullServer?.close();
+    fullServer = undefined;
+  });
+
+  it('滿場假時鐘推到截止前 1 ms 仍 open，截止後只關閉一次', async () => {
+    fullServer = await startTestServer({ scheduler: fullManual.scheduler });
+    seedQuestion(fullServer.db);
+    const sockets: Socket[] = [];
+    const teacherToken = issueSession(fullServer.db, { role: 'teacher' });
+    const teacher = fullServer.connect({
+      token: teacherToken,
+      autoConnect: false,
+    });
+    const teacherInitial = waitForState(teacher);
+    teacher.connect();
+    await teacherInitial;
+    sockets.push(teacher);
+
+    for (let position = 1; position <= 50; position += 1) {
+      const groupId = `group-${position}`;
+      insertGroup(fullServer.db, {
+        id: groupId,
+        name: `第 ${position} 組`,
+        position,
+      });
+      const token = issueSession(fullServer.db, { role: 'student', groupId });
+      const student = fullServer.connect({ token, autoConnect: false });
+      const states = [student, ...sockets].map((socket) =>
+        waitForState(socket),
+      );
+      student.connect();
+      await Promise.all(states);
+      sockets.push(student);
+    }
+    expect(sockets).toHaveLength(51);
+
+    const openedStates = sockets.map((socket) => waitForState(socket));
+    expect(
+      await sendCommand(teacher, 'activity:open', { countdownSeconds: 10 }),
+    ).toEqual({
+      ok: true,
+    });
+    const opened = await Promise.all(openedStates);
+    for (const snapshot of opened) expect(snapshot.phase).toBe('open');
+    const afterOpen = readActivity(fullServer);
+    const timer = fullManual.pending()[0];
+    if (timer === undefined) throw new Error('未建立倒數排程');
+    expect(timer.ms).toBe(10_000);
+
+    fullManual.advance(9_999);
+    expect(readActivity(fullServer).phase).toBe('open');
+    expect(fullManual.pending()).toHaveLength(1);
+
+    const closedStates = sockets.map((socket) => waitForState(socket));
+    fullManual.advance(1);
+    fullManual.fire(timer);
+    const closed = await Promise.all(closedStates);
+    expect(closed).toHaveLength(51);
+    for (const snapshot of closed) {
+      expect(snapshot.phase).toBe('closed');
+      expect(snapshot.revision).toBe(afterOpen.revision + 1);
+    }
+    expect(readActivity(fullServer)).toEqual({
+      ...afterOpen,
+      phase: 'closed',
+      closedAt: new Date(START + 10_000).toISOString(),
+      revision: afterOpen.revision + 1,
+    });
+    expect(fullManual.pending()).toHaveLength(0);
+
+    const afterDeadlineClose = readActivity(fullServer);
+    fullManual.fire(timer);
+    expect(readActivity(fullServer)).toEqual(afterDeadlineClose);
+    await expectNoState(teacher, 100);
+  }, 30_000);
+});
