@@ -20,7 +20,10 @@ import {
 } from '../infra/db/activityRepo.js';
 import { getGroupAnswerRevision } from '../infra/db/answerRepo.js';
 import { listGroups } from '../infra/db/groupRepo.js';
-import { getGuidedNotes, list as listQuestions } from '../infra/db/questionRepo.js';
+import {
+  getGuidedNotes,
+  list as listQuestions,
+} from '../infra/db/questionRepo.js';
 
 export function createSnapshot(
   database: DatabaseSync,
@@ -130,9 +133,6 @@ export function createProjectorSnapshot(
     throw new Error('Activity state is not initialized');
   }
   const groups = listGroups(database);
-  const results = new Map(
-    buildResults(database, now).map((result) => [result.questionNumber, result]),
-  );
   // 逐題揭曉依題號順序（2026-11-17 兩組同意）。
   const questions = [...listQuestions(database)].sort(
     (a, b) => a.number - b.number,
@@ -140,6 +140,12 @@ export function createProjectorSnapshot(
   const revealedCount = Math.min(
     activity.revealedQuestionCount,
     questions.length,
+  );
+  // 揭曉 0 題時投影不含任何作答資料，連結算與答案批讀都不進行；
+  // 部分揭曉仍保留公平順位必要的跨題依賴，由 buildResults 判定。
+  const allResults = revealedCount === 0 ? [] : buildResults(database, now);
+  const results = new Map(
+    allResults.map((result) => [result.questionNumber, result]),
   );
   const revealed = questions.slice(0, revealedCount).map((question) => {
     const result = results.get(question.number);
@@ -150,7 +156,10 @@ export function createProjectorSnapshot(
     };
   });
 
-  const winCounts = new Map<string, { groupId: string; groupName: string; count: number }>();
+  const winCounts = new Map<
+    string,
+    { groupId: string; groupName: string; count: number }
+  >();
   for (const result of results.values()) {
     if (result.winner === null) {
       continue;
@@ -182,9 +191,7 @@ export function createProjectorSnapshot(
       questions: revealed,
       // 全部揭曉後才顯示各組成功題數（FR-018）。
       groupWinCounts:
-        revealedCount >= questions.length
-          ? [...winCounts.values()]
-          : null,
+        revealedCount >= questions.length ? [...winCounts.values()] : null,
     },
   };
 }
