@@ -38,6 +38,13 @@ export type StateBroadcaster = {
    * owned by the command use case.
    */
   demoteToGuest: (socket: Socket) => void;
+  /**
+   * 2026-11-22（D20，100 組）：清除老師看板合併廣播的待處理計時器。
+   *
+   * 伺服器關閉時必須呼叫：計時器若在資料庫關閉後才觸發，會讀到已關閉的
+   * SQLite 而拋出 ERR_INVALID_STATE（變成未處理的例外）。
+   */
+  dispose: () => void;
 };
 
 function socketData(socket: Socket): SocketDataWithIdentity {
@@ -211,22 +218,28 @@ export function createSocketBroadcaster(
    */
   function flushTeacherBoard(): void {
     teacherBoardTimer = null;
-    const now = new Date();
-    const presence = getPresence();
-    const answersView = options.answersView?.();
-    const cache = new Map<string, Snapshot>();
+    try {
+      const now = new Date();
+      const presence = getPresence();
+      const answersView = options.answersView?.();
+      const cache = new Map<string, Snapshot>();
 
-    for (const socket of io.sockets.sockets.values()) {
-      // 投影檢視連線的身分也是老師，但它只收投影快照：不能混進看板廣播。
-      if (socketData(socket).view === 'projector') {
-        continue;
+      for (const socket of io.sockets.sockets.values()) {
+        // 投影檢視連線的身分也是老師，但它只收投影快照：不能混進看板廣播。
+        if (socketData(socket).view === 'projector') {
+          continue;
+        }
+        if (getSocketIdentity(socket).role !== 'teacher') {
+          continue;
+        }
+        emitSnapshotSafely(socket, () =>
+          snapshotForSocket(socket, presence, now, answersView, cache),
+        );
       }
-      if (getSocketIdentity(socket).role !== 'teacher') {
-        continue;
-      }
-      emitSnapshotSafely(socket, () =>
-        snapshotForSocket(socket, presence, now, answersView, cache),
-      );
+    } catch {
+      // 伺服器可能已在計時器觸發前關閉（資料庫已關閉）：不得讓計時器的例外
+      // 變成未處理的例外而中止行程。只記錄固定事件字串，不記錄資料或堆疊。
+      console.error('Broadcast teacher board failed.');
     }
   }
 
@@ -347,5 +360,11 @@ export function createSocketBroadcaster(
     getPresence,
     invalidateGroup,
     demoteToGuest,
+    dispose: () => {
+      if (teacherBoardTimer !== null) {
+        clearTimeout(teacherBoardTimer);
+        teacherBoardTimer = null;
+      }
+    },
   };
 }

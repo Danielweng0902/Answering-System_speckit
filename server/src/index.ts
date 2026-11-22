@@ -104,7 +104,24 @@ function listen(
   });
 }
 
-function closeResources(io: SocketIOServer, database: DatabaseSync): Promise<void> {
+/**
+ * 關閉伺服器資源。
+ *
+ * `onBeforeClose` 在資料庫關閉**之前**呼叫：2026-11-22（D20，100 組）加入的
+ * 老師看板合併廣播有一個 120 ms 的待處理計時器，若伺服器在它觸發前就關閉，
+ * 計時器會在資料庫關閉後才執行而拋出 ERR_INVALID_STATE。因此關閉前先清掉
+ * 計時器（與倒數計時器 `countdown.cancel()` 同一個理由）。
+ */
+function closeResources(
+  io: SocketIOServer,
+  database: DatabaseSync,
+  onBeforeClose?: (() => void) | undefined,
+): Promise<void> {
+  try {
+    onBeforeClose?.();
+  } catch {
+    // 清理失敗不得擋住關閉流程。
+  }
   return new Promise((resolve, reject) => {
     try {
       // Socket.IO closes both its transports and the attached HTTP server.
@@ -405,23 +422,24 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     await listen(httpServer, options.port ?? config.port, options.host ?? config.host);
   } catch (error) {
     countdown.cancel();
-    await closeResources(io, database);
+    await closeResources(io, database, () => broadcaster.dispose());
     throw error;
   }
 
   const address = httpServer.address();
   if (address === null || typeof address === 'string') {
     countdown.cancel();
-    await closeResources(io, database);
+    await closeResources(io, database, () => broadcaster.dispose());
     throw new Error('HTTP server did not expose a TCP listening address');
   }
 
   const close = (() => {
     let closing: Promise<void> | undefined;
     return (): Promise<void> => {
-      // 關閉時取消倒數，避免計時器在資料庫關閉後觸發結束流程。
+      // 關閉時取消倒數，避免計時器在資料庫關閉後觸發結束流程；同時取消
+      // 老師看板的合併廣播計時器（理由見 closeResources 的說明）。
       countdown.cancel();
-      closing ??= closeResources(io, database);
+      closing ??= closeResources(io, database, () => broadcaster.dispose());
       return closing;
     };
   })();
