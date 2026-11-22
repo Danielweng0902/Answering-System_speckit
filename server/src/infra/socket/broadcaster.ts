@@ -11,6 +11,7 @@ import { recordPresenceChange } from '../../app/presence.js';
 import type { AnswerDataView } from '../../app/answerProjections.js';
 import { createProjectorSnapshot, createSnapshot } from '../../app/snapshot.js';
 import { getGroupById, listGroups } from '../db/groupRepo.js';
+import { readTeacherCookieToken } from '../http/teacherSession.js';
 
 export type SocketDataWithIdentity = {
   identity?: AccessIdentity;
@@ -53,6 +54,29 @@ function tokenFromSocket(socket: Socket): string | undefined {
   return typeof token === 'string' && token.length > 0 ? token : undefined;
 }
 
+/**
+ * 2026-11-22（D18）：老師的 Socket.IO 連線不再帶 token，改帶 HttpOnly
+ * cookie（瀏覽器同源連線會自動帶上）。因此握手時的身分解析順序是：
+ *
+ * 1. `auth.token`（學生的 sessionStorage token）
+ * 2. cookie 裡的老師 session
+ * 3. guest
+ */
+function resolveSocketIdentity(
+  socket: Socket,
+  database: DatabaseSync,
+): AccessIdentity {
+  const token = tokenFromSocket(socket);
+  if (token !== undefined) {
+    return resolveIdentity(database, token);
+  }
+  const cookieToken = readTeacherCookieToken(socket.handshake.headers.cookie);
+  if (cookieToken !== null) {
+    return resolveIdentity(database, cookieToken);
+  }
+  return { role: 'guest' };
+}
+
 /** 005：握手時的檢視模式；只有 'projector' 會改變快照內容。 */
 function viewFromSocket(socket: Socket): 'projector' | undefined {
   const view: unknown = socket.handshake.auth.view;
@@ -67,12 +91,23 @@ export type StateBroadcasterOptions = {
   answersView?: (() => AnswerDataView) | undefined;
 };
 
+/**
+ * 老師看板合併廣播的時間窗（毫秒）。
+ *
+ * 2026-11-22（D20，100 組）：倒數歸零全班同時送出時，每筆作答都重建並
+ * 送出全場看板（100 組約 600 KB／份）會塞滿事件迴圈。改成同一個時間窗內
+ * 只送一份最新看板；120 ms 遠小於契約的「2 秒內更新看板」，行為不變。
+ */
+export const TEACHER_BOARD_COALESCE_MS = 120;
+
 export function createSocketBroadcaster(
   io: Server,
   database: DatabaseSync,
   options: StateBroadcasterOptions = {},
 ): StateBroadcaster {
   const connectedStudents = new Map<string, number>();
+  // 2026-11-22（D20，100 組）：老師看板的合併廣播計時器。
+  let teacherBoardTimer: ReturnType<typeof setTimeout> | null = null;
 
   function getPresence(): Record<string, number> {
     const presence: Record<string, number> = {};
@@ -159,6 +194,51 @@ export function createSocketBroadcaster(
     }
   }
 
+  /**
+   * 2026-11-22（D20，100 組）：**老師看板的廣播合併**。
+   *
+   * 老師看板是全場快照，100 組 × 20 題時每份約 600 KB；倒數歸零的瞬間
+   * 全班同時送出，舊做法會送出「每筆作答一份看板」＝一輪 60 MB 的序列化
+   * 與寫入，事件迴圈被塞滿，學生的 ACK 也跟著排隊（實測 100 組冷啟：
+   * ACK p50 1.6 s、逾時 12%；50 組則是 p50 90 ms、逾時 0%）。
+   *
+   * 這裡改成：**同一個時間窗內只送一份最新看板**。時間窗
+   * `TEACHER_BOARD_COALESCE_MS`（120 ms）遠小於契約要求的「2 秒內更新
+   * 看板」，所以行為不變（老師仍會在 2 秒內看到順位），但一輪的看板
+   * 廣播從 N 份降到約 N × 120ms 內的份數。
+   *
+   * 學生的 ACK 與自己組的快照**不受影響**（立即送出）。
+   */
+  function flushTeacherBoard(): void {
+    teacherBoardTimer = null;
+    const now = new Date();
+    const presence = getPresence();
+    const answersView = options.answersView?.();
+    const cache = new Map<string, Snapshot>();
+
+    for (const socket of io.sockets.sockets.values()) {
+      // 投影檢視連線的身分也是老師，但它只收投影快照：不能混進看板廣播。
+      if (socketData(socket).view === 'projector') {
+        continue;
+      }
+      if (getSocketIdentity(socket).role !== 'teacher') {
+        continue;
+      }
+      emitSnapshotSafely(socket, () =>
+        snapshotForSocket(socket, presence, now, answersView, cache),
+      );
+    }
+  }
+
+  function scheduleTeacherBoard(): void {
+    if (teacherBoardTimer !== null) {
+      return;
+    }
+    teacherBoardTimer = setTimeout(flushTeacherBoard, TEACHER_BOARD_COALESCE_MS);
+    // 沒有其他待辦時不因為這個計時器而延後行程結束。
+    teacherBoardTimer.unref?.();
+  }
+
   function broadcastSubmissionChanged(groupId: string): void {
     const now = new Date();
     const presence = getPresence();
@@ -173,9 +253,13 @@ export function createSocketBroadcaster(
       if (socketData(socket).view === 'projector') {
         continue;
       }
+      // 老師看板改走合併廣播（見 flushTeacherBoard）。
+      if (identity.role === 'teacher') {
+        scheduleTeacherBoard();
+        continue;
+      }
       const receivesSubmissionChange =
-        identity.role === 'teacher' ||
-        (identity.role === 'student' && identity.groupId === groupId);
+        identity.role === 'student' && identity.groupId === groupId;
       if (!receivesSubmissionChange) {
         continue;
       }
@@ -204,7 +288,7 @@ export function createSocketBroadcaster(
   }
 
   io.on('connection', (socket) => {
-    let identity = resolveIdentity(database, tokenFromSocket(socket));
+    let identity = resolveSocketIdentity(socket, database);
 
     if (identity.role === 'student' && !getGroupById(database, identity.groupId)) {
       socket.emit(SESSION_INVALID_EVENT, { code: 'GROUP_NOT_FOUND' });
