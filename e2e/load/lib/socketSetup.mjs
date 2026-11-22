@@ -18,21 +18,50 @@
 import { Buffer } from 'node:buffer';
 import { randomBytes } from 'node:crypto';
 import { URL, URLSearchParams } from 'node:url';
-import { postJson, timedRequest } from './httpClient.mjs';
+import { timedRequest } from './httpClient.mjs';
 
-/** 老師 HTTP 登入，回傳 token（呼叫方不得印出或寫檔）。 */
+/**
+ * 老師 HTTP 登入。
+ *
+ * 2026-11-22（D18）：登入狀態改放在 **HttpOnly cookie**，登入回應不再
+ * 回傳 token。這個工具要模擬瀏覽器，因此取出 `Set-Cookie` 的
+ * `classroom.teacher.session=<token>` 並以 `Cookie` 標頭帶著走。
+ *
+ * 回傳值是 cookie 標頭字串；呼叫方不得印出或寫檔（它就是憑證）。
+ */
 export async function loginTeacher(baseUrl, password) {
-  const body = await postJson(`${baseUrl}/api/teacher/login`, { password });
-  if (typeof body.token !== 'string' || body.token.length === 0) {
-    throw new Error('老師登入回應缺少 token');
+  const result = await timedRequest({
+    url: new URL('/api/teacher/login', baseUrl),
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ password }),
+    agent: false,
+    timeoutMs: 8000,
+  });
+  if (result.error !== null || result.statusCode !== 200) {
+    throw new Error('老師登入失敗');
   }
-  return body.token;
+  const setCookie = result.headers?.['set-cookie'];
+  const raw = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  if (typeof raw !== 'string') {
+    throw new Error('老師登入回應缺少 session cookie');
+  }
+  const match = /classroom\.teacher\.session=([^;]+)/.exec(raw);
+  if (match === null || match[1] === undefined) {
+    throw new Error('老師登入回應缺少 session cookie');
+  }
+  return `classroom.teacher.session=${match[1]}`;
 }
 
-async function pollingGet(baseUrl, query, timeoutMs) {
+async function pollingGet(baseUrl, query, timeoutMs, cookie) {
   const url = new URL('/socket.io/', baseUrl);
   url.search = new URLSearchParams(query).toString();
-  const result = await timedRequest({ url, agent: false, timeoutMs });
+  const result = await timedRequest({
+    url,
+    headers: cookie === undefined ? {} : { cookie },
+    agent: false,
+    timeoutMs,
+  });
   if (result.error !== null) {
     throw new Error(
       `Socket.IO polling GET 失敗（${result.error === 'timeout' ? '逾時' : '連線錯誤'}）`,
@@ -44,13 +73,16 @@ async function pollingGet(baseUrl, query, timeoutMs) {
   return (result.body ?? Buffer.alloc(0)).toString('utf8');
 }
 
-async function pollingPost(baseUrl, query, packet, timeoutMs) {
+async function pollingPost(baseUrl, query, packet, timeoutMs, cookie) {
   const url = new URL('/socket.io/', baseUrl);
   url.search = new URLSearchParams(query).toString();
   const result = await timedRequest({
     url,
     method: 'POST',
-    headers: { 'content-type': 'text/plain;charset=UTF-8' },
+    headers: {
+      'content-type': 'text/plain;charset=UTF-8',
+      ...(cookie === undefined ? {} : { cookie }),
+    },
     body: packet,
     agent: false,
     timeoutMs,
@@ -73,12 +105,15 @@ function splitPackets(payload) {
 /**
  * 以老師身分經 Socket.IO 的 group:create 指令建立組別，回傳新組別的 groupId。
  * 每次呼叫使用隨機組名，避免與既有組別撞名。
+ *
+ * 2026-11-22（D18）：老師身分改由 cookie 認證，所以 CONNECT 封包不再帶
+ * token，改由 polling 請求帶 `Cookie` 標頭。
  */
-export async function createGroupViaTeacherSocket(baseUrl, token, { timeoutMs = 10_000 } = {}) {
+export async function createGroupViaTeacherSocket(baseUrl, cookie, { timeoutMs = 10_000 } = {}) {
   const name = `load-${randomBytes(6).toString('hex')}`;
   const query = { EIO: '4', transport: 'polling' };
 
-  const handshake = await pollingGet(baseUrl, query, timeoutMs);
+  const handshake = await pollingGet(baseUrl, query, timeoutMs, cookie);
   if (!handshake.startsWith('0')) {
     throw new Error('Socket.IO 握手回應格式不符（缺少 open 封包）');
   }
@@ -93,21 +128,32 @@ export async function createGroupViaTeacherSocket(baseUrl, token, { timeoutMs = 
   }
 
   const open = { ...query, sid };
-  // CONNECT 封包帶 auth token；此封包含密鑰，任何 log 都不得輸出。
-  await pollingPost(baseUrl, open, `40${JSON.stringify({ token })}`, timeoutMs);
-  const connected = await pollingGet(baseUrl, open, timeoutMs);
+  // CONNECT 封包帶 auth；此封包含憑證，任何 log 都不得輸出。
+  await pollingPost(baseUrl, open, `40${JSON.stringify({})}`, timeoutMs, cookie);
+  const connected = await pollingGet(baseUrl, open, timeoutMs, cookie);
   if (!splitPackets(connected).some((packet) => packet.startsWith('40'))) {
     throw new Error('Socket.IO 連線未成功（缺少 connect ack）');
   }
 
   try {
-    await pollingPost(baseUrl, open, `420${JSON.stringify(['group:create', { name }])}`, timeoutMs);
+    await pollingPost(
+      baseUrl,
+      open,
+      `420${JSON.stringify(['group:create', { name }])}`,
+      timeoutMs,
+      cookie,
+    );
 
     const deadline = Date.now() + timeoutMs;
     let ack = null;
     let groupId = null;
     while (Date.now() < deadline && (ack === null || groupId === null)) {
-      const payload = await pollingGet(baseUrl, open, Math.max(1000, deadline - Date.now()));
+      const payload = await pollingGet(
+        baseUrl,
+        open,
+        Math.max(1000, deadline - Date.now()),
+        cookie,
+      );
       for (const packet of splitPackets(payload)) {
         if (packet.startsWith('430')) {
           ack = JSON.parse(packet.slice(3))[0];
@@ -134,6 +180,6 @@ export async function createGroupViaTeacherSocket(baseUrl, token, { timeoutMs = 
     return groupId;
   } finally {
     // 盡力關閉；失敗不影響設定結果（polling 連線會由伺服器 ping 逾時回收）。
-    await pollingPost(baseUrl, open, '41', 2000).catch(() => {});
+    await pollingPost(baseUrl, open, '41', 2000, cookie).catch(() => {});
   }
 }

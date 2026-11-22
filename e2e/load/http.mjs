@@ -259,18 +259,18 @@ async function main() {
   };
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
-  let teacherToken = null;
+  let teacherCookie = null;
   let fullRoomTokens = [];
   let activeFlood = null;
 
   try {
     let groupIds = [];
     if (password !== null) {
-      teacherToken = await loginTeacher(baseUrl, password);
+      teacherCookie = await loginTeacher(baseUrl, password);
       password = null;
       const groupCount = options.students === 0 ? 1 : Math.min(50, Math.max(1, options.students));
       for (let index = 0; index < groupCount; index += 1) {
-        groupIds.push(await createGroupViaTeacherSocket(baseUrl, teacherToken));
+        groupIds.push(await createGroupViaTeacherSocket(baseUrl, teacherCookie));
       }
       console.log(`已用老師 API 建立 ${groupCount} 個量測組別`);
     } else {
@@ -327,7 +327,7 @@ async function main() {
       }
       activeFlood = await createAnswerFlood({
         baseUrl,
-        teacherToken,
+        teacherCookie,
         groupIds,
         studentTokensByGroup: fullRoomTokens,
         questionCount: 20,
@@ -373,7 +373,7 @@ async function main() {
   } finally {
     activeFlood?.close();
     fullRoomTokens = [];
-    teacherToken = null;
+    teacherCookie = null;
     if (server !== null) {
       await server.stop();
       console.log('量測用伺服器已停止，暫存資料已刪除。');

@@ -8,7 +8,6 @@ import {
 } from '@classroom/shared';
 import { localizeErrorMessage } from './i18n/errors';
 import { getCurrentLanguage } from './i18n/language';
-import { getToken } from './session';
 
 /**
  * 007 i18n：前端自己產生的錯誤（伺服器沒回應、格式不符）沒有錯誤代碼，
@@ -36,11 +35,20 @@ function genericError(key: GenericErrorKey): string {
 }
 
 export type LoginTeacherResult =
-  | { ok: true; token: string }
+  | { ok: true }
   | {
       ok: false;
       error: { code: ErrorCode | null; message: string };
     };
+
+/**
+ * 2026-11-22（D18）：老師登入狀態改存 HttpOnly cookie，**回應不含憑證**，
+ * 頁面 JavaScript 拿不到 token（與 OpenSpec 組一致）。
+ */
+export type TeacherSessionStatus = {
+  authenticated: boolean;
+  passwordConfigured: boolean;
+};
 
 export type JoinStudentResult =
   | { ok: true; token: string; groupId: string }
@@ -93,7 +101,7 @@ function isTeacherLoginResponse(
   return (
     isRecord(value) &&
     value.role === 'teacher' &&
-    typeof value.token === 'string'
+    value.authenticated === true
   );
 }
 
@@ -164,7 +172,56 @@ export async function loginTeacher(
     };
   }
 
-  return { ok: true, token: body.token };
+  // 憑證在 HttpOnly cookie 裡，頁面拿不到（2026-11-22 D18）。
+  return { ok: true };
+}
+
+/**
+ * 2026-11-22（D18）：查詢老師登入狀態（不需登入即可呼叫）。
+ *
+ * 教師頁用它決定要顯示登入畫面、「尚未設定老師密碼」的說明，還是控制台。
+ */
+export async function fetchTeacherSession(): Promise<TeacherSessionStatus> {
+  try {
+    const response = await fetch('/api/teacher/session', {
+      method: 'GET',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) {
+      return { authenticated: false, passwordConfigured: false };
+    }
+    const body = (await response.json()) as unknown;
+    if (
+      !isRecord(body) ||
+      typeof body.authenticated !== 'boolean' ||
+      typeof body.passwordConfigured !== 'boolean'
+    ) {
+      return { authenticated: false, passwordConfigured: false };
+    }
+    return {
+      authenticated: body.authenticated,
+      passwordConfigured: body.passwordConfigured,
+    };
+  } catch {
+    return { authenticated: false, passwordConfigured: false };
+  }
+}
+
+/**
+ * 2026-11-22（D18）：登出——伺服器端 session 立即失效並清除 cookie。
+ *
+ * 失敗時仍回 ok（畫面回到登入畫面即可，不該把老師卡在控制台）。
+ */
+export async function logoutTeacher(): Promise<{ ok: boolean }> {
+  try {
+    const response = await fetch('/api/teacher/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+    return { ok: response.ok };
+  } catch {
+    return { ok: false };
+  }
 }
 
 /** 依學生進場 HTTP 合約選擇組別，並保留伺服器提供的錯誤訊息。 */
@@ -261,8 +318,9 @@ export async function importFromFile(
 
     return fetch('/api/questions/import/file', {
       method: 'POST',
+      // 2026-11-22（D18）：老師身分在 HttpOnly cookie 裡，同源請求會自動帶上。
+      credentials: 'same-origin',
       headers: {
-        authorization: `Bearer ${getToken() ?? ''}`,
         'content-type': 'application/octet-stream',
         'x-file-name': encodeURIComponent(file.name),
       },
@@ -278,8 +336,8 @@ export async function importFromLink(
   return readQuestionsImport(() =>
     fetch('/api/questions/import/link', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: {
-        authorization: `Bearer ${getToken() ?? ''}`,
         'content-type': 'application/json',
       },
       body: JSON.stringify({ url }),
@@ -319,7 +377,8 @@ async function downloadExport(
   let response: Response;
   try {
     response = await fetch(path, {
-      headers: { authorization: `Bearer ${getToken() ?? ''}` },
+      // 2026-11-22（D18）：老師身分在 HttpOnly cookie 裡。
+      credentials: 'same-origin',
     });
   } catch {
     return {
@@ -385,8 +444,8 @@ export async function writeBackGuidedNotes(): Promise<WriteBackResult> {
   try {
     response = await fetch('/api/export/guided-notes/writeback', {
       method: 'POST',
+      credentials: 'same-origin',
       headers: {
-        authorization: `Bearer ${getToken() ?? ''}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({}),

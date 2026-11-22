@@ -170,8 +170,8 @@ describe('邊界情況（spec Edge Cases）', () => {
     expect(mine?.name).toBe('新名組');
   });
 
-  it('已有 50 組時新增回 GROUP_LIMIT_REACHED，組數不變也不廣播（FR-009）', async () => {
-    for (let index = 1; index <= 50; index += 1) {
+  it('已有 100 組時新增回 GROUP_LIMIT_REACHED，組數不變也不廣播（FR-009；2026-11-22 D20）', async () => {
+    for (let index = 1; index <= 100; index += 1) {
       insertGroup(server.db, {
         id: `group-${index}`,
         name: `第${index}組`,
@@ -189,14 +189,14 @@ describe('邊界情況（spec Edge Cases）', () => {
     await teacherInitial;
 
     const ack = await sendCommand(teacherSocket, 'group:create', {
-      name: '第 51 組',
+      name: '第 101 組',
     });
 
     expect(ack).toEqual({
       ok: false,
       error: { code: 'GROUP_LIMIT_REACHED', message: expect.any(String) },
     });
-    expect(countGroups(server.db)).toBe(50);
+    expect(countGroups(server.db)).toBe(100);
     // 被拒絕的指令不得改變資料，也不得觸發廣播（原則 III）。
     await expectNoState(teacherSocket);
   });

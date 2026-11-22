@@ -15,6 +15,10 @@ import {
   getStoredGuidedNotes,
   list as listQuestions,
 } from '../../src/infra/db/questionRepo.js';
+import {
+  TEACHER_SESSION_COOKIE,
+  readTeacherCookieToken,
+} from '../../src/infra/http/teacherSession.js';
 import { fetchSheetXlsx } from '../../src/infra/sheets/googleSheetsFetcher.js';
 import {
   seedQuestion,
@@ -49,6 +53,10 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
+/**
+ * 2026-11-22（D18）：老師登入狀態在 HttpOnly cookie 裡，測試走同一條路。
+ * 回傳值是可直接放進 `Cookie` 標頭的字串。
+ */
 async function loginTeacher(target: TestServer): Promise<string> {
   const response = await fetch(`${target.url}/api/teacher/login`, {
     method: 'POST',
@@ -56,19 +64,23 @@ async function loginTeacher(target: TestServer): Promise<string> {
     body: JSON.stringify({ password: TEACHER_PW }),
   });
   expect(response.status).toBe(200);
-  return ((await response.json()) as { token: string }).token;
+  const token = readTeacherCookieToken(
+    response.headers.get('set-cookie') ?? undefined,
+  );
+  expect(token).not.toBeNull();
+  return `${TEACHER_SESSION_COOKIE}=${token as string}`;
 }
 
 function importFromLink(
   target: TestServer,
-  token: string | null,
+  cookie: string | null,
   url?: string,
 ): Promise<Response> {
   const headers: Record<string, string> = {
     'content-type': 'application/json',
   };
-  if (token !== null) {
-    headers.authorization = `Bearer ${token}`;
+  if (cookie !== null) {
+    headers.cookie = cookie;
   }
   return fetch(`${target.url}/api/questions/import/link`, {
     method: 'POST',
@@ -105,14 +117,14 @@ function expectStoredStateUnchanged(
 
 async function startWithFetch(
   fetchImpl: typeof fetch,
-): Promise<{ server: TestServer; token: string }> {
+): Promise<{ server: TestServer; cookie: string }> {
   server = await startTestServer({
     teacherPassword: TEACHER_PW,
     fetchImpl,
   });
   const target = server;
-  const token = await loginTeacher(target);
-  return { server: target, token };
+  const cookie = await loginTeacher(target);
+  return { server: target, cookie };
 }
 
 function xlsxResponse(): Response {
@@ -151,14 +163,14 @@ describe('連結讀取與確認（AC-002-04；注入假的 fetch）', () => {
       fetchImpl,
     });
     const target = server;
-    const token = await loginTeacher(target);
+    const cookie = await loginTeacher(target);
 
-    const teacherSocket = target.connect({ token, autoConnect: false });
+    const teacherSocket = target.connect({ cookie, autoConnect: false });
     const initial = waitForState(teacherSocket);
     teacherSocket.connect();
     await initial;
 
-    const response = await importFromLink(target, token, SHEET_LINK);
+    const response = await importFromLink(target, cookie, SHEET_LINK);
     expect(response.status).toBe(200);
     const summary = (await response.json()) as ImportSummary;
 
@@ -192,7 +204,7 @@ describe('連結讀取與確認（AC-002-04；注入假的 fetch）', () => {
       {
         method: 'POST',
         headers: {
-          authorization: `Bearer ${token}`,
+          cookie,
           'content-type': 'application/octet-stream',
         },
         body: fixture01,
@@ -208,7 +220,7 @@ describe('連結讀取與確認（AC-002-04；注入假的 fetch）', () => {
     // 較新的讀取是 uploadSummary；以它確認，來源仍正確記為 file。
     // 另外再讀一次連結，確認 link 來源的保存。
     const linkAgain = (await (
-      await importFromLink(target, token, SHEET_LINK)
+      await importFromLink(target, cookie, SHEET_LINK)
     ).json()) as ImportSummary;
     const statePromise = waitForState(teacherSocket);
     expect(
@@ -236,7 +248,7 @@ describe('連結讀取與確認（AC-002-04；注入假的 fetch）', () => {
       fetchImpl,
     });
     const target = server;
-    const token = await loginTeacher(target);
+    const cookie = await loginTeacher(target);
     seedQuestion(target.db);
     const before = storedImportState(target);
 
@@ -247,14 +259,14 @@ describe('連結讀取與確認（AC-002-04；注入假的 fetch）', () => {
       `https://docs.google.com/document/d/${SHEET_ID}/edit`,
       'not-a-url',
     ]) {
-      const response = await importFromLink(target, token, url);
+      const response = await importFromLink(target, cookie, url);
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toEqual({
         error: { code: 'LINK_INVALID', message: expect.any(String) },
       });
     }
 
-    const missing = await importFromLink(target, token);
+    const missing = await importFromLink(target, cookie);
     expect(missing.status).toBe(400);
     await expect(missing.json()).resolves.toEqual({
       error: { code: 'INVALID_INPUT', message: expect.any(String) },
@@ -264,14 +276,14 @@ describe('連結讀取與確認（AC-002-04；注入假的 fetch）', () => {
     expectStoredStateUnchanged(target, before);
   });
 
-  it('沒有 token 回 401 UNAUTHORIZED，不發出任何請求', async () => {
+  it('沒有 cookie 回 401 TEACHER_AUTH_REQUIRED，不發出任何請求', async () => {
     const fetchImpl = vi.fn<typeof fetch>(() =>
       Promise.resolve(xlsxResponse()),
     );
     const { server: target } = await startWithFetch(fetchImpl);
 
     const response = await importFromLink(target, null, SHEET_LINK);
-    await expectLinkError(response, 401, 'UNAUTHORIZED');
+    await expectLinkError(response, 401, 'TEACHER_AUTH_REQUIRED');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
@@ -292,13 +304,13 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
           }),
         ),
       );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
     seedQuestion(target.db);
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const before = storedImportState(target);
       await expectLinkError(
-        await importFromLink(target, token, SHEET_LINK),
+        await importFromLink(target, cookie, SHEET_LINK),
         422,
         'LINK_NOT_SHARED',
       );
@@ -322,12 +334,12 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
     const fetchImpl = vi.fn<typeof fetch>(() =>
       Promise.resolve(response),
     );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
     seedQuestion(target.db);
     const before = storedImportState(target);
 
     await expectLinkError(
-      await importFromLink(target, token, SHEET_LINK),
+      await importFromLink(target, cookie, SHEET_LINK),
       422,
       'LINK_NOT_SHARED',
     );
@@ -345,12 +357,12 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
         }),
       ),
     );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
     seedQuestion(target.db);
     const before = storedImportState(target);
 
     await expectLinkError(
-      await importFromLink(target, token, SHEET_LINK),
+      await importFromLink(target, cookie, SHEET_LINK),
       422,
       'LINK_NOT_SHARED',
     );
@@ -365,9 +377,9 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
       .mockImplementationOnce(() =>
         Promise.resolve(redirectResponse(downloadHost)),
       );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
 
-    const response = await importFromLink(target, token, SHEET_LINK);
+    const response = await importFromLink(target, cookie, SHEET_LINK);
     expect(response.status).toBe(200);
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(fetchImpl).toHaveBeenNthCalledWith(
@@ -421,13 +433,13 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
         );
       }),
     );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
     seedQuestion(target.db);
     const before = storedImportState(target);
 
     vi.useFakeTimers();
     try {
-      const request = importFromLink(target, token, SHEET_LINK);
+      const request = importFromLink(target, cookie, SHEET_LINK);
       await vi.waitFor(
         () => {
           expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -446,12 +458,12 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
     const fetchImpl = vi.fn<typeof fetch>(() =>
       Promise.reject(new TypeError('network down')),
     );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
     seedQuestion(target.db);
     const before = storedImportState(target);
 
     await expectLinkError(
-      await importFromLink(target, token, SHEET_LINK),
+      await importFromLink(target, cookie, SHEET_LINK),
       502,
       'LINK_UNREACHABLE',
     );
@@ -463,12 +475,12 @@ describe('US4 連結錯誤路徑（T044；AC-002-18、19；research R4）', () =
     const fetchImpl = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(chunkStream(), { status: 200 })),
     );
-    const { server: target, token } = await startWithFetch(fetchImpl);
+    const { server: target, cookie } = await startWithFetch(fetchImpl);
     seedQuestion(target.db);
     const before = storedImportState(target);
 
     await expectLinkError(
-      await importFromLink(target, token, SHEET_LINK),
+      await importFromLink(target, cookie, SHEET_LINK),
       413,
       'FILE_TOO_LARGE',
     );

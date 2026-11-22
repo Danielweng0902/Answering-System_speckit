@@ -76,6 +76,11 @@ export function seedQuestion(database: DatabaseSync): void {
 
 export type TestClientOptions = {
   token?: string;
+  /**
+   * 2026-11-22（D18）：老師的 HttpOnly cookie（登入狀態）。
+   * 瀏覽器的同源連線會自動帶上 cookie，所以測試老師端也要走這條路。
+   */
+  cookie?: string;
   autoConnect?: boolean;
   /** 005：投影檢視模式；伺服器改送不含作答資訊的投影快照。 */
   view?: 'projector';
@@ -153,6 +158,9 @@ export async function startTestServer(
             ? {}
             : { view: clientOptions.view }),
         },
+        ...(clientOptions.cookie === undefined
+          ? {}
+          : { extraHeaders: { Cookie: clientOptions.cookie } }),
         autoConnect: clientOptions.autoConnect ?? true,
         forceNew: true,
         reconnection: false,

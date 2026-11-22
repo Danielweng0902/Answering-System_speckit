@@ -48,14 +48,14 @@ function setPhase(database: DatabaseSync, phase: 'preparing' | 'open' | 'closed'
 }
 
 describe('004 匯出 HTTP 路由 Foundational（T007）', () => {
-  it.each(ENDPOINTS)('%s：沒有 token 或 token 無效 → 401 UNAUTHORIZED', async (path) => {
+  it.each(ENDPOINTS)('%s：沒有 token 或 token 無效 → 401 TEACHER_AUTH_REQUIRED', async (path) => {
     const server = await start();
     try {
-      await expectExportError(await requestExport(server, path), 401, 'UNAUTHORIZED');
+      await expectExportError(await requestExport(server, path), 401, 'TEACHER_AUTH_REQUIRED');
       await expectExportError(
         await requestExport(server, path, 'invalid-token'),
         401,
-        'UNAUTHORIZED',
+        'TEACHER_AUTH_REQUIRED',
       );
     } finally {
       await server.close();

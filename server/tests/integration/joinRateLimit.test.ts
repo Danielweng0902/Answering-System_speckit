@@ -14,7 +14,11 @@ describe('POST /api/student/join 速率限制', () => {
   let server: TestServer;
 
   beforeEach(async () => {
-    server = await startTestServer();
+    // 2026-11-22（D20 統一為 100 組）：預設 burst 由 600 提到 1000，逐一
+    // 打 1,000 次會讓這個測試在並行跑全套時超出 vitest 的 5 秒上限。
+    // 這裡改用小門檻驗證**行為**（超過門檻 → 429、sessions 不再增加）；
+    // 預設值本身由 config.test.ts 斷言。
+    server = await startTestServer({ joinRateLimit: { burst: 50, perMinute: 30 } });
     insertGroup(server.db, { id: 'group-1', name: '第一組', position: 1 });
   });
 
@@ -31,8 +35,8 @@ describe('POST /api/student/join 速率限制', () => {
   }
 
   it('連續進場超過門檻後回 429 TOO_MANY_ATTEMPTS，且不再新增 session', async () => {
-    // 門檻預設 burst 600；先確認前 600 次都成功（合法課堂規模）。
-    for (let attempt = 0; attempt < 600; attempt += 1) {
+    // 先確認門檻內的請求都成功（合法課堂規模）。
+    for (let attempt = 0; attempt < 50; attempt += 1) {
       const response = await join();
       expect(response.status).toBe(200);
       await response.arrayBuffer();
@@ -41,7 +45,7 @@ describe('POST /api/student/join 速率限制', () => {
     const sessionsAfterBurst = server.db
       .prepare('SELECT COUNT(*) AS count FROM sessions')
       .get() as { count: number };
-    expect(sessionsAfterBurst.count).toBe(600);
+    expect(sessionsAfterBurst.count).toBe(50);
 
     // 額度用完 → 429。
     const blocked = await join();
@@ -54,7 +58,7 @@ describe('POST /api/student/join 速率限制', () => {
     const sessionsAfterBlock = server.db
       .prepare('SELECT COUNT(*) AS count FROM sessions')
       .get() as { count: number };
-    expect(sessionsAfterBlock.count).toBe(600);
+    expect(sessionsAfterBlock.count).toBe(50);
   });
 
   it('格式錯誤與不存在的組別不影響額度以外的行為', async () => {

@@ -7,13 +7,14 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getToken } from '../../src/lib/session';
-import { connectSocket } from '../../src/lib/socket';
+import { connectSocket, reconnectSocket } from '../../src/lib/socket';
 import { TeacherLogin } from '../../src/features/teacher/TeacherLogin';
 
 const TEACHER_PW = 'teacher-pass-123';
 
 vi.mock('../../src/lib/socket', () => ({
   connectSocket: vi.fn(),
+  reconnectSocket: vi.fn(),
 }));
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -70,10 +71,10 @@ describe('TeacherLogin', () => {
     expect(screen.getByRole('button', { name: '登入' })).toBeDefined();
   });
 
-  it('登入成功保存 token、以 token 連線並通知父元件', async () => {
+  it('登入成功不保存 token（改用 HttpOnly cookie）、以 cookie 身分連線並通知父元件', async () => {
     const onLoginSuccess = vi.fn();
     fetchMock.mockResolvedValue(
-      mockLoginResponse(200, { token: 'teacher-token', role: 'teacher' }),
+      mockLoginResponse(200, { role: 'teacher', authenticated: true }),
     );
 
     render(<TeacherLogin onLoginSuccess={onLoginSuccess} />);
@@ -83,10 +84,14 @@ describe('TeacherLogin', () => {
     fireEvent.click(screen.getByRole('button', { name: '登入' }));
 
     await waitFor(() => {
-      expect(connectSocket).toHaveBeenCalledWith('teacher-token');
+      expect(connectSocket).toHaveBeenCalledWith(null);
     });
-    expect(getToken()).toBe('teacher-token');
-    expect(onLoginSuccess).toHaveBeenCalledWith('teacher-token');
+    // 2026-11-22（D18）：憑證在 cookie 裡，token 沒有變化，所以要明確
+    // 重新握手讓伺服器用新的 cookie 判定身分。
+    expect(reconnectSocket).toHaveBeenCalled();
+    // 2026-11-22（D18）：頁面 JavaScript 不得持有憑證。
+    expect(getToken()).toBeNull();
+    expect(onLoginSuccess).toHaveBeenCalledWith();
     expect(passwordInput.value).toBe('');
     expect(fetchMock).toHaveBeenCalledWith('/api/teacher/login', {
       method: 'POST',

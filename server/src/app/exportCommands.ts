@@ -88,7 +88,7 @@ export function authorizeExport(
 ): ExportAuthorization {
   const identity = resolveIdentity(database, token);
   if (identity.role === 'guest') {
-    return { ok: false, code: 'UNAUTHORIZED' };
+    return { ok: false, code: 'TEACHER_AUTH_REQUIRED' };
   }
   if (identity.role !== 'teacher') {
     return { ok: false, code: 'FORBIDDEN' };

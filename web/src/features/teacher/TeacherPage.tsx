@@ -1,15 +1,17 @@
 import { useI18n } from '../../lib/i18n/LanguageProvider';
 import type { Snapshot } from '@classroom/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   downloadGuidedNotes,
   downloadResultCsv,
+  fetchTeacherSession,
+  logoutTeacher,
   writeBackGuidedNotes,
   type DownloadExportResult,
 } from '../../lib/api';
 import { Countdown } from '../shared/Countdown';
 import { LanguageSwitch } from '../shared/LanguageSwitch';
-import { sendCommand } from '../../lib/socket';
+import { connectSocket, reconnectSocket, sendCommand } from '../../lib/socket';
 import { AnswerBoard } from './AnswerBoard';
 import { GroupManager } from './GroupManager';
 import { PhaseControl } from './PhaseControl';
@@ -33,6 +35,22 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
   const [isWritingBack, setIsWritingBack] = useState(false);
   const [writeBackMessage, setWriteBackMessage] = useState<string | null>(null);
   const [writeBackError, setWriteBackError] = useState<string | null>(null);
+  // 2026-11-22（D18）：伺服器有沒有設定老師密碼——沒設定時登入一定會失敗，
+  // 與其讓老師一直試錯，不如直接說明。
+  const [passwordConfigured, setPasswordConfigured] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchTeacherSession().then((status) => {
+      if (!cancelled) {
+        setPasswordConfigured(status.passwordConfigured);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   /**
    * 006 T022（人工驗證建議 2）：階段改變、重設活動或重新匯入時，
@@ -110,11 +128,18 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
             <LanguageSwitch />
           </div>
         </header>
-        <TeacherLogin
-          onLoginSuccess={() => {
-            setIsAwaitingTeacherSnapshot(true);
-          }}
-        />
+        {!passwordConfigured && (
+          <p className={styles.notice} role="status">
+            {t('teacher.passwordNotSet')}
+          </p>
+        )}
+        {passwordConfigured && (
+          <TeacherLogin
+            onLoginSuccess={() => {
+              setIsAwaitingTeacherSnapshot(true);
+            }}
+          />
+        )}
         {isAwaitingTeacherSnapshot && (
           <p className={styles.notice} role="status">
             {t('teacher.loginPending')}
@@ -122,6 +147,21 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
         )}
       </section>
     );
+  }
+
+  /**
+   * 2026-11-22（D18）：登出——伺服器端 session 失效並清除 cookie，
+   * 然後重新連線（此時已沒有 cookie，身分降級為訪客，畫面回到登入表單）。
+   */
+  async function handleLogout(): Promise<void> {
+    setIsLoggingOut(true);
+    try {
+      await logoutTeacher();
+      connectSocket(null);
+      reconnectSocket();
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   async function handleExport(
@@ -158,7 +198,20 @@ export function TeacherPage({ snapshot }: TeacherPageProps) {
           <h1 id="teacher-page-title" className={styles.title}>
             {t('teacher.title')}
           </h1>
-          <LanguageSwitch />
+          <div className={styles.headerActions}>
+            <LanguageSwitch />
+            {/* 2026-11-22（D18）：登出。 */}
+            <button
+              className={styles.exportButton}
+              type="button"
+              disabled={isLoggingOut}
+              onClick={() => {
+                void handleLogout();
+              }}
+            >
+              {t('teacher.logout')}
+            </button>
+          </div>
         </div>
       </header>
       <PhaseControl snapshot={snapshot} />

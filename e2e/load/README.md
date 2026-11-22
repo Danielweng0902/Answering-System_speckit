@@ -38,9 +38,13 @@ node --test 'e2e/load/tests/*.mjs'
 node e2e/load/socket.mjs --groups 5 --questions 3 --rounds 1 \
   --cooldown-seconds 0 --json socket-smoke.json
 
-# 中等量測（每次先做 1,000 筆重建，再量 50 組重連）
+# 中等量測（每次先做「組數 × 20 題」筆重建，再量各組依序重連）
 node e2e/load/socket.mjs --groups 50 --questions 20 --rounds 2 \
   --cooldown-seconds 60 --json socket-medium.json
+
+# 滿房量測（2026-11-22 D20 統一為 100 組後）
+node e2e/load/socket.mjs --transport websocket --groups 100 --questions 20 --rounds 2 \
+  --cooldown-seconds 30 --json socket-100groups.json
 
 # 只跑單一 transport
 node e2e/load/socket.mjs --transport websocket --groups 50 --questions 20 --rounds 2
@@ -55,7 +59,7 @@ TEACHER_PASSWORD=… node e2e/load/socket.mjs \
 參數：
 
 - `--transport websocket|polling|both`（未給 `--url` 且未給此參數時為 both）。
-- `--groups 1..50`（預設 50）、`--questions 1..100`（預設 20）、
+- `--groups 1..100`（預設 50）、`--questions 1..100`（預設 20）、
   `--rounds >= 1`（預設 10）。
 - `--timeout-ms`（預設 5000）：正式 ACK／必要 state deadline；逾時以這個
   上限計入全體分位數。

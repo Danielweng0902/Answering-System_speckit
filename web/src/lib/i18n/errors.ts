@@ -14,7 +14,7 @@ export const ERROR_MESSAGES_EN: Partial<Record<ErrorCode, string>> = {
   GROUP_NAME_EMPTY: 'Please enter a group name',
   GROUP_NAME_TOO_LONG: 'Group names can be at most 30 characters',
   GROUP_NAME_DUPLICATE: 'A group with this name already exists',
-  GROUP_LIMIT_REACHED: 'You can create at most 50 groups',
+  GROUP_LIMIT_REACHED: 'You can create at most 100 groups',
   GROUP_NOT_FOUND: 'That group no longer exists, please pick another one',
   NO_GROUPS: 'Create at least one group first',
   COUNTDOWN_OUT_OF_RANGE: 'The countdown must be between 10 seconds and 60 minutes',
@@ -22,7 +22,7 @@ export const ERROR_MESSAGES_EN: Partial<Record<ErrorCode, string>> = {
   WRONG_PASSWORD: 'Wrong password',
   TEACHER_PASSWORD_NOT_SET: 'No teacher password has been set yet',
   TOO_MANY_ATTEMPTS: 'Too many attempts, please try again later',
-  UNAUTHORIZED: 'Please sign in as a teacher first',
+  TEACHER_AUTH_REQUIRED: 'Please sign in as a teacher first',
   FILE_INVALID: 'That file could not be read — upload an xlsx Guided Notes file',
   FILE_TOO_LARGE: 'The file is too large — upload an xlsx under 5 MB',
   HEADER_NOT_FOUND:

@@ -71,6 +71,9 @@ export function timedRequest({ url, method = 'GET', headers = {}, body, agent, t
           statusCode: response.statusCode ?? null,
           error: null,
           body: Buffer.concat(chunks),
+          // 2026-11-22（D18）：老師登入狀態在 Set-Cookie 裡，設定用戶端
+          // 需要讀取它；回應標頭不會寫進報告或 log。
+          headers: response.headers,
         });
       });
       response.on('error', () => {
@@ -79,6 +82,7 @@ export function timedRequest({ url, method = 'GET', headers = {}, body, agent, t
           statusCode: response.statusCode ?? null,
           error: 'network',
           body: null,
+          headers: null,
         });
       });
     });
@@ -90,6 +94,7 @@ export function timedRequest({ url, method = 'GET', headers = {}, body, agent, t
         statusCode: null,
         error: 'network',
         body: null,
+        headers: null,
       });
     });
 
@@ -99,6 +104,7 @@ export function timedRequest({ url, method = 'GET', headers = {}, body, agent, t
         statusCode: null,
         error: 'timeout',
         body: null,
+        headers: null,
       });
       req.destroy();
     }, timeoutMs);

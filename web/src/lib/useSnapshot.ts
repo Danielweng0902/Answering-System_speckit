@@ -31,11 +31,15 @@ let cachedSnapshot: Snapshot | null = null;
  *
  * 005：投影頁用 `view: 'projector'` 連線，伺服器改送投影快照（不含作答
  * 資訊）；一般頁面維持預設的檢視模式。
+ *
+ * 2026-11-22（D18）：`auth: 'teacher'` 表示這條連線**不帶 token**，老師
+ * 身分改由 HttpOnly cookie 認證（頁面 JavaScript 讀不到憑證）。
  */
 export function useSnapshot(
-  options: { view?: SocketView } = {},
+  options: { view?: SocketView; auth?: 'session' | 'teacher' } = {},
 ): UseSnapshotResult {
   const view = options.view ?? 'normal';
+  const authMode = options.auth ?? 'session';
   const [snapshot, setSnapshot] = useState<Snapshot | null>(cachedSnapshot);
   const [sessionInvalidPayload, setSessionInvalidPayload] =
     useState<SessionInvalidPayload | null>(null);
@@ -98,7 +102,7 @@ export function useSnapshot(
     socket.on('connect_error', handleConnectError);
     socket.on(STATE_EVENT, handleState);
     socket.on(SESSION_INVALID_EVENT, handleSessionInvalid);
-    connectSocket(undefined, view);
+    connectSocket(authMode === 'teacher' ? null : undefined, view);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -107,7 +111,7 @@ export function useSnapshot(
       socket.off(STATE_EVENT, handleState);
       socket.off(SESSION_INVALID_EVENT, handleSessionInvalid);
     };
-  }, [view]);
+  }, [view, authMode]);
 
   return {
     snapshot,
