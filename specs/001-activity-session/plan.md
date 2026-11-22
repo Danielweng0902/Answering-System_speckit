@@ -30,7 +30,7 @@
 
 **Constraints**: 伺服器判定階段、時間與可見範圍（原則 VI）；機敏資料只在環境變數（原則 IV）；同一台電腦的多個瀏覽器分頁必須能分別扮演老師與不同組別（demo 需求）
 
-**Scale/Scope**: 一個活動、最多 50 組、同時連線約 100 個；本子功能 6 個 user story、28 條 FR
+**Scale/Scope**: 一個活動、最多 100 組、同時連線約 100 個；本子功能 6 個 user story、28 條 FR
 
 ## Constitution Check
 

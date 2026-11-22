@@ -74,7 +74,7 @@ server → 所有連線: state { ... revealedQuestionCount: 1 }
 
 | 代碼 | 意義 | 005 的適用情境 |
 |---|---|---|
-| `UNAUTHORIZED` | 未登入或 token 無效 | 投影頁未登入 |
+| `TEACHER_AUTH_REQUIRED` | 未登入或登入狀態已失效 | 投影頁未登入 |
 | `FORBIDDEN` | 不是老師 | 學生呼叫 `activity:fair-ranking`／`reveal:*` |
 | `INVALID_PHASE` | 階段不允許 | 非準備中改公平順位；非已結束揭曉 |
 
