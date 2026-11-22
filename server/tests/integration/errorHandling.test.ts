@@ -5,11 +5,15 @@ import { Server as SocketIOServer } from 'socket.io';
 import { io as createSocketIOClient, type Socket } from 'socket.io-client';
 import type { Ack } from '@classroom/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { issueSession } from '../../src/app/access.js';
 import { registerCommand } from '../../src/infra/socket/commandRouter.js';
 import { createSocketBroadcaster } from '../../src/infra/socket/broadcaster.js';
 import { initializeDatabase } from '../../src/infra/db/database.js';
+import { insertGroup } from '../../src/infra/db/groupRepo.js';
 import { createApp } from '../../src/infra/http/app.js';
 import {
+  seedQuestion,
+  sendCommand,
   startTestServer,
   waitForState,
   type TestServer,
@@ -37,6 +41,22 @@ function memoryDatabase(): DatabaseSync {
   return database;
 }
 
+/**
+ * 等待條件成立（最多 5 秒）；條件不成立就讓測試以斷言失敗收尾。
+ *
+ * 2026-11-22：CI 跑器比本機慢，用固定 sleep 等非同步結果會造成間歇性失敗。
+ */
+async function waitUntil(condition: () => boolean, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() > deadline) {
+      expect(condition(), '等待條件逾時').toBe(true);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 describe('例外處理（GLM 複查發現）', () => {
   let server: TestServer | undefined;
 
@@ -62,7 +82,11 @@ describe('例外處理（GLM 複查發現）', () => {
     await initial;
 
     socket.emit('activity:close', { secretField: 'payload-value' });
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // 等待伺服器真的記錄了這筆錯誤：固定睡 200 ms 在忙碌的機器（CI 跑器）
+    // 上可能還沒處理完 socket 事件就斷言，會造成間歇性失敗。
+    await waitUntil(() =>
+      errorSpy.mock.calls.flat().map(String).join('\n').includes('activity:close'),
+    );
 
     expect(socket.connected).toBe(true);
     expect(broadcast).not.toHaveBeenCalled();
@@ -326,5 +350,71 @@ describe('broadcaster 單一連線例外隔離（T063）', () => {
       database.close();
       vi.restoreAllMocks();
     }
+  });
+});
+
+describe('伺服器關閉後的待處理計時器（2026-11-22 CI 失敗回歸）', () => {
+  it('dispose() 會清掉老師看板的合併廣播計時器（資料庫關閉後不會再觸發）', async () => {
+    // 情境：作答後老師看板的合併廣播排了 120 ms 的計時器 → 伺服器在計時器
+    // 觸發前就關閉（資料庫一併關閉）。若計時器沒被清掉，它會讀已關閉的
+    // SQLite 而拋出 ERR_INVALID_STATE（變成未處理的例外，CI 第一次失敗）。
+    //
+    // 訊號：flushTeacherBoard 會把這類例外記成 'Broadcast teacher board failed.'，
+    // 因此斷言「伺服器關閉後不該出現這筆錯誤」。
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const database = memoryDatabase();
+    const broadcaster = createSocketBroadcaster(
+      fakeBroadcasterIo(teacherSocket(vi.fn())),
+      database,
+    );
+
+    broadcaster.broadcastSubmissionChanged('group-1');
+    broadcaster.dispose();
+    database.close();
+
+    // 等過合併視窗（120 ms）。
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    const logged = errorSpy.mock.calls.flat().map(String).join('\n');
+    expect(logged).not.toContain('Broadcast teacher board failed.');
+  });
+
+  it('作答後立刻關閉伺服器，不會在資料庫關閉後觸發看板廣播', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const local = await startTestServer();
+    insertGroup(local.db, { id: 'group-1', name: '第一組', position: 1 });
+    seedQuestion(local.db);
+
+    const teacher = local.connect({
+      token: issueSession(local.db, { role: 'teacher' }),
+      autoConnect: false,
+    });
+    const teacherState = waitForState(teacher);
+    teacher.connect();
+    await teacherState;
+    await sendCommand(teacher, 'activity:open', {});
+
+    const student = local.connect({
+      token: issueSession(local.db, { role: 'student', groupId: 'group-1' }),
+      autoConnect: false,
+    });
+    const studentState = waitForState(student);
+    student.connect();
+    await studentState;
+
+    // 作答會觸發老師看板的合併廣播（排入 120 ms 計時器）；ack 是在廣播之後
+    // 才送出的，所以等到 ack 就確定計時器已經排入。
+    await sendCommand(student, 'answer:submit', {
+      questionNumber: 1,
+      answers: ['答案'],
+    });
+
+    await local.close();
+
+    // 等過合併視窗：伺服器關閉後不得再讀已關閉的資料庫。
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    const logged = errorSpy.mock.calls.flat().map(String).join('\n');
+    expect(logged).not.toContain('Broadcast teacher board failed.');
   });
 });
