@@ -84,7 +84,7 @@ Router --> Groups : group:create / group:rename / group:delete
 Router --> Phase : activity:open / activity:close / activity:reset
 Router --> Sync : Ack ok 後 broadcastState()
 
-Sync --> Auth : resolveIdentity(token)
+Sync --> Auth : resolveIdentity(token；老師可用 HttpOnly cookie）
 Groups --> Store : groupRepo / activityRepo
 Phase --> Store : activityRepo / countGroups
 Phase --> Timer : onOpened / onClosed

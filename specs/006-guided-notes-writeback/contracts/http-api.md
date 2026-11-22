@@ -11,7 +11,7 @@
 把本次活動各題搶答成功組別的答案，直接寫回老師原本那份線上 Google 試算表。
 
 - Request：無 body；`Authorization: Bearer <token>`
-- 權限：**只有老師**（`FORBIDDEN`）；未登入（`UNAUTHORIZED`）
+- 權限：**只有老師**（`FORBIDDEN`）；未登入（`TEACHER_AUTH_REQUIRED`）
 - 階段：只有 `closed`（`INVALID_PHASE`）
 - 前提：有匯入過學習單（`NO_GUIDED_NOTES`）
 
@@ -40,7 +40,7 @@
 
 | 代碼 | HTTP | 意義與老師該怎麼做 |
 |---|---|---|
-| `UNAUTHORIZED` | 401 | 沒有帶 token 或 token 無效 |
+| `TEACHER_AUTH_REQUIRED` | 401 | 沒有登入狀態或登入狀態已失效 |
 | `FORBIDDEN` | 403 | 不是老師 |
 | `INVALID_PHASE` | 409 | 活動還沒結束 |
 | `NO_GUIDED_NOTES` | 422 | 沒有匯入過學習單 |

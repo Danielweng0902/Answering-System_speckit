@@ -30,7 +30,7 @@
 
 **Constraints**: 順位、階段與可見範圍由伺服器判定（原則 VI、FR-009）；同題同組同時只有一筆有效作答（FR-004）；學生不得從 payload 指定組別（FR-018）；搶答中不得讓其他組從內容或 revision 推知作答（FR-016、SC-002）；答案 trim 後 1–200 個 Unicode code point（FR-006）；介面只用 design tokens（原則 IX）
 
-**Scale/Scope**: 最多 50 組；每份學習單通常 5–30 題；每題至多 50 筆有效作答並保留作廢歷史；本子功能 6 個 user story、30 條 FR
+**Scale/Scope**: 最多 100 組；每份學習單通常 5–30 題；每題至多 50 筆有效作答並保留作廢歷史；本子功能 6 個 user story、30 條 FR
 
 ## Constitution Check
 

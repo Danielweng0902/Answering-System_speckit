@@ -13,7 +13,7 @@
 - 400 `FILE_INVALID`：不是 xlsx 或檔案損壞
 - 413 `FILE_TOO_LARGE`：超過 5 MB，或解壓後超過 50 MB
 - 422 `HEADER_NOT_FOUND`、`NO_QUESTIONS`、`DUPLICATE_QUESTION_NUMBER`：內容不符（見下方錯誤代碼）
-- 401 `UNAUTHORIZED`：沒有帶 token 或 token 無效
+- 401 `TEACHER_AUTH_REQUIRED`：沒有登入狀態或登入狀態已失效
 - 403 `FORBIDDEN`：不是老師
 - 409 `INVALID_PHASE`：不在準備中
 
@@ -34,7 +34,7 @@
 
 | 代碼 | 意義 | 給使用者的訊息（範例） |
 |---|---|---|
-| `UNAUTHORIZED` | 沒有登入或登入已失效 | 請先以老師身分登入 |
+| `TEACHER_AUTH_REQUIRED` | 沒有登入或登入已失效 | 請先以老師身分登入 |
 | `FILE_INVALID` | 不是 xlsx 或檔案損壞 | 無法讀取這個檔案，請上傳 xlsx 格式的學習單 |
 | `FILE_TOO_LARGE` | 超過大小上限 | 檔案太大，請上傳 5 MB 以內的 xlsx 檔 |
 | `HEADER_NOT_FOUND` | 找不到表頭 | 找不到表頭。學習單需要有一列同時包含「題號」「題目」「作答」三個欄位 |

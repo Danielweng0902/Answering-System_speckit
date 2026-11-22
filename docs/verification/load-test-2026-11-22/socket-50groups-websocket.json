@@ -1,0 +1,1089 @@
+{
+  "tool": "e2e/load/socket.mjs",
+  "node": "v26.7.0",
+  "platform": "darwin",
+  "targetMode": "managed",
+  "config": {
+    "url": null,
+    "transport": "websocket",
+    "groups": 50,
+    "questions": 20,
+    "rounds": 2,
+    "timeoutMs": 5000,
+    "burstIntervalMs": 250,
+    "cooldownSeconds": 30,
+    "jsonPath": "/private/var/folders/k5/vlsbp10n1fxcsjwj3hfl1jy40000gp/T/opencode/socket-50groups-ws-coalesce.json",
+    "allowRemote": false,
+    "serverPidProvided": false
+  },
+  "statistics": {
+    "thresholdBasis": "全部樣本；逾時以 timeoutMs 作為延遲下界",
+    "note": "summary.completedOnly 另供對照，不用作門檻；3 秒公平順位提醒不作必要送達"
+  },
+  "runs": [
+    {
+      "transportMode": "websocket",
+      "startedAt": "2026-11-22T09:54:46.075Z",
+      "finishedAt": "2026-11-22T09:55:53.027Z",
+      "config": {
+        "activeGroups": 50,
+        "totalGroupsCreated": 50,
+        "questions": 20,
+        "rounds": 2,
+        "timeoutMs": 5000,
+        "handshakeTimeoutMs": 30000,
+        "burstIntervalMs": 250,
+        "cooldownSeconds": 30,
+        "seedAnswersBeforeReconnect": 1000,
+        "seedSetupTransport": "websocket"
+      },
+      "progress": [
+        "資源採樣自第 0 筆樣本後開始",
+        "1,000 筆重建期間暫停量測用老師／投影連線，避免 setup 廣播汙染後續送達"
+      ],
+      "handshakes": {
+        "initial": {
+          "summary": {
+            "sampleCount": 103,
+            "successCount": 103,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 7.627207999999996,
+            "p95Ms": 15.314540999999963,
+            "p99Ms": 17.41820800000005,
+            "maxMs": 17.419167000000016,
+            "completedOnly": {
+              "p50Ms": 7.627207999999996,
+              "p95Ms": 15.314540999999963,
+              "p99Ms": 17.41820800000005,
+              "maxMs": 17.419167000000016
+            }
+          },
+          "samples": 103
+        },
+        "reconnect": {
+          "answersBeforeReconnect": 1000,
+          "seedSetupTransport": "websocket",
+          "measuredReconnectTransport": "websocket",
+          "state": {
+            "sampleCount": 50,
+            "successCount": 50,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 21.779875000000175,
+            "p95Ms": 24.075666000000638,
+            "p99Ms": 1102.6186660000021,
+            "maxMs": 1102.6186660000021,
+            "completedOnly": {
+              "p50Ms": 21.779875000000175,
+              "p95Ms": 24.075666000000638,
+              "p99Ms": 1102.6186660000021,
+              "maxMs": 1102.6186660000021
+            }
+          },
+          "handshakeErrorCount": 0
+        },
+        "switch": {
+          "leaveToGuest": {
+            "sampleCount": 1,
+            "successCount": 1,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 8.748791999999412,
+            "p95Ms": 8.748791999999412,
+            "p99Ms": 8.748791999999412,
+            "maxMs": 8.748791999999412,
+            "completedOnly": {
+              "p50Ms": 8.748791999999412,
+              "p95Ms": 8.748791999999412,
+              "p99Ms": 8.748791999999412,
+              "maxMs": 8.748791999999412
+            }
+          },
+          "leaveToNewIdentity": {
+            "sampleCount": 1,
+            "successCount": 1,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 22.67449999999917,
+            "p95Ms": 22.67449999999917,
+            "p99Ms": 22.67449999999917,
+            "maxMs": 22.67449999999917,
+            "completedOnly": {
+              "p50Ms": 22.67449999999917,
+              "p95Ms": 22.67449999999917,
+              "p99Ms": 22.67449999999917,
+              "maxMs": 22.67449999999917
+            }
+          },
+          "samples": 1
+        }
+      },
+      "scenarios": {
+        "coldSubmissions": {
+          "ack": {
+            "sampleCount": 2000,
+            "successCount": 2000,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 55.44945800000005,
+            "p95Ms": 89.68183299999873,
+            "p99Ms": 93.5478750000002,
+            "maxMs": 97.69400000000041,
+            "completedOnly": {
+              "p50Ms": 55.44945800000005,
+              "p95Ms": 89.68183299999873,
+              "p99Ms": 93.5478750000002,
+              "maxMs": 97.69400000000041
+            }
+          },
+          "senderState": {
+            "sampleCount": 2000,
+            "successCount": 2000,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 55.43687499999987,
+            "p95Ms": 89.66483300000073,
+            "p99Ms": 93.52237499999956,
+            "maxMs": 97.65970899999957,
+            "completedOnly": {
+              "p50Ms": 55.43687499999987,
+              "p95Ms": 89.66483300000073,
+              "p99Ms": 93.52237499999956,
+              "maxMs": 97.65970899999957
+            }
+          },
+          "peerState": {
+            "sampleCount": 2000,
+            "successCount": 2000,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 55.51487499999985,
+            "p95Ms": 89.74162500000011,
+            "p99Ms": 93.61424999999963,
+            "maxMs": 98.21204200000011,
+            "completedOnly": {
+              "p50Ms": 55.51487499999985,
+              "p95Ms": 89.74162500000011,
+              "p99Ms": 93.61424999999963,
+              "maxMs": 98.21204200000011
+            }
+          },
+          "teacherState": {
+            "sampleCount": 2000,
+            "successCount": 2000,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 127.49937499999942,
+            "p95Ms": 129.14924999999857,
+            "p99Ms": 129.85283400000026,
+            "maxMs": 130.39679200000046,
+            "completedOnly": {
+              "p50Ms": 127.49937499999942,
+              "p95Ms": 129.14924999999857,
+              "p99Ms": 129.85283400000026,
+              "maxMs": 130.39679200000046
+            }
+          },
+          "projectorState": {
+            "sampleCount": 2000,
+            "successCount": 0,
+            "timeoutCount": 2000,
+            "timeoutRate": 1,
+            "p50Ms": 5000,
+            "p95Ms": 5000,
+            "p99Ms": 5000,
+            "maxMs": 5000,
+            "completedOnly": {
+              "p50Ms": null,
+              "p95Ms": null,
+              "p99Ms": null,
+              "maxMs": null
+            }
+          },
+          "necessaryState": {
+            "sampleCount": 6000,
+            "successCount": 6000,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 74.95058299999982,
+            "p95Ms": 128.58854100000008,
+            "p99Ms": 129.4138750000002,
+            "maxMs": 130.39679200000046,
+            "completedOnly": {
+              "p50Ms": 74.95058299999982,
+              "p95Ms": 128.58854100000008,
+              "p99Ms": 129.4138750000002,
+              "maxMs": 130.39679200000046
+            }
+          },
+          "commandErrorCount": 0,
+          "commandErrorRate": 0,
+          "commandErrorCodes": {},
+          "missingDeliveryCount": 0,
+          "unauthorizedCount": 0,
+          "ignoredReminderStateCount": 0,
+          "submissionCount": 2000,
+          "plannedSubmissions": 2000,
+          "wrongRankingCount": 0
+        },
+        "reconnect": {
+          "answersBeforeReconnect": 1000,
+          "seedSetupTransport": "websocket",
+          "measuredReconnectTransport": "websocket",
+          "state": {
+            "sampleCount": 50,
+            "successCount": 50,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 21.779875000000175,
+            "p95Ms": 24.075666000000638,
+            "p99Ms": 1102.6186660000021,
+            "maxMs": 1102.6186660000021,
+            "completedOnly": {
+              "p50Ms": 21.779875000000175,
+              "p95Ms": 24.075666000000638,
+              "p99Ms": 1102.6186660000021,
+              "maxMs": 1102.6186660000021
+            }
+          },
+          "handshakeErrorCount": 0
+        },
+        "fairness": {
+          "ack": {
+            "sampleCount": 3,
+            "successCount": 3,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 7.409249999996973,
+            "p95Ms": 8.931582999997772,
+            "p99Ms": 8.931582999997772,
+            "maxMs": 8.931582999997772,
+            "completedOnly": {
+              "p50Ms": 7.409249999996973,
+              "p95Ms": 8.931582999997772,
+              "p99Ms": 8.931582999997772,
+              "maxMs": 8.931582999997772
+            }
+          },
+          "senderState": {
+            "sampleCount": 3,
+            "successCount": 3,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 7.543499999999767,
+            "p95Ms": 9.014458000001468,
+            "p99Ms": 9.014458000001468,
+            "maxMs": 9.014458000001468,
+            "completedOnly": {
+              "p50Ms": 7.543499999999767,
+              "p95Ms": 9.014458000001468,
+              "p99Ms": 9.014458000001468,
+              "maxMs": 9.014458000001468
+            }
+          },
+          "peerState": {
+            "sampleCount": 3,
+            "successCount": 3,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 7.194541000000754,
+            "p95Ms": 8.78950000000259,
+            "p99Ms": 8.78950000000259,
+            "maxMs": 8.78950000000259,
+            "completedOnly": {
+              "p50Ms": 7.194541000000754,
+              "p95Ms": 8.78950000000259,
+              "p99Ms": 8.78950000000259,
+              "maxMs": 8.78950000000259
+            }
+          },
+          "teacherState": {
+            "sampleCount": 3,
+            "successCount": 3,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 125.57629099999758,
+            "p95Ms": 135.4918749999997,
+            "p99Ms": 135.4918749999997,
+            "maxMs": 135.4918749999997,
+            "completedOnly": {
+              "p50Ms": 125.57629099999758,
+              "p95Ms": 135.4918749999997,
+              "p99Ms": 135.4918749999997,
+              "maxMs": 135.4918749999997
+            }
+          },
+          "projectorState": {
+            "sampleCount": 3,
+            "successCount": 0,
+            "timeoutCount": 3,
+            "timeoutRate": 1,
+            "p50Ms": 5000,
+            "p95Ms": 5000,
+            "p99Ms": 5000,
+            "maxMs": 5000,
+            "completedOnly": {
+              "p50Ms": null,
+              "p95Ms": null,
+              "p99Ms": null,
+              "maxMs": null
+            }
+          },
+          "necessaryState": {
+            "sampleCount": 9,
+            "successCount": 9,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 8.78950000000259,
+            "p95Ms": 135.4918749999997,
+            "p99Ms": 135.4918749999997,
+            "maxMs": 135.4918749999997,
+            "completedOnly": {
+              "p50Ms": 8.78950000000259,
+              "p95Ms": 135.4918749999997,
+              "p99Ms": 135.4918749999997,
+              "maxMs": 135.4918749999997
+            }
+          },
+          "commandErrorCount": 0,
+          "commandErrorRate": 0,
+          "commandErrorCodes": {},
+          "missingDeliveryCount": 0,
+          "unauthorizedCount": 0,
+          "ignoredReminderStateCount": 9,
+          "submissionCount": 3,
+          "laterSubmissionWon": true,
+          "wrongRankingCount": 0
+        },
+        "longAnswers": {
+          "ack": {
+            "sampleCount": 50,
+            "successCount": 50,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 35.80566700000054,
+            "p95Ms": 66.57270900000003,
+            "p99Ms": 69.20750000000044,
+            "maxMs": 69.20750000000044,
+            "completedOnly": {
+              "p50Ms": 35.80566700000054,
+              "p95Ms": 66.57270900000003,
+              "p99Ms": 69.20750000000044,
+              "maxMs": 69.20750000000044
+            }
+          },
+          "senderState": {
+            "sampleCount": 50,
+            "successCount": 50,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 35.808625000001484,
+            "p95Ms": 66.57524999999805,
+            "p99Ms": 69.20683300000019,
+            "maxMs": 69.20683300000019,
+            "completedOnly": {
+              "p50Ms": 35.808625000001484,
+              "p95Ms": 66.57524999999805,
+              "p99Ms": 69.20683300000019,
+              "maxMs": 69.20683300000019
+            }
+          },
+          "peerState": {
+            "sampleCount": 50,
+            "successCount": 50,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 35.7389170000024,
+            "p95Ms": 66.51379100000122,
+            "p99Ms": 69.12545799999862,
+            "maxMs": 69.12545799999862,
+            "completedOnly": {
+              "p50Ms": 35.7389170000024,
+              "p95Ms": 66.51379100000122,
+              "p99Ms": 69.12545799999862,
+              "maxMs": 69.12545799999862
+            }
+          },
+          "teacherState": {
+            "sampleCount": 50,
+            "successCount": 50,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 127.05279200000223,
+            "p95Ms": 127.96033400000306,
+            "p99Ms": 128.20079200000328,
+            "maxMs": 128.20079200000328,
+            "completedOnly": {
+              "p50Ms": 127.05279200000223,
+              "p95Ms": 127.96033400000306,
+              "p99Ms": 128.20079200000328,
+              "maxMs": 128.20079200000328
+            }
+          },
+          "projectorState": {
+            "sampleCount": 50,
+            "successCount": 0,
+            "timeoutCount": 50,
+            "timeoutRate": 1,
+            "p50Ms": 5000,
+            "p95Ms": 5000,
+            "p99Ms": 5000,
+            "maxMs": 5000,
+            "completedOnly": {
+              "p50Ms": null,
+              "p95Ms": null,
+              "p99Ms": null,
+              "maxMs": null
+            }
+          },
+          "necessaryState": {
+            "sampleCount": 150,
+            "successCount": 150,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 53.5826249999991,
+            "p95Ms": 127.73529200000121,
+            "p99Ms": 128.0055420000026,
+            "maxMs": 128.20079200000328,
+            "completedOnly": {
+              "p50Ms": 53.5826249999991,
+              "p95Ms": 127.73529200000121,
+              "p99Ms": 128.0055420000026,
+              "maxMs": 128.20079200000328
+            }
+          },
+          "commandErrorCount": 0,
+          "commandErrorRate": 0,
+          "commandErrorCodes": {},
+          "missingDeliveryCount": 0,
+          "unauthorizedCount": 0,
+          "ignoredReminderStateCount": 0,
+          "submissionCount": 50
+        },
+        "voidResend": {
+          "ack": {
+            "sampleCount": 2,
+            "successCount": 2,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 2.1499580000017886,
+            "p95Ms": 4.175082999998267,
+            "p99Ms": 4.175082999998267,
+            "maxMs": 4.175082999998267,
+            "completedOnly": {
+              "p50Ms": 2.1499580000017886,
+              "p95Ms": 4.175082999998267,
+              "p99Ms": 4.175082999998267,
+              "maxMs": 4.175082999998267
+            }
+          },
+          "senderState": {
+            "sampleCount": 2,
+            "successCount": 2,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 2.167083000000275,
+            "p95Ms": 4.2022910000014235,
+            "p99Ms": 4.2022910000014235,
+            "maxMs": 4.2022910000014235,
+            "completedOnly": {
+              "p50Ms": 2.167083000000275,
+              "p95Ms": 4.2022910000014235,
+              "p99Ms": 4.2022910000014235,
+              "maxMs": 4.2022910000014235
+            }
+          },
+          "peerState": {
+            "sampleCount": 2,
+            "successCount": 2,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 2.097582999998849,
+            "p95Ms": 4.057208000001992,
+            "p99Ms": 4.057208000001992,
+            "maxMs": 4.057208000001992,
+            "completedOnly": {
+              "p50Ms": 2.097582999998849,
+              "p95Ms": 4.057208000001992,
+              "p99Ms": 4.057208000001992,
+              "maxMs": 4.057208000001992
+            }
+          },
+          "teacherState": {
+            "sampleCount": 2,
+            "successCount": 2,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 107.26520800000071,
+            "p95Ms": 128.45370800000092,
+            "p99Ms": 128.45370800000092,
+            "maxMs": 128.45370800000092,
+            "completedOnly": {
+              "p50Ms": 107.26520800000071,
+              "p95Ms": 128.45370800000092,
+              "p99Ms": 128.45370800000092,
+              "maxMs": 128.45370800000092
+            }
+          },
+          "projectorState": {
+            "sampleCount": 2,
+            "successCount": 0,
+            "timeoutCount": 2,
+            "timeoutRate": 1,
+            "p50Ms": 5000,
+            "p95Ms": 5000,
+            "p99Ms": 5000,
+            "maxMs": 5000,
+            "completedOnly": {
+              "p50Ms": null,
+              "p95Ms": null,
+              "p99Ms": null,
+              "maxMs": null
+            }
+          },
+          "necessaryState": {
+            "sampleCount": 6,
+            "successCount": 6,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 4.057208000001992,
+            "p95Ms": 128.45370800000092,
+            "p99Ms": 128.45370800000092,
+            "maxMs": 128.45370800000092,
+            "completedOnly": {
+              "p50Ms": 4.057208000001992,
+              "p95Ms": 128.45370800000092,
+              "p99Ms": 128.45370800000092,
+              "maxMs": 128.45370800000092
+            }
+          },
+          "commandErrorCount": 0,
+          "commandErrorRate": 0,
+          "commandErrorCodes": {},
+          "missingDeliveryCount": 0,
+          "unauthorizedCount": 0,
+          "ignoredReminderStateCount": 0,
+          "submissionCount": 2,
+          "voidAck": {
+            "sampleCount": 1,
+            "successCount": 1,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 5.818999999999505,
+            "p95Ms": 5.818999999999505,
+            "p99Ms": 5.818999999999505,
+            "maxMs": 5.818999999999505,
+            "completedOnly": {
+              "p50Ms": 5.818999999999505,
+              "p95Ms": 5.818999999999505,
+              "p99Ms": 5.818999999999505,
+              "maxMs": 5.818999999999505
+            }
+          },
+          "voidErrorCount": 0,
+          "resubmitted": true
+        },
+        "countdown": {
+          "allRoles": {
+            "sampleCount": 103,
+            "successCount": 103,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 54.70825000000332,
+            "p95Ms": 58.35187500000029,
+            "p99Ms": 60.76808300000266,
+            "maxMs": 60.84233300000051,
+            "completedOnly": {
+              "p50Ms": 54.70825000000332,
+              "p95Ms": 58.35187500000029,
+              "p99Ms": 60.76808300000266,
+              "maxMs": 60.84233300000051
+            }
+          },
+          "teacher": {
+            "sampleCount": 1,
+            "successCount": 1,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 60.76808300000266,
+            "p95Ms": 60.76808300000266,
+            "p99Ms": 60.76808300000266,
+            "maxMs": 60.76808300000266,
+            "completedOnly": {
+              "p50Ms": 60.76808300000266,
+              "p95Ms": 60.76808300000266,
+              "p99Ms": 60.76808300000266,
+              "maxMs": 60.76808300000266
+            }
+          },
+          "projector": {
+            "sampleCount": 1,
+            "successCount": 1,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 60.84233300000051,
+            "p95Ms": 60.84233300000051,
+            "p99Ms": 60.84233300000051,
+            "maxMs": 60.84233300000051,
+            "completedOnly": {
+              "p50Ms": 60.84233300000051,
+              "p95Ms": 60.84233300000051,
+              "p99Ms": 60.84233300000051,
+              "maxMs": 60.84233300000051
+            }
+          },
+          "student": {
+            "sampleCount": 101,
+            "successCount": 101,
+            "timeoutCount": 0,
+            "timeoutRate": 0,
+            "p50Ms": 54.625166000005265,
+            "p95Ms": 58.197916000004625,
+            "p99Ms": 58.508083000000624,
+            "maxMs": 58.59045800000604,
+            "completedOnly": {
+              "p50Ms": 54.625166000005265,
+              "p95Ms": 58.197916000004625,
+              "p99Ms": 58.508083000000624,
+              "maxMs": 58.59045800000604
+            }
+          },
+          "timeoutCount": 0,
+          "timeoutMs": 15000,
+          "clockViolationCount": 0,
+          "participants": 103
+        }
+      },
+      "finalTransportCounts": {
+        "websocket": 103
+      },
+      "resources": {
+        "available": true,
+        "sampleCount": 68,
+        "warmupRssBytes": 161529856,
+        "endRssBytes": 219267072,
+        "rssGrowthRatio": 0.3574399026270413,
+        "steadyCpuPercent": 31.067704905715775,
+        "cpuP50Percent": 0,
+        "cpuP95Percent": 102.7553694698601,
+        "cpuP99Percent": 104.9835700712842,
+        "cpuMaxPercent": 104.9835700712842,
+        "rssMinBytes": 121454592,
+        "rssMaxBytes": 223395840,
+        "faultCount": 0,
+        "intervalMs": 1000,
+        "samples": [
+          {
+            "capturedAt": "2026-11-22T09:54:46.362Z",
+            "monoMs": 799.234709,
+            "rssBytes": 121454592,
+            "cpuSeconds": 0.48
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:47.256Z",
+            "monoMs": 1692.865334,
+            "rssBytes": 161529856,
+            "cpuSeconds": 1.27
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:48.255Z",
+            "monoMs": 2691.403042,
+            "rssBytes": 189775872,
+            "cpuSeconds": 1.61
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:49.256Z",
+            "monoMs": 3692.676625,
+            "rssBytes": 204144640,
+            "cpuSeconds": 1.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:50.256Z",
+            "monoMs": 4692.536292,
+            "rssBytes": 210780160,
+            "cpuSeconds": 2.39
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:51.256Z",
+            "monoMs": 5693.189292,
+            "rssBytes": 214843392,
+            "cpuSeconds": 2.81
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:52.256Z",
+            "monoMs": 6693.276959,
+            "rssBytes": 219676672,
+            "cpuSeconds": 3.17
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:53.260Z",
+            "monoMs": 7696.931542,
+            "rssBytes": 223199232,
+            "cpuSeconds": 3.67
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:54.261Z",
+            "monoMs": 8698.449584,
+            "rssBytes": 223395840,
+            "cpuSeconds": 4.03
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:55.264Z",
+            "monoMs": 9701.497959,
+            "rssBytes": 222511104,
+            "cpuSeconds": 4.44
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:56.265Z",
+            "monoMs": 10702.505084,
+            "rssBytes": 222085120,
+            "cpuSeconds": 4.83
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:57.265Z",
+            "monoMs": 11702.293625,
+            "rssBytes": 221233152,
+            "cpuSeconds": 5.22
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:58.264Z",
+            "monoMs": 12700.914167,
+            "rssBytes": 197263360,
+            "cpuSeconds": 5.91
+          },
+          {
+            "capturedAt": "2026-11-22T09:54:59.264Z",
+            "monoMs": 13701.328834,
+            "rssBytes": 210157568,
+            "cpuSeconds": 6.96
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:00.267Z",
+            "monoMs": 14703.709542,
+            "rssBytes": 210419712,
+            "cpuSeconds": 7.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:01.266Z",
+            "monoMs": 15702.8255,
+            "rssBytes": 212566016,
+            "cpuSeconds": 8.88
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:02.265Z",
+            "monoMs": 16702.193584,
+            "rssBytes": 213417984,
+            "cpuSeconds": 9.36
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:03.265Z",
+            "monoMs": 17702.023167,
+            "rssBytes": 213483520,
+            "cpuSeconds": 10.4
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:04.268Z",
+            "monoMs": 18705.313167,
+            "rssBytes": 213745664,
+            "cpuSeconds": 11.42
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:05.271Z",
+            "monoMs": 19708.02675,
+            "rssBytes": 213778432,
+            "cpuSeconds": 11.45
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:06.270Z",
+            "monoMs": 20707.428875,
+            "rssBytes": 215433216,
+            "cpuSeconds": 11.63
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:07.274Z",
+            "monoMs": 21710.989542,
+            "rssBytes": 215433216,
+            "cpuSeconds": 11.63
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:08.282Z",
+            "monoMs": 22719.009167,
+            "rssBytes": 215433216,
+            "cpuSeconds": 11.63
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:09.280Z",
+            "monoMs": 23716.997292,
+            "rssBytes": 215449600,
+            "cpuSeconds": 11.7
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:10.285Z",
+            "monoMs": 24721.937542,
+            "rssBytes": 215449600,
+            "cpuSeconds": 11.7
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:11.286Z",
+            "monoMs": 25723.360792,
+            "rssBytes": 215449600,
+            "cpuSeconds": 11.71
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:12.284Z",
+            "monoMs": 26721.117917,
+            "rssBytes": 215515136,
+            "cpuSeconds": 11.78
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:13.290Z",
+            "monoMs": 27727.279209,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.15
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:14.285Z",
+            "monoMs": 28722.085667,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.15
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:15.289Z",
+            "monoMs": 29726.661125,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.15
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:16.297Z",
+            "monoMs": 30734.370167,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.15
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:17.297Z",
+            "monoMs": 31734.589375,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.15
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:18.300Z",
+            "monoMs": 32737.242,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.16
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:19.302Z",
+            "monoMs": 33740.023625,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.16
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:20.301Z",
+            "monoMs": 34738.373667,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.16
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:21.302Z",
+            "monoMs": 35739.922459,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.16
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:22.308Z",
+            "monoMs": 36745.341959,
+            "rssBytes": 201342976,
+            "cpuSeconds": 12.16
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:23.301Z",
+            "monoMs": 37738.235042,
+            "rssBytes": 201785344,
+            "cpuSeconds": 12.5
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:24.301Z",
+            "monoMs": 38738.391542,
+            "rssBytes": 223019008,
+            "cpuSeconds": 13.55
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:25.311Z",
+            "monoMs": 39748.742584,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:26.311Z",
+            "monoMs": 40748.409709,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:27.314Z",
+            "monoMs": 41751.60425,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:28.309Z",
+            "monoMs": 42746.588667,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:29.310Z",
+            "monoMs": 43747.595667,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:30.312Z",
+            "monoMs": 44749.517792,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.98
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:31.314Z",
+            "monoMs": 45751.508292,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:32.315Z",
+            "monoMs": 46753.2545,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:33.317Z",
+            "monoMs": 47755.164292,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:34.320Z",
+            "monoMs": 48757.88275,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:35.322Z",
+            "monoMs": 49760.114584,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:36.323Z",
+            "monoMs": 50761.277625,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:37.325Z",
+            "monoMs": 51763.003084,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:38.325Z",
+            "monoMs": 52762.982834,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:39.327Z",
+            "monoMs": 53764.561834,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:40.328Z",
+            "monoMs": 54766.534709,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:41.336Z",
+            "monoMs": 55774.271542,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:42.340Z",
+            "monoMs": 56777.814709,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:43.343Z",
+            "monoMs": 57781.301125,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:44.343Z",
+            "monoMs": 58781.25075,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:45.346Z",
+            "monoMs": 59783.778834,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:46.347Z",
+            "monoMs": 60785.064,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:47.348Z",
+            "monoMs": 61786.483042,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:48.353Z",
+            "monoMs": 62791.079292,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:49.353Z",
+            "monoMs": 63791.210875,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:50.356Z",
+            "monoMs": 64794.153667,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:51.357Z",
+            "monoMs": 65795.584334,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:52.361Z",
+            "monoMs": 66799.179959,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          },
+          {
+            "capturedAt": "2026-11-22T09:55:53.038Z",
+            "monoMs": 67476.507125,
+            "rssBytes": 219267072,
+            "cpuSeconds": 13.99
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -26,7 +26,7 @@
 
 **Project Type**: 沿用 001（npm workspaces：`shared`、`server`、`web`）
 
-**Performance Goals**: 老師按下匯出到取得檔案在 5 秒內完成（SC-003）；匯出不因作答筆數增加而變慢（最多 50 組 × 數十題）
+**Performance Goals**: 老師按下匯出到取得檔案在 5 秒內完成（SC-003）；匯出不因作答筆數增加而變慢（最多 100 組 × 數十題）
 
 **Constraints**：
 - 寫入位置 MUST 來自 002 依結構解析的紀錄，MUST NOT 寫死儲存格座標（原則 V、FR-002）
@@ -37,7 +37,7 @@
 - CSV 欄位固定 7 欄，依 D13（clarify 2026-11-14）
 - 介面只用 design tokens（原則 IX）
 
-**Scale/Scope**: 最多 50 組；每份學習單 5–30 題；每題至多 50 筆有效作答；本子功能 3 個 user story、17 條 FR、17 個驗收情境
+**Scale/Scope**: 最多 100 組；每份學習單 5–30 題；每題至多 50 筆有效作答；本子功能 3 個 user story、17 條 FR、17 個驗收情境
 
 ## Constitution Check
 

@@ -39,7 +39,7 @@
 - CSV 第 8 欄與 D13 v0.5 一致（FR-011）
 - 介面只用 design tokens（原則 IX）
 
-**Scale/Scope**: 最多 50 組；每份學習單 5–30 題；本子功能 3 個 user story、23 條 FR、20 個驗收情境
+**Scale/Scope**: 最多 100 組；每份學習單 5–30 題；本子功能 3 個 user story、23 條 FR、20 個驗收情境
 
 ## Constitution Check
 
@@ -47,7 +47,7 @@
 |---|---|---|
 | I. 規格是唯一真相來源 | ✓ | 行為只以 `specs/005-fairness-and-extras/spec.md` + `docs/shared/FEATURE-CONTRACT.md` v0.5 為準；D14／D16／D25／D13 已兩組同意 |
 | II. 測試先行 | ✓ | 每個 user story 先寫失敗測試（純函式 → 指令 → 端點 → 前端 → e2e），再實作 |
-| III. 輸入驗證與清楚錯誤 | ✓ | 新指令 `activity:fair-ranking`、`reveal:next`、`reveal:all` 在 server 端驗證身分與階段，失敗回既有錯誤代碼（`FORBIDDEN`／`INVALID_PHASE`／`UNAUTHORIZED`），不新增模糊錯誤 |
+| III. 輸入驗證與清楚錯誤 | ✓ | 新指令 `activity:fair-ranking`、`reveal:next`、`reveal:all` 在 server 端驗證身分與階段，失敗回既有錯誤代碼（`FORBIDDEN`／`INVALID_PHASE`／`TEACHER_AUTH_REQUIRED`），不新增模糊錯誤 |
 | IV. 機敏資料零落地 | ✓ | 不新增日誌輸出；公平順位與揭曉進度不含答案內容；log 只記事件名稱 |
 | V. 依結構定位，不寫死位置 | ✓ | 判定依 `submissions` 的送達資料與題目順序，不引用任何固定座標或固定題號 |
 | VI. 伺服器是公平與可見性的唯一裁判 | ✓ | 判定、順位、投影快照、揭曉進度全部由伺服器決定並過濾；前端只呈現（R6 特別說明投影快照不是前端隱藏） |

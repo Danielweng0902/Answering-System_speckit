@@ -1,7 +1,7 @@
 # 決策對照表（D1～D25 × 我們的實作狀態）
 
-> 給 OpenSpec 組（另一小組）的附件｜2026-11-20｜SpecKit 組整理
-> 對應文件：[`FEATURE-CONTRACT.md`](./FEATURE-CONTRACT.md) v0.6（2026-11-17）
+> 給 OpenSpec 組（另一小組）的附件｜2026-11-20 初版｜**2026-11-22 更新：D18、D20 已與 OpenSpec 組確認**｜SpecKit 組整理
+> 對應文件：[`FEATURE-CONTRACT.md`](./FEATURE-CONTRACT.md) v0.7（2026-11-22）
 
 ## 這份表在做什麼
 
@@ -27,9 +27,11 @@
 | D25 | 公平順位下的作廢重判與連鎖重算 | Confirmed（2026-11-17）| `server/src/domain/answerSettlement.ts`；對應子功能 005 |
 | E3／E4 | 公平順位機制、倒數計時與投影看板 | Confirmed（2026-11-17）| 倒數：`server/src/app/countdown.ts`；對應子功能 001／005 |
 
-## 二、尚待你們確認的決策（Default 18 條）
+## 二、尚待你們確認的決策（Default 17 條：D1～D11、D15、D17、D19、D21～D23）
 
 下表是我們的**實際做法**與**實作位置**。最下面三欄是請你們回覆的重點。
+
+> 2026-11-22 更新：D18、D20 已被你們回覆並確認（見第三節），從這 17 條裡移出。
 
 | # | 決策 | 我們的實際做法 | 實作位置 | 對應子功能 |
 |---|---|---|---|---|
@@ -46,26 +48,43 @@
 | D11 | 匯入 | 貼 Google Sheets 連結或上傳 xlsx；依表頭「題號／題目／作答」與合併範圍辨識題目與空格；匯入後顯示摘要讓老師確認 | `server/src/app/importService.ts`、`server/src/domain/importValidator.ts` | 002 |
 | D15 | 倒數計時 | 老師開啟時可選是否設定時間；範圍 10 秒～60 分鐘；時間到自動結束 | `server/src/app/countdown.ts`、`server/src/app/activityCommands.ts` | 001 |
 | D17 | 組別建立 | 老師在準備階段設定組數與組名（可新增／改名／刪除）| `server/src/app/groupCommands.ts` | 001 |
-| **D18** | **老師身分** | **老師端需要密碼才能進入**（密碼由環境變數 `TEACHER_PASSWORD` 設定）；同一組同學共用一個密碼 | `server/src/infra/http/authRoutes.ts` | 001 |
+| **D18** | **老師身分** | **老師端需要密碼才能進入**（密碼由環境變數 `TEACHER_PASSWORD` 設定）；**登入狀態存 HttpOnly cookie**（頁面 JS 讀不到）、可登出、**伺服器重啟後須重新登入**；未登入呼叫老師端點回 **401 `TEACHER_AUTH_REQUIRED`** | `server/src/infra/http/authRoutes.ts`、`server/src/infra/http/teacherSession.ts` | 001 |
 | D19 | 重設活動 | 老師可在「已結束」後重設回到「準備中」（需再次確認）；組別保留、本次作答清空 | `server/src/app/activityCommands.ts` | 001 |
-| **D20** | **數量限制** | **組名 1–30 字元且不重複、最多 50 組**；倒數 10 秒～60 分鐘；答案每格 1–200 字元 | `server/src/domain/groupRegistry.ts`、`server/src/app/countdown.ts`、`server/src/domain/answerValidation.ts` | 001／003 |
+| **D20** | **數量限制** | **組名 1–30 字元且不重複、最多 100 組**；倒數 10 秒～60 分鐘；答案每格 1–200 字元 | `server/src/domain/groupRegistry.ts`、`server/src/app/countdown.ts`、`server/src/domain/answerValidation.ts` | 001／003 |
 | D21 | 換組與重連 | 學生只能在「準備中」換組；重新整理或斷線重連後回到原組別與目前階段 | `server/src/app/studentCommands.ts`、`web/src/features/student/answerDrafts.ts` | 001／003 |
 | D22 | 題目敘述 | 匯入時若有題目敘述則一併讀取，作答區在題號旁顯示；沒有也不影響 | `server/src/domain/guidedNotesParser.ts`、`web/src/features/student/AnswerArea.tsx` | 002／003 |
 | D23 | 答案規則 | 每個空格的答案去除前後空白後 1–200 字元；**不判斷對錯** | `server/src/domain/answerValidation.ts` | 003 |
 
-## 三、想請你們回覆的三件事
+## 三、已對齊的問題（2026-11-22 回覆結果）
 
-### 1️⃣ D18 老師身分：要不要密碼？
+### 1️⃣ D18 老師身分：兩邊都要密碼 ✅ Confirmed
 
-我們是**要密碼**（`TEACHER_PASSWORD` 環境變數）。聽說你們目前只能 loopback 開啟。
+我們與 OpenSpec 組 2026-11-22 確認：
 
-助教的說明提到要在**自己雲端的試算表**上工作，遠端講課時沒有密碼就開不了老師端——我們建議兩邊都要密碼。請回覆你們的作法，我們對齊。
+- 兩邊都是**單一密碼**（環境變數 `TEACHER_PASSWORD`），未設定時拒絕登入。
+- 錯誤代碼兩邊一致：`WRONG_PASSWORD`（401）、`TOO_MANY_ATTEMPTS`（429，60 秒 10 次）、
+  `TEACHER_PASSWORD_NOT_SET`（503）。
+- **未登入呼叫老師端點的代碼統一為 `TEACHER_AUTH_REQUIRED`（401）**——OpenSpec 組原本用這個名稱，
+  我們由 `UNAUTHORIZED` 改為同名，避免兩組對照時的名稱落差。
+- 登入狀態一律存 **HttpOnly cookie**（我們原本放 sessionStorage，已改）；老師可**登出**；
+  **伺服器重新啟動後老師須重新登入**。這三點是我們參照 OpenSpec 組 teacher-auth 規格補上的。
 
-### 2️⃣ D20 數量限制：組數上限 50 還是 100？
+### 2️⃣ D20 數量限制：統一為 100 組 ✅ Confirmed
 
-契約寫 **最多 50 組**，我們照 50 實作（`GROUP_LIMIT_REACHED`）。你們目前是 100，請回覆要統一成哪個。
+我們原本照契約寫 50 組；OpenSpec 組回報**實際有 64 組的班級**，50 組會擋到能上課的班級，
+因此 2026-11-22 兩組統一為 **100 組**（我們的 FR-009、錯誤訊息、測試與壓測工具上限都已更新）。
 
-### 3️⃣ 其餘 16 條 Default：我們的實作如上，有沒有要調整的？
+我們的 100 組實測（本機、正式 build、WebSocket、100 組 × 20 題 × 2 輪＝4,000 筆作答）：
+ACK p50 **88 ms**／p95 **158 ms**、逾時 **0%**、漏送 0、老師看板更新 p95 179 ms。
+（量測方法與原始數字見 [`../verification/load-test-2026-11-22-100groups.md`](../verification/load-test-2026-11-22-100groups.md)。）
+
+### 3️⃣ O3（結束後老師改選最終勝者）：不納入共同契約
+
+我們的結果判定是**純函式衍生**（依送達時間與順位即時計算，不落庫），要支援「結束後改選勝者」
+就得新增覆寫欄位，並連動老師看板、學生結果頁、CSV 第 8 欄與 Guided Notes 寫回；
+核心需求（C1～C11）也沒有這項。**兩邊都不做**，OpenSpec 組已表示尚未實作，維持現狀即可。
+
+### 4️⃣ 其餘 16 條 Default：我們的實作如上，有沒有要調整的？
 
 如果照上表沒有問題，回覆「照你們的」即可，我們就把這些收成 Confirmed（契約升 v0.7）。
 
@@ -82,10 +101,10 @@
 
 | # | 項目 | 我們的實際做法 | 實作位置 | 邊界行為 |
 |---|---|---|---|---|
-| S1 | 進場速率限制 | `POST /api/student/join` 加上「爆發額度＋持續速率」的令牌桶：同一來源瞬間可進場 600 次、持續 30 次／分（環境變數可調） | `server/src/infra/http/rateLimiter.ts`、`server/src/infra/http/authRoutes.ts` | 超過時回 429 `TOO_MANY_ATTEMPTS`（沿用既有的錯誤代碼）。門檻遠高於 50 組班級的合法規模，正常上課不會遇到 |
-| S2 | 同時在線連線數上限 | 預設 500 條 Socket.IO 連線；超過上限時**新的**連線在握手階段被拒（HTTP 403），既有連線不受影響 | `server/src/infra/socket/connectionCap.ts` | 客戶端會自動退避重連，名額空出來就能進場。正常上課不會遇到 |
+| S1 | 進場速率限制 | `POST /api/student/join` 加上「爆發額度＋持續速率」的令牌桶：同一來源瞬間可進場 1000 次、持續 30 次／分（環境變數可調） | `server/src/infra/http/rateLimiter.ts`、`server/src/infra/http/authRoutes.ts` | 超過時回 429 `TOO_MANY_ATTEMPTS`（沿用既有的錯誤代碼）。門檻遠高於 100 組班級的合法規模，正常上課不會遇到 |
+| S2 | 同時在線連線數上限 | 預設 1000 條 Socket.IO 連線；超過上限時**新的**連線在握手階段被拒（HTTP 403），既有連線不受影響 | `server/src/infra/socket/connectionCap.ts` | 客戶端會自動退避重連，名額空出來就能進場。正常上課不會遇到 |
 
-> 為什麼門檻開那麼寬：50 組班級約 200 人，而且雲端部署時**全班共用同一個對外 IP**，
+> 為什麼門檻開那麼寬：100 組班級約 400 人，而且雲端部署時**全班共用同一個對外 IP**，
 > 門檻必須容得下整班同時進場，否則會擋掉自己的學生。真正要防的是「持續灌水」，
 > 那是 `JOIN_RATE_LIMIT_PER_MINUTE` 這一側在擋。
 

@@ -66,6 +66,7 @@ class "參與者 (AccessIdentity)" as Participant <<union>> {
 }
 
 class "身分憑據 (Session)" as Session {
+  註：老師的登入狀態另以 HttpOnly cookie 存放憑證（2026-11-22 D18）
   tokenHash : string
   role : SessionRole
   groupId : string|null
@@ -121,7 +122,7 @@ note right of Registry
   規則（server/src/domain/groupRegistry.ts）：
   1. 只有「準備中」可以修改
   2. 名稱去除前後空白後為 1–30 個字且不重複
-  3. 最多 50 組
+  3. 最多 100 組
   程式沒有名為 GroupRegistry 的類別；名冊是 GroupRegistryEntry[]。
 end note
 
