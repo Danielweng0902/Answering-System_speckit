@@ -27,7 +27,7 @@ function readActivity(server: TestServer): Activity {
 }
 
 describe('伺服器以同一 SQLite 資料夾重新啟動', () => {
-  it('保留階段、組別順序、倒數結束時間與舊師生 token（AC-001-21）', async () => {
+  it('保留階段、組別順序與倒數結束時間；學生的 token 仍有效，老師須重新登入（AC-001-21；D18）', async () => {
     let server = await startTestServer();
     const dataDir = server.dataDir;
 
@@ -105,8 +105,11 @@ describe('伺服器以同一 SQLite 資料夾重新啟動', () => {
         countdownEndsAt: activityBeforeRestart.countdownEndsAt,
         groups: openedState.groups,
       });
+      // 2026-11-22（D18）：重新啟動會讓所有老師登入狀態失效（與 OpenSpec 組
+      // 的 teacher-auth 規格一致），所以舊的老師 token 只能拿到訪客快照；
+      // 活動階段、組別與倒數仍然完整保留（AC-001-21）。
       expect(teacherState).toMatchObject({
-        role: 'teacher',
+        role: 'guest',
         phase: activityBeforeRestart.phase,
         countdownEndsAt: activityBeforeRestart.countdownEndsAt,
         groups: openedState.groups,

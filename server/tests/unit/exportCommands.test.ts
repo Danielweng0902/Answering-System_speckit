@@ -40,9 +40,9 @@ describe('exportCommands（004 Foundational；T003）', () => {
   it.each<[string, string | undefined]>([
     ['沒有 token', undefined],
     ['無效 token', 'invalid-token'],
-  ])('%s → UNAUTHORIZED', (_name, token) => {
+  ])('%s → TEACHER_AUTH_REQUIRED', (_name, token) => {
     withDatabase((database) => {
-      expectExportError(authorizeExport(database, token), 'UNAUTHORIZED');
+      expectExportError(authorizeExport(database, token), 'TEACHER_AUTH_REQUIRED');
       expect(database.prepare('SELECT COUNT(*) AS count FROM sessions').get()).toEqual({ count: 0 });
     });
   });
@@ -87,7 +87,7 @@ describe('exportCommands（004 Foundational；T003）', () => {
     withDatabase((database) => {
       const beforeRevision = getActivity(database)!.revision;
 
-      expectExportError(authorizeExport(database, 'invalid'), 'UNAUTHORIZED');
+      expectExportError(authorizeExport(database, 'invalid'), 'TEACHER_AUTH_REQUIRED');
       setPhase(database, 'open');
       const teacher = issueSession(database, { role: 'teacher' });
       expectExportError(authorizeExport(database, teacher), 'INVALID_PHASE');

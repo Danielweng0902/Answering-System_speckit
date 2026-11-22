@@ -80,8 +80,8 @@ describe('createGroup', () => {
     });
   });
 
-  it('rejects the 51st group', () => {
-    const current = Array.from({ length: 50 }, (_, index) => ({
+  it('rejects the 101st group（2026-11-22 D20：上限統一為 100 組）', () => {
+    const current = Array.from({ length: 100 }, (_, index) => ({
       id: `group-${index + 1}`,
       name: `組別${index + 1}`,
       position: index + 1,

@@ -38,7 +38,9 @@ export function AppRoutes() {
   // 其他頁面維持一般檢視模式。
   const location = useLocation();
   const view = location.pathname === '/projector' ? 'projector' : 'normal';
-  const snapshotState = useSnapshot({ view });
+  // 2026-11-22（D18）：老師端不帶 token，改由 HttpOnly cookie 認證。
+  const auth = location.pathname === '/teacher' ? 'teacher' : 'session';
+  const snapshotState = useSnapshot({ view, auth });
 
   return (
     <>

@@ -5,6 +5,10 @@
  * - 同一來源 60 秒內登入失敗 10 次後，之後請求一律 429，直到視窗過期。
  * - 進場（`/api/student/join`）另有令牌桶節流（2026-11-21 資安審計 D2-3）。
  * - 任何地方都不輸出密碼或 token 到 log。
+ *
+ * 2026-11-22（D18 與 OpenSpec 組對齊）：老師登入狀態改存 **HttpOnly
+ * cookie**，登入回應不再回傳 token；另加「登入狀態查詢」與「登出」兩個
+ * 端點（對方的 teacher-auth 規格已有）。
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
@@ -15,7 +19,7 @@ import {
   teacherLoginSchema,
   type ErrorCode,
 } from '@classroom/shared';
-import { issueSession } from '../../app/access.js';
+import { issueSession, resolveIdentity, revokeSession } from '../../app/access.js';
 import { getGroupById } from '../db/groupRepo.js';
 import {
   createSlidingWindowLimiter,
@@ -24,6 +28,11 @@ import {
   RATE_LIMIT_WINDOW_MS,
   type TokenBucketLimiter,
 } from './rateLimiter.js';
+import {
+  clearTeacherSessionCookie,
+  readTeacherToken,
+  setTeacherSessionCookie,
+} from './teacherSession.js';
 
 const MAX_FAILURES = 10;
 
@@ -34,15 +43,15 @@ const MAX_FAILURES = 10;
  * 成功，每次都新增一筆 session（sessions 表因此可無限成長）。
  *
  * 門檻的形狀來自「一堂課的實際樣態」：
- * - **burst（capacity）**：整班學生在上課瞬間一起進場是正常行為，50 組班級
- *   加上壓測工具的滿房情境都是 200 名學生自同一個來源（NAT）進場，所以
+ * - **burst（capacity）**：整班學生在上課瞬間一起進場是正常行為，100 組班級
+ *   加上壓測工具的滿房情境都是數百名學生自同一個來源（NAT）進場，所以
  *   瞬間額度必須容得下整班。
  * - **sustained（perMinute）**：持續灌水要壓到很低。
  *
  * 兩者都由環境變數調整（見 `server/src/config.ts`）：
- * `JOIN_RATE_LIMIT_BURST`（預設 600）與 `JOIN_RATE_LIMIT_PER_MINUTE`（預設 30）。
+ * `JOIN_RATE_LIMIT_BURST`（預設 1000）與 `JOIN_RATE_LIMIT_PER_MINUTE`（預設 30）。
  */
-export const DEFAULT_JOIN_RATE_LIMIT_BURST = 600;
+export const DEFAULT_JOIN_RATE_LIMIT_BURST = 1000;
 export const DEFAULT_JOIN_RATE_LIMIT_PER_MINUTE = 30;
 
 export type LoginRateLimiter = {
@@ -188,7 +197,48 @@ export function createAuthRouter(dependencies: AuthRoutesDependencies): Router {
     }
 
     const token = issueSession(dependencies.database, { role: 'teacher' });
-    response.status(200).json({ token, role: 'teacher' });
+    // 2026-11-22（D18）：登入狀態放在 HttpOnly cookie，回應本文不含憑證，
+    // 頁面 JavaScript 讀不到 token。
+    setTeacherSessionCookie(response, token);
+    response.status(200).json({ role: 'teacher', authenticated: true });
+  });
+
+  /**
+   * 2026-11-22（D18）：登入狀態查詢，不需登入即可呼叫。
+   *
+   * 教師頁用它決定要顯示登入畫面、「尚未設定老師密碼」的說明，還是控制台；
+   * `authenticated` 只看 cookie 裡的 session 是否仍是有效的老師 session。
+   */
+  router.get('/api/teacher/session', (request, response) => {
+    const token = readTeacherToken(request);
+    const identity =
+      token === null
+        ? { role: 'guest' as const }
+        : resolveIdentity(dependencies.database, token);
+    const configuredPassword = dependencies.getTeacherPassword();
+
+    response.status(200).json({
+      authenticated: identity.role === 'teacher',
+      passwordConfigured:
+        configuredPassword !== undefined && configuredPassword.length > 0,
+    });
+  });
+
+  /**
+   * 2026-11-22（D18）：登出——伺服器端 session 立即失效並清除 cookie。
+   *
+   * 沒有登入狀態時也回 200（冪等）：前端按兩次不會出錯。
+   */
+  router.post('/api/teacher/logout', (request, response) => {
+    const token = readTeacherToken(request);
+    if (token !== null) {
+      const identity = resolveIdentity(dependencies.database, token);
+      if (identity.role === 'teacher') {
+        revokeSession(dependencies.database, token);
+      }
+    }
+    clearTeacherSessionCookie(response);
+    response.status(200).json({ ok: true });
   });
 
   router.post('/api/student/join', (request, response) => {

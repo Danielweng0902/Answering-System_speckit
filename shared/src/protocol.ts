@@ -254,7 +254,7 @@ export const ERROR_CODES = [
   'WRONG_PASSWORD',
   'TEACHER_PASSWORD_NOT_SET',
   'TOO_MANY_ATTEMPTS',
-  'UNAUTHORIZED',
+  'TEACHER_AUTH_REQUIRED',
   'FILE_INVALID',
   'FILE_TOO_LARGE',
   'HEADER_NOT_FOUND',
@@ -295,7 +295,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   GROUP_NAME_EMPTY: '請輸入組名',
   GROUP_NAME_TOO_LONG: '組名最多 30 個字',
   GROUP_NAME_DUPLICATE: '已經有同名的組別',
-  GROUP_LIMIT_REACHED: '最多只能建立 50 組',
+  GROUP_LIMIT_REACHED: '最多只能建立 100 組',
   GROUP_NOT_FOUND: '找不到這個組別，請重新選擇',
   NO_GROUPS: '請先建立至少一個組別',
   COUNTDOWN_OUT_OF_RANGE: '倒數時間需介於 10 秒到 60 分鐘',
@@ -303,7 +303,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   WRONG_PASSWORD: '密碼錯誤',
   TEACHER_PASSWORD_NOT_SET: '系統尚未設定老師密碼，請先設定',
   TOO_MANY_ATTEMPTS: '嘗試次數過多，請稍後再試',
-  UNAUTHORIZED: '請先以老師身分登入',
+  TEACHER_AUTH_REQUIRED: '請先以老師身分登入',
   FILE_INVALID: '無法讀取這個檔案，請上傳 xlsx 格式的學習單',
   FILE_TOO_LARGE: '檔案太大，請上傳 5 MB 以內的 xlsx 檔',
   HEADER_NOT_FOUND: '找不到表頭。學習單需要有一列同時包含「題號」「題目」「作答」三個欄位',
@@ -419,7 +419,24 @@ export type CommandEvent = (typeof COMMAND_EVENTS)[number];
 /* ------------------------------------------------------------------ */
 
 export type TeacherLoginRequest = { password: string };
-export type TeacherLoginResponse = { token: string; role: 'teacher' };
+
+/**
+ * 2026-11-22（D18 與 OpenSpec 組對齊）：老師登入狀態改放在 **HttpOnly
+ * cookie**，登入回應不再把憑證交給頁面 JavaScript，因此沒有 token 欄位。
+ */
+export type TeacherLoginResponse = { role: 'teacher'; authenticated: true };
+
+/**
+ * 老師登入狀態查詢（不需登入即可呼叫）：讓教師頁決定要顯示登入畫面、
+ * 「尚未設定密碼」的說明，還是控制台。
+ */
+export type TeacherSessionStatus = {
+  authenticated: boolean;
+  passwordConfigured: boolean;
+};
+
+/** 老師登出後的回應。 */
+export type TeacherLogoutResponse = { ok: true };
 
 export type StudentJoinRequest = { groupId: string };
 export type StudentJoinResponse = {

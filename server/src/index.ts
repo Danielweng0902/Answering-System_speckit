@@ -12,6 +12,7 @@ import type {
 import { loadConfig } from './config.js';
 import { repositoryRoot, resolveFromRepositoryRoot } from './paths.js';
 import { createActivityCommands } from './app/activityCommands.js';
+import { deleteTeacherSessions } from './app/access.js';
 import { createAnswerCommands } from './app/answerCommands.js';
 import { createFairnessSettler } from './app/fairnessSettler.js';
 import { createProjectorCommands } from './app/projectorCommands.js';
@@ -136,6 +137,11 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     mkdirSync(dirname(databasePath), { recursive: true });
   }
   const database = openDatabase(databasePath);
+
+  // 2026-11-22（D18 與 OpenSpec 組對齊）：伺服器重新啟動時，所有老師的
+  // 登入狀態一律失效（cookie 仍在瀏覽器，但 session 已不存在），老師須
+  // 重新輸入密碼。學生的 session 不受影響。
+  deleteTeacherSessions(database);
 
   // 002 匯入服務：HTTP 讀取與 Socket questions:confirm 共用同一份記憶體
   // 讀取結果，所以先建立再傳給 HTTP app 與指令註冊。

@@ -1,8 +1,8 @@
 /**
  * Guided Notes 匯入的 HTTP 路由（T023；contracts/http-api.md）。
  *
- * 兩個端點都只讀取不寫入：Authorization: Bearer <token> 以 001 的
- * resolveIdentity 解析身分（沒有或無效 → 401 UNAUTHORIZED；不是老師 →
+ * 兩個端點都只讀取不寫入：以 Authorization: Bearer <token> 或 HttpOnly
+ * cookie 解析老師身分（沒有或無效 → 401 TEACHER_AUTH_REQUIRED；不是老師 →
  * 403 FORBIDDEN），不在準備中 → 409 INVALID_PHASE。成功的摘要與之後的
  * 內容錯誤（422）交給 importService 回傳，這裡只對應 HTTP 狀態碼。
  *
@@ -27,6 +27,7 @@ import {
   assertWorkbookSize,
   WorkbookReadError,
 } from '../xlsx/workbookReader.js';
+import { readTeacherToken } from './teacherSession.js';
 
 export type QuestionRoutesDependencies = {
   database: DatabaseSync;
@@ -48,16 +49,6 @@ const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
 
 function errorBody(code: ErrorCode, message?: string) {
   return { error: { code, message: message ?? ERROR_MESSAGES[code] } };
-}
-
-function bearerToken(request: Request): string | null {
-  const header = request.headers.authorization;
-  if (!header) {
-    return null;
-  }
-  const match = /^Bearer\s+(.+)$/i.exec(header);
-  const token = match?.[1]?.trim();
-  return token ? token : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,16 +82,16 @@ function authorizeTeacher(
   response: Response,
   database: DatabaseSync,
 ): boolean {
-  const token = bearerToken(request);
+  const token = readTeacherToken(request);
   if (token === null) {
-    response.status(401).json(errorBody('UNAUTHORIZED'));
+    response.status(401).json(errorBody('TEACHER_AUTH_REQUIRED'));
     return false;
   }
 
   const identity = resolveIdentity(database, token);
   if (identity.role === 'guest') {
-    // 帶了 token 但無效（找不到 session）。
-    response.status(401).json(errorBody('UNAUTHORIZED'));
+    // 帶了憑證但無效（找不到 session）。
+    response.status(401).json(errorBody('TEACHER_AUTH_REQUIRED'));
     return false;
   }
   if (identity.role !== 'teacher') {

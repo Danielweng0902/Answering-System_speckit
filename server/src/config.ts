@@ -16,8 +16,9 @@ export type ServerConfig = {
    *
    * 2026-11-21 資安審計 D2-3：`/api/student/join` 原本無任何節流，
    * 實測 1000 次 join 在 0.6 秒內全部成功。burst 必須容得下「整班學生
-   * 在上課瞬間同時進場」（50 組班級、壓測工具的滿房情境都是 200 人），
-   * 因此預設 600；持續灌水則由 perMinute 壓住。
+   * 在上課瞬間同時進場」（100 組班級約 400 人、壓測工具的滿房情境同樣是
+   * 數百人），因此 2026-11-22（D20 統一為 100 組）把預設由 600 提到 1000；
+   * 持續灌水則由 perMinute 壓住。
    */
   joinRateLimitBurst: number;
   /** 進場請求的持續速率（每個來源每分鐘）；預設 30。0 = 不限制。 */
@@ -26,8 +27,9 @@ export type ServerConfig = {
    * 同時在線的 Socket.IO 連線數上限；0 = 不限制。
    *
    * 2026-11-21 資安審計 C3：連線數原本只受 OS 限制。課堂的合法規模是
-   * 50 組 × 每組數人 ≈ 200–300 條連線（含老師端與投影），所以預設 500，
-   * 有 1.6 倍餘裕；超過時新連線被拒（403），客戶端會自動退避重連。
+   * 100 組 × 每組數人 ≈ 400–600 條連線（含老師端與投影），所以 2026-11-22
+   * （D20 統一為 100 組）把預設由 500 提到 1000，有餘裕；超過時新連線被拒
+   * （403），客戶端會自動退避重連。
    */
   maxConnections: number;
 };
@@ -77,7 +79,7 @@ export function loadConfig(
       env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || undefined,
     joinRateLimitBurst: parseCount(
       env.JOIN_RATE_LIMIT_BURST,
-      600,
+      1000,
       'JOIN_RATE_LIMIT_BURST',
     ),
     joinRateLimitPerMinute: parseCount(
@@ -85,6 +87,6 @@ export function loadConfig(
       30,
       'JOIN_RATE_LIMIT_PER_MINUTE',
     ),
-    maxConnections: parseCount(env.MAX_CONNECTIONS, 500, 'MAX_CONNECTIONS'),
+    maxConnections: parseCount(env.MAX_CONNECTIONS, 1000, 'MAX_CONNECTIONS'),
   };
 }

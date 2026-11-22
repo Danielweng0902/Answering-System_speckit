@@ -17,7 +17,13 @@ export type GroupRegistryResult =
   | { ok: true; groups: GroupRegistryEntry[] }
   | { ok: false; code: ErrorCode };
 
-export const MAX_GROUPS = 50;
+/**
+ * 組數上限（2026-11-22，D20 與 OpenSpec 組統一為 100）。
+ *
+ * 原本是 50（契約 v0.6 的寫法），但 OpenSpec 組回報有實際班級是 64 組，
+ * 50 組會擋到真的能上課的班級；兩組因此統一為 100 組。
+ */
+export const MAX_GROUPS = 100;
 export const MAX_GROUP_NAME_LENGTH = 30;
 
 function failure(code: ErrorCode): GroupRegistryResult {

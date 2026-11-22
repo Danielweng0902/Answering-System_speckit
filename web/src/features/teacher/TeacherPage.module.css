@@ -20,6 +20,13 @@
   gap: var(--space-3);
 }
 
+/* 2026-11-22（D18）：語言切換與登出鈕同一列。 */
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 .title {
   margin: var(--space-0);
   font-family: var(--font-family-display);

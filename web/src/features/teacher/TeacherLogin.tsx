@@ -1,12 +1,11 @@
 import { useI18n } from '../../lib/i18n/LanguageProvider';
 import { useId, useState, type FormEvent } from 'react';
 import { loginTeacher } from '../../lib/api';
-import { saveToken } from '../../lib/session';
-import { connectSocket } from '../../lib/socket';
+import { connectSocket, reconnectSocket } from '../../lib/socket';
 import styles from './TeacherLogin.module.css';
 
 export type TeacherLoginProps = {
-  onLoginSuccess?: (token: string) => void;
+  onLoginSuccess?: () => void;
 };
 
 export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
@@ -31,10 +30,12 @@ export function TeacherLogin({ onLoginSuccess }: TeacherLoginProps) {
         return;
       }
 
-      saveToken(result.token);
-      connectSocket(result.token);
+      // 2026-11-22（D18）：登入狀態在 HttpOnly cookie 裡，頁面不持有 token；
+      // 重新握手讓伺服器用 cookie 認證成老師。
+      connectSocket(null);
+      reconnectSocket();
       setPassword('');
-      onLoginSuccess?.(result.token);
+      onLoginSuccess?.();
     } finally {
       setIsSubmitting(false);
     }
