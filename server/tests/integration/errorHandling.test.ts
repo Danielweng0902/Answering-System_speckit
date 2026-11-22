@@ -295,7 +295,7 @@ describe('broadcaster 單一連線例外隔離（T063）', () => {
     }
   });
 
-  it('定向廣播中一個 teacher emit 拋例外時，其他 teacher 仍收到 state', () => {
+  it('定向廣播中一個 teacher emit 拋例外時，其他 teacher 仍收到 state', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const throwingEmit = vi.fn(() => {
       throw new Error('directed-socket-secret');
@@ -312,6 +312,9 @@ describe('broadcaster 單一連線例外隔離（T063）', () => {
         database,
       );
       broadcaster.broadcastSubmissionChanged('group-1');
+      // 2026-11-22（D20，100 組）：老師看板的廣播會在同一個時間窗內合併，
+      // 這裡等時間窗過去再斷言（廣播本身仍逐個 socket 送出、例外仍被隔離）。
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       expect(throwingEmit).toHaveBeenCalledTimes(1);
       expect(normalEmit).toHaveBeenCalledTimes(1);
