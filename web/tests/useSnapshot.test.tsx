@@ -56,6 +56,20 @@ describe('useSnapshot', () => {
     expect(result.current.connectionState).toBe('connected');
   });
 
+  it('握手被拒（connect_error）時顯示重新連線中，而不是停在連線中', () => {
+    // 2026-11-21 資安審計：伺服器超過同時在線連線數上限時，新連線在握手
+    // 階段被拒（HTTP 403）。此時不會有 'disconnect' 事件（從未連上過），
+    // 若不處理 connect_error，畫面會一直停在「連線中…」。
+    const { result } = renderHook(() => useSnapshot());
+
+    expect(result.current.connectionState).toBe('connecting');
+
+    act(() => {
+      fakeSocket.emit('connect_error', new Error('websocket error'));
+    });
+    expect(result.current.connectionState).toBe('reconnecting');
+  });
+
   it('重新連線（身分改變）後接受相同 revision 的新身分快照', () => {
     const { result } = renderHook(() => useSnapshot());
     act(() => {

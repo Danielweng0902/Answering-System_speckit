@@ -178,6 +178,12 @@ export async function startServer(options = {}) {
       DATA_DIR: dataDir,
       PORT: '0',
       TEACHER_PASSWORD: teacherPassword,
+      // 壓測工具量的是**伺服器本身的容量**，不是速率限制的行為：它會用單一
+      // 來源送出上萬次 join，會把正常的進場節流（預設 burst 600／分鐘 30）
+      // 全部打成 429，量到的就是限流而不是容量。因此在壓測用的伺服器上
+      // 把進場限流關閉（0 = 不限制）；限流本身另有單元與整合測試涵蓋。
+      JOIN_RATE_LIMIT_BURST: '0',
+      JOIN_RATE_LIMIT_PER_MINUTE: '0',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

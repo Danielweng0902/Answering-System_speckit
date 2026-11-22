@@ -3,12 +3,12 @@
  *
  * - 密碼比對先各自 sha256 再以 crypto.timingSafeEqual 比較（research R5）。
  * - 同一來源 60 秒內登入失敗 10 次後，之後請求一律 429，直到視窗過期。
+ * - 進場（`/api/student/join`）另有令牌桶節流（2026-11-21 資安審計 D2-3）。
  * - 任何地方都不輸出密碼或 token 到 log。
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 import { Router } from 'express';
-import { isIPv6 } from 'node:net';
 import {
   ERROR_MESSAGES,
   studentJoinSchema,
@@ -17,9 +17,33 @@ import {
 } from '@classroom/shared';
 import { issueSession } from '../../app/access.js';
 import { getGroupById } from '../db/groupRepo.js';
+import {
+  createSlidingWindowLimiter,
+  createTokenBucketLimiter,
+  normalizeRateLimitSource,
+  RATE_LIMIT_WINDOW_MS,
+  type TokenBucketLimiter,
+} from './rateLimiter.js';
 
-const WINDOW_MS = 60_000;
 const MAX_FAILURES = 10;
+
+/**
+ * 進場請求的令牌桶參數（2026-11-21 資安審計 D2-3）。
+ *
+ * `/api/student/join` 原本完全沒有節流：實測 1000 次 join 在 0.6 秒內全部
+ * 成功，每次都新增一筆 session（sessions 表因此可無限成長）。
+ *
+ * 門檻的形狀來自「一堂課的實際樣態」：
+ * - **burst（capacity）**：整班學生在上課瞬間一起進場是正常行為，50 組班級
+ *   加上壓測工具的滿房情境都是 200 名學生自同一個來源（NAT）進場，所以
+ *   瞬間額度必須容得下整班。
+ * - **sustained（perMinute）**：持續灌水要壓到很低。
+ *
+ * 兩者都由環境變數調整（見 `server/src/config.ts`）：
+ * `JOIN_RATE_LIMIT_BURST`（預設 600）與 `JOIN_RATE_LIMIT_PER_MINUTE`（預設 30）。
+ */
+export const DEFAULT_JOIN_RATE_LIMIT_BURST = 600;
+export const DEFAULT_JOIN_RATE_LIMIT_PER_MINUTE = 30;
 
 export type LoginRateLimiter = {
   /** 來源目前是否還能嘗試登入；false 時應回覆 429。 */
@@ -37,71 +61,73 @@ export type LoginRateLimiterOptions = {
   now?: () => number;
 };
 
-/**
- * 速率限制的來源位址正規化（2026-11-21 資安審計 GLM 覆核）。
- *
- * 原本直接用 `request.ip` 當 key，但同一台機器的 IPv4（127.0.0.1）與
- * IPv6（::1）是兩個不同的 key → 換一種位址表示法就能完全繞過限流（實測：
- * 猜 10 次 → 429；改用 [::1] 立刻恢復可猜）。
- *
- * 規則：
- * - IPv4（或 IPv4-mapped 的 IPv6）→ 取 IPv4 部分，維持「同一個出口位址算同一個來源」。
- * - IPv6 → 取 /64 前綴（同一個 IPv6 網段算同一個來源）。
- *
- * 這與 IPv4 的既有行為一致，只是補上 IPv6 的同一性；不影響正常登入。
- */
-export function normalizeRateLimitSource(address: string): string {
-  const trimmed = address.trim();
-  const lower = trimmed.toLowerCase();
-  const ipv4Mapped = '::ffff:';
-  if (lower.startsWith(ipv4Mapped)) {
-    return trimmed.slice(ipv4Mapped.length);
-  }
-  if (!isIPv6(trimmed)) {
-    return trimmed;
-  }
-  // IPv6 迴圈位址與 IPv4 迴圈位址是同一台機器 → 視為同一個來源，
-  // 否則攻擊者只要在 127.0.0.1 與 ::1 之間交替就能完全繞過限流
-  // （2026-11-21 資安審計實測）。
-  if (lower === '::1' || lower === '0:0:0:0:0:0:0:1') {
-    return '127.0.0.1';
-  }
-  const head = trimmed.split('::')[0] ?? '';
-  const hextets = head.split(':').filter((hextet) => hextet.length > 0);
-  return `${hextets.slice(0, 4).join(':')}::/64`;
-}
+export type JoinRateLimiter = {
+  /**
+   * 嘗試為這個來源取得一次進場額度。
+   *
+   * 額度不足時回 false（呼叫端應回覆 429）；取得成功時額度被扣減，
+   * 因此「檢查」與「扣減」是同一步驟，不會有競態。
+   */
+  tryAcquire: (source: string) => boolean;
+  /** 清空所有來源的額度（供測試使用）。 */
+  reset: () => void;
+};
+
+export type JoinRateLimiterOptions = {
+  /** 瞬間可用的進場額度（burst）。 */
+  burst?: number;
+  /** 每分鐘補充的進場額度（sustained）。 */
+  perMinute?: number;
+  /** 可注入時鐘供測試控制。 */
+  now?: () => number;
+};
+
+export { normalizeRateLimitSource };
 
 export function createLoginRateLimiter(
   options: LoginRateLimiterOptions = {},
 ): LoginRateLimiter {
-  const windowMs = options.windowMs ?? WINDOW_MS;
-  const maxFailures = options.maxFailures ?? MAX_FAILURES;
-  const now = options.now ?? Date.now;
-  const failures = new Map<string, number[]>();
-
-  function recentFailures(source: string): number[] {
-    const cutoff = now() - windowMs;
-    const kept = (failures.get(source) ?? []).filter(
-      (timestamp) => timestamp >= cutoff,
-    );
-    if (kept.length === 0) {
-      failures.delete(source);
-    } else {
-      failures.set(source, kept);
-    }
-    return kept;
-  }
+  const limiter = createSlidingWindowLimiter({
+    windowMs: options.windowMs ?? RATE_LIMIT_WINDOW_MS,
+    maxEvents: options.maxFailures ?? MAX_FAILURES,
+    now: options.now,
+  });
 
   return {
-    isAllowed(source) {
-      return recentFailures(source).length < maxFailures;
-    },
-    recordFailure(source) {
-      failures.set(source, [...recentFailures(source), now()]);
-    },
-    reset() {
-      failures.clear();
-    },
+    isAllowed: (source) => limiter.isWithinLimit(source),
+    recordFailure: (source) => limiter.record(source),
+    reset: () => limiter.reset(),
+  };
+}
+
+/**
+ * 進場請求的速率限制（2026-11-21 資安審計 D2-3）。
+ *
+ * 計數的是「請求次數」而不是「成功次數」：連不存在的組別也會動到資料庫，
+ * 因此一併限制。burst 與 perMinute 為 0 時不限制（供測試與特殊部署使用）。
+ */
+export function createJoinRateLimiter(
+  options: JoinRateLimiterOptions = {},
+): JoinRateLimiter {
+  const burst = options.burst ?? DEFAULT_JOIN_RATE_LIMIT_BURST;
+  const perMinute = options.perMinute ?? DEFAULT_JOIN_RATE_LIMIT_PER_MINUTE;
+
+  if (burst <= 0 || perMinute <= 0) {
+    return {
+      tryAcquire: () => true,
+      reset: () => undefined,
+    };
+  }
+
+  const limiter: TokenBucketLimiter = createTokenBucketLimiter({
+    capacity: burst,
+    perMinute,
+    now: options.now,
+  });
+
+  return {
+    tryAcquire: (source) => limiter.take(source),
+    reset: () => limiter.reset(),
   };
 }
 
@@ -110,6 +136,8 @@ export type AuthRoutesDependencies = {
   /** 每次請求即時讀取設定；undefined 或空字串代表未設定密碼。 */
   getTeacherPassword: () => string | undefined;
   rateLimiter?: LoginRateLimiter | undefined;
+  /** 進場請求的速率限制；未注入時使用預設門檻。 */
+  joinRateLimiter?: JoinRateLimiter | undefined;
 };
 
 function errorBody(code: ErrorCode): {
@@ -131,6 +159,8 @@ export function createAuthRouter(dependencies: AuthRoutesDependencies): Router {
   const router = Router();
   const limiter =
     dependencies.rateLimiter ?? createLoginRateLimiter();
+  const joinLimiter =
+    dependencies.joinRateLimiter ?? createJoinRateLimiter();
 
   router.post('/api/teacher/login', (request, response) => {
     const parsed = teacherLoginSchema.safeParse(request.body);
@@ -162,6 +192,15 @@ export function createAuthRouter(dependencies: AuthRoutesDependencies): Router {
   });
 
   router.post('/api/student/join', (request, response) => {
+    // 2026-11-21 資安審計 D2-3：進場端點原本無任何節流，這裡加上
+    // 與登入同樣的來源限流。超過門檻回 429 TOO_MANY_ATTEMPTS，
+    // 沿用既有錯誤代碼，不新增代碼也不改變既有成功路徑的行為。
+    const source = normalizeRateLimitSource(request.ip ?? 'unknown');
+    if (!joinLimiter.tryAcquire(source)) {
+      response.status(429).json(errorBody('TOO_MANY_ATTEMPTS'));
+      return;
+    }
+
     const parsed = studentJoinSchema.safeParse(request.body);
     if (!parsed.success) {
       response.status(400).json(errorBody('INVALID_INPUT'));

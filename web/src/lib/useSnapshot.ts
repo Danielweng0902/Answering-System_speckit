@@ -85,8 +85,17 @@ export function useSnapshot(
       setConnectionState('reconnecting');
     };
 
+    // 2026-11-21 資安審計：伺服器設有同時在線連線數上限，超過時新的連線
+    // 在握手階段被拒（HTTP 403），socket.io-client 會自動退避重連。這個事件
+    // 不會伴隨 'disconnect'（從未連上過），因此要單獨處理，否則畫面會一直
+    // 停在「連線中…」而看不出伺服器正在重試。
+    const handleConnectError = (): void => {
+      setConnectionState('reconnecting');
+    };
+
     socket.on('connect', handleConnect);
     socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
     socket.on(STATE_EVENT, handleState);
     socket.on(SESSION_INVALID_EVENT, handleSessionInvalid);
     connectSocket(undefined, view);
@@ -94,6 +103,7 @@ export function useSnapshot(
     return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
       socket.off(STATE_EVENT, handleState);
       socket.off(SESSION_INVALID_EVENT, handleSessionInvalid);
     };

@@ -193,6 +193,11 @@ JSON 保留 `capturedAt/rssBytes/cpuSeconds` 每秒原始樣本。
 - 執行一輪不算穩定基準。正式報告若只有一趟中等負載，就必須標註
   「不能宣稱長期穩定性」；若時間不足，只能跑短階段重複，也要說明所用
   規模。
+- **壓測用的伺服器會關閉進場限流**（`JOIN_RATE_LIMIT_BURST=0`、
+  `JOIN_RATE_LIMIT_PER_MINUTE=0`，見 `lib/server.mjs`）。本工具量的是**伺服器本身的
+  容量**，不是速率限制的行為：它會用單一來源送出上萬次 join，若不關閉限流，
+  量到的就是限流（大量 429）而不是容量。限流本身另有單元與整合測試涵蓋
+  （`server/tests/unit/rateLimiter.test.ts`、`server/tests/integration/joinRateLimit.test.ts`）。
 
 ## 測試
 
