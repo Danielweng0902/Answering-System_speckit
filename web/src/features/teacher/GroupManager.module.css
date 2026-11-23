@@ -50,6 +50,28 @@
   gap: var(--space-3);
 }
 
+/*
+ * 2026-11-23：名稱與按鈕同一列後，按鈕列不可被壓縮
+ * （否則「改名／刪除」會被壓成兩行）。
+ *
+ * 空間真的不夠時（窄視窗 ＋ 組名 30 字），`.group` 的 flex-wrap 會讓
+ * 按鈕列整列換到下一行並靠右 —— 那是可接受的降級，不是 bug。
+ * `margin-inline-start: auto` 只在換行後才有意義（單列時由
+ * `justify-content: space-between` 負責分配剩餘空間）。
+ */
+.actions {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+/*
+ * 改名中的表單取代按鈕列出現，內容（標籤＋輸入框＋存檔＋取消）較寬，
+ * 讓它獨佔一列，不要跟組名擠在同一列。
+ */
+.renameForm {
+  flex: 1 1 100%;
+}
+
 .field {
   display: grid;
   gap: var(--space-1);
@@ -101,12 +123,26 @@
 }
 
 .group {
-  display: grid;
-  gap: var(--space-3);
   /*
-   * 2026-11-23：100 組（D20 統一後的上限）時，組別管理這一區就佔了
-   * 5,759 px，整頁要捲十幾屏。每列的上下留白收緊一級，列與列仍然分得開。
+   * 2026-11-23：名稱與按鈕改成同一列。
+   *
+   * 原本每組一列是「名稱列 + 按鈕列」上下疊兩行（grid，gap 12px），
+   * 實測每列 103 px；改成同一列後實測每列 67 px。組別管理這一區的
+   * 高度（實測：1440px、搶答中、已匯入官方題目；量測步驟見
+   * docs/verification/web-group-list-inline-actions.md）：
+   *   50 組：  5,446 px → 3,543 px（-35%）
+   *   100 組：10,493 px → 6,893 px（-34%）
+   * 老師一眼就能掃過整欄組名。
+   *
+   * 只改 CSS、不動 TSX：`.group` 從 grid 改成 flex（space-between），
+   * 兩個子元素（.groupHeader 與 .actions）自然並排成同一列。
+   * 按鈕仍保留 DESIGN.md §5 規定的留白與 1px 墨框。
    */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
   padding-block: var(--space-2);
   border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
@@ -114,8 +150,17 @@
 .groupHeader {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2);
+  align-items: baseline;
+  /* 名稱與在線狀態靠在一起：同一列後右邊是按鈕，狀態再被推開反而難讀。 */
+  gap: var(--space-3);
+  min-width: 0;
+  /*
+   * 2026-11-23：組名最長 30 字（MAX_GROUP_NAME_LENGTH）。不可斷開的
+   * 長字串（例如 30 個英文字母）會把整頁撐寬到水平溢出（實測 390px
+   * 視窗下 scrollWidth 455px）。`anywhere` 讓組名可以在任何位置斷行，
+   * 且不影響 CJK（它本來就能逐字斷）。
+   */
+  overflow-wrap: anywhere;
 }
 
 .presence {
