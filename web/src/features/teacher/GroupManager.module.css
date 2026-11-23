@@ -63,7 +63,12 @@
 }
 
 .input {
-  padding: var(--space-2) var(--space-3);
+  /*
+   * 2026-11-23：輸入框與同列的按鈕同高（--control-height = 44px），
+   * 底部對齊時不會出現「按鈕上緣凸出」。
+   */
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
   color: var(--color-ink);
   background: var(--color-paper-raised);
   border: var(--border-width-thin) solid var(--color-ink);
@@ -72,7 +77,15 @@
 
 /* 次要動作：四邊留白與主要動作一致（2026-11-19 review）。 */
 .button {
-  padding: var(--space-3) var(--space-6);
+  /*
+   * 2026-11-23：所有表單控制項統一高度（--control-height = 44px）。
+   * 輸入框與按鈕同一列時才會自然對齊；按鈕只留左右留白。
+   */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-inline);
   color: var(--color-ink);
   background: transparent;
   border: var(--border-width-thin) solid var(--color-ink);

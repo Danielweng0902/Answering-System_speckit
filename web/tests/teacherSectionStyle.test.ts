@@ -18,10 +18,9 @@ function readCss(relativePath: string): string {
 
 /** 取出某個選擇器的規則內容。 */
 function ruleBody(css: string, selector: string): string {
-  const match = new RegExp(
-    `(^|[,}\\s])${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`,
-    'm',
-  ).exec(css);
+  const match = new RegExp(`(^|[,}\\s])${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`, 'm').exec(
+    css,
+  );
   if (match === null) {
     throw new Error(`找不到選擇器 ${selector}`);
   }
@@ -70,9 +69,12 @@ describe('老師端區塊樣式（design/DESIGN.md §5）', () => {
     const exportButton = ruleBody(teacher, '.exportButton');
     const primaryButton = ruleBody(phase, '.button');
 
-    const expected = 'padding: var(--space-3) var(--space-6);';
+    // 2026-11-23（設計負責人意見，DESIGN.md v1.2）：按鈕高度統一
+    // --control-height，只留左右留白 → 主要與次要動作用同一組規格。
+    const expected = 'padding: 0 var(--control-padding-inline);';
     expect(exportButton).toContain(expected);
     expect(primaryButton).toContain(expected);
+    expect(primaryButton).toContain('min-height: var(--control-height);');
   });
 
   it('區塊之間只留一條線：每個區塊只畫下框線', () => {
