@@ -128,9 +128,10 @@
    *
    * 原本每組一列是「名稱列 + 按鈕列」上下疊兩行（grid，gap 12px），
    * 實測每列 103 px；改成同一列後實測每列 67 px。組別管理這一區的
-   * 高度（實測，scripts/group-shots.mjs）：
-   *   50 組：  5,307 px → 3,507 px（-34%）
-   *   100 組：10,457 px → 6,857 px（-34%）
+   * 高度（實測：1440px、搶答中、已匯入官方題目；量測步驟見
+   * docs/verification/web-group-list-inline-actions.md）：
+   *   50 組：  5,446 px → 3,543 px（-35%）
+   *   100 組：10,493 px → 6,893 px（-34%）
    * 老師一眼就能掃過整欄組名。
    *
    * 只改 CSS、不動 TSX：`.group` 從 grid 改成 flex（space-between），

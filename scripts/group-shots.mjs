@@ -17,6 +17,8 @@
  *   SHOT_BASE     伺服器網址（預設 http://127.0.0.1:3000）
  *   SHOT_PASSWORD 老師密碼（**必填**，沒有預設值：密碼不進版本控制）
  *   SHOT_GROUPS   建立的組別數（預設 12；100 是 D20 的上限）
+ *   SHOT_SECTIONS 設成 1 時，匯入官方題目並開搶答，量測各區塊高度
+ *                 （密度成果「區塊少了 34%」的數字來源）
  *
  * 產生的畫面：
  *   01-teacher-group-list-desktop       老師端組別管理（桌面 1440px，一般狀態）
@@ -28,8 +30,9 @@
  * 註：老師端自 2026-11-22（D18）改用 HttpOnly cookie 認證，所以 Socket.IO
  * 連線必須帶上同一個 browser context 的 cookie。
  */
-import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { io } from 'socket.io-client';
 
@@ -38,8 +41,13 @@ const PASSWORD = process.env.SHOT_PASSWORD;
 if (PASSWORD === undefined || PASSWORD === '') {
   throw new Error('SHOT_PASSWORD 未設定：密碼不進版本控制，請用環境變數傳入');
 }
-const outDir = process.argv[2] ?? 'docs/verification/015-group-list-inline-actions-screenshots';
+const outDir = process.argv[2] ?? 'docs/verification/web-group-list-inline-actions-screenshots';
 const groupCount = Number(process.env.SHOT_GROUPS ?? '12');
+const measureSections = process.env.SHOT_SECTIONS === '1';
+const FIXTURE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '../fixtures/guided-notes/01-official-single.xlsx',
+);
 
 await mkdir(outDir, { recursive: true });
 
@@ -199,6 +207,39 @@ await firstGroup.waitFor();
 await firstGroup.click();
 await student.waitForTimeout(900);
 await shot(student, '05-student-mobile');
+
+// ── 量測各區塊高度（密度成果「區塊少了 34%」的數字來源）──
+// 量測條件與 CSS 註解一致：1440px、搶答中、已匯入官方題目。
+// 放在最後：開搶答之後組別管理的按鈕會被鎖定，先拍完照再量。
+if (measureSections) {
+  await teacher.setViewportSize({ width: 1440, height: 900 });
+  await teacher.reload();
+  await teacher.getByRole('button', { name: '開啟搶答', exact: true }).waitFor();
+
+  const fixture = await readFile(FIXTURE);
+  await teacher.setInputFiles('input[name="guided-notes-file"]', {
+    name: '01-official-single.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer: fixture,
+  });
+  await teacher.getByRole('button', { name: '確認匯入', exact: true }).waitFor({ timeout: 15_000 });
+  await teacher.getByRole('button', { name: '確認匯入', exact: true }).click();
+  await teacher.waitForTimeout(1500);
+  await teacher.reload();
+  await teacher.getByRole('button', { name: '開啟搶答', exact: true }).click();
+  await teacher.getByText('目前階段：搶答中').waitFor();
+  await teacher.waitForTimeout(800);
+
+  const sectionReport = await teacher.evaluate(() => ({
+    docHeight: Math.round(document.documentElement.scrollHeight),
+    sections: [...document.querySelectorAll('section')].map((section) => ({
+      title: section.querySelector('h2')?.textContent?.slice(0, 8) ?? '(無標題)',
+      height: Math.round(section.getBoundingClientRect().height),
+    })),
+  }));
+  console.log('=== 各區塊高度（搶答中）===');
+  console.log(JSON.stringify(sectionReport, null, 2));
+}
 
 await browser.close();
 console.log('done →', outDir);

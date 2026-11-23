@@ -11,12 +11,14 @@
 | 項目                   | 改動前（grid） | 改動後（flex）       |
 | ---------------------- | -------------- | -------------------- |
 | 每列高度               | 103 px         | **67 px**（實測）    |
-| 組別管理區塊（50 組）  | 5,307 px       | **3,507 px**（−34%） |
-| 組別管理區塊（100 組） | 10,457 px      | **6,857 px**（−34%） |
-| 整頁高度（100 組）     | 11,762 px      | **8,162 px**（−31%） |
+| 組別管理區塊（50 組）  | 5,446 px       | **3,543 px**（−35%） |
+| 組別管理區塊（100 組） | 10,493 px      | **6,893 px**（−34%） |
+| 整頁高度（50 組）      | 8,061 px       | **6,158 px**（−24%） |
+| 整頁高度（100 組）     | 13,301 px      | **9,701 px**（−27%） |
 
-（實測方式見 §3；數字由 `scripts/group-shots.mjs` 與同一支量的量測工具取得，
-新舊版面用**完全相同的資料**各跑一次。）
+量測條件：**1440px 視窗、搶答中、已匯入官方題目**（`fixtures/guided-notes/01-official-single.xlsx`），
+新舊版面用**完全相同的資料**各跑一次。
+（量測方式見 §3。注意「準備中」狀態的數字會少 36px —— 搶答中多一行「已鎖定」說明。）
 
 CSS 層面的四件套：
 
@@ -32,7 +34,7 @@ CSS 層面的四件套：
 ```bash
 npm test --workspace @classroom/web
 # Test Files  24 passed (24)
-#      Tests  131 passed (131)
+#      Tests  132 passed (132)
 
 npm test --workspace @classroom/web -- --run tests/teacherSectionStyle.test.ts
 # Test Files  1 passed (1)
@@ -81,6 +83,40 @@ groups created: 12/12
 - **改名表單獨佔一列**：`formTop (461) > headerBottom (449)`，確認表單落在名稱下方、沒有被擠在右側。
 - **每列高度一致**：12／50／100 組實測每列都是 67 px，沒有因組數或組名長度而產生不一致的列高。
 - **窄視窗不溢出**：`docScrollWidth == viewportWidth == 390`。
+
+### 3.1 各區塊高度（密度成果的數字來源）
+
+```bash
+SHOT_GROUPS=50 SHOT_SECTIONS=1 SHOT_PASSWORD=... \
+  node scripts/group-shots.mjs /tmp/shots
+```
+
+`SHOT_SECTIONS=1` 會匯入官方題目、開搶答，再量每個區塊的高度
+（量測條件與 CSS 註解一致：1440px、搶答中、已匯入官方題目）：
+
+```
+=== 各區塊高度（搶答中）===
+{
+  "docHeight": 6158,
+  "sections": [
+    { "title": "搶答控制",  "height": 6062 },
+    { "title": "搶答控制",  "height": 330  },
+    { "title": "匯入學習單", "height": 215  },
+    { "title": "題目清單",   "height": 807  },
+    { "title": "組別管理",   "height": 3543 },
+    { "title": "投影看板",   "height": 142  },
+    { "title": "作答看板",   "height": 767  },
+    { "title": "(無標題)",   "height": 296  }
+  ]
+}
+```
+
+同一支工具在**改動前**的 grid 版面上量到「組別管理 5,446 px／整頁 8,061 px」，
+100 組時是「10,493 px／13,301 px」—— 新舊兩次都用完全相同的資料與量測條件。
+
+> 註：PR 說明初稿寫的「50 組：5,343 px」比實測少一列（103 px），
+> 那是量測當下少算了一組組別；100 組的 10,493 px 兩邊一致。
+> 本文件與 CSS 註解都改用上表這組可重現的數字。
 
 ## 4. 截圖（Constitution 原則 IX／EXECUTION-PLAYBOOK §10）
 
