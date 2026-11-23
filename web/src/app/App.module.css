@@ -11,7 +11,8 @@
 
 .page {
   display: grid;
-  gap: var(--space-10);
+  /* 2026-11-23：與老師端同一個區塊留白（見 TeacherPage.module.css）。 */
+  gap: var(--space-block);
 }
 
 .homeHeader {

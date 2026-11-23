@@ -108,7 +108,7 @@
   border-block-end: var(--border-width-thin) solid var(--color-ink);
   border-radius: 0;
   font-family: var(--font-family-display);
-  font-size: var(--font-size-question);
+  font-size: var(--font-size-input);
 }
 
 .input:disabled {
@@ -170,7 +170,19 @@
     font-size: var(--font-size-large);
   }
 
+  /*
+   * 2026-11-23：輸入框在窄螢幕也要維持 --font-size-input。
+   *
+   * 這條規則原本把輸入框壓成 --font-size-large（18px），與 .prompt
+   * 的 18px 完全同級 —— 學生在手機上分不出「哪裡要打字」，
+   * 等於這次的字級調整（--font-size-input）在學生端真正使用的手機
+   * 寬度（≤480px）下完全沒生效。
+   *
+   * 只收窄「題目字級」（題目標題與題目文字），輸入框不收 ——
+   * 輸入框的寬度是 100%，字級變大不會造成水平溢出（實測 390px
+   * 下 scrollWidth 仍等於 390）。
+   */
   .input {
-    font-size: var(--font-size-large);
+    font-size: var(--font-size-input);
   }
 }

@@ -156,7 +156,7 @@
 
 .revealWinner {
   font-family: var(--font-family-display);
-  font-size: var(--font-size-headline);
+  font-size: var(--font-size-projector-winner);
   font-weight: 600;
   color: var(--color-ink);
 }
@@ -169,7 +169,7 @@
 .revealAnswers {
   grid-column: 2;
   font-family: var(--font-family-display);
-  font-size: var(--font-size-question);
+  font-size: var(--font-size-projector-answer);
   color: var(--color-indigo);
   text-decoration: underline;
   text-underline-offset: 0.25em;
