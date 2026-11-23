@@ -26,7 +26,7 @@ A 2-person student subgroup will build a course final project (a classroom "buzz
 4. Build a compatibility matrix (markdown table): skill | best Spec Kit phase (constitution / specify / clarify / plan / tasks / analyze / implement / converge / code review & PR) | conflict risk (does it create parallel spec/plan artifacts or take over the flow? low/med/high) | recommendation (use / use with care / avoid) | one-line reason.
 
 ## ② Acceptance criteria
-- Report file `/Users/Pig0902/Answering-System_speckit/_research/W2-skills.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, with sections 1–4.
+- Report file `<repo>/_research/W2-skills.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, with sections 1–4.
 - Every factual claim cites its source (URL, or `local: <path>`); unverifiable items are marked `UNVERIFIED`. Never invent skill names — if a name the user mentioned does not exist, say so and give the closest real one.
 
 ## ③ Report format (your final message, keep it short)
@@ -36,7 +36,7 @@ A 2-person student subgroup will build a course final project (a classroom "buzz
 未驗證/風險: <bullets, or 無 + reason>
 
 ## ④–⑦ Scope and limits
-- Read-only research. Write ONLY `/Users/Pig0902/Answering-System_speckit/_research/W2-skills.md`.
+- Read-only research. Write ONLY `<repo>/_research/W2-skills.md`.
 - Do not install any skill or plugin, do not modify ~/.agents, ~/.claude, ~/.codex or any config, do not create repos/commits/issues/PRs.
 - Useful fetch methods: `gh api repos/<owner>/<repo>/contents/<path>`, `gh release list -R <owner>/<repo>`, `curl -sL https://raw.githubusercontent.com/<owner>/<repo>/main/<path>`, or your web fetch tool.
 
@@ -48,7 +48,7 @@ All facts gathered. Now writing the report.
 
 結果 TLDR: superpowers 的 pipeline 類 skill（brainstorming、writing-plans、using-superpowers）會在 `docs/superpowers/specs|plans/` 自建第二真相來源，只該用它的 6 個 discipline skill；mattpocock 的 `grill-me`、grill-with-docs 確實存在且適合 clarify/specify 階段，但 PRD 系名字（write-a-prd、prd-to-issues 等）全部不存在。
 
-報告路徑： /Users/Pig0902/Answering-System_speckit/_research/W2-skills.md
+報告路徑： <repo>/_research/W2-skills.md
 
 五個最重要發現：
 - **superpowers 最新 v7.0.2（2026-11-03），15 個 skill**；本機 `~/.agents/skills/` 快照缺 `diagnosing-superpowers`、executing-plans/TDD/writing-plans 內文對不上 v6.3.0，判定為約 v6.0.x 時代的手動複製版，明顯過時須先更新。

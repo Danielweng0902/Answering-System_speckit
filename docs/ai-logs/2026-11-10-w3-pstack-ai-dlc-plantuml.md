@@ -29,13 +29,13 @@ The course references "AIDLC" slides (AI-Driven Development Life Cycle) and a "D
 The course requires: during the specify phase, generate PlantUML component, class and sequence diagrams as `.puml` files in `./diagrams/`, then run `java -jar plantuml.jar "./diagrams/*.puml"` to render PNGs into the same directory. Find out:
 1. The official download location of plantuml.jar (GitHub releases of plantuml/plantuml), the current version, and the license variants (GPL / MIT / LGPL ... jars).
 2. Whether class and component diagrams need Graphviz `dot`, and how to avoid that with the built-in Smetana layout (`!pragma layout smetana` inside the file, and/or a command-line option). Give the exact working syntax.
-3. Hands-on proof: in a temp dir created with `mktemp -d /tmp/plantuml-try.XXXX` (NEVER inside /Users/Pig0902/Answering-System_speckit), download the jar, write a tiny class diagram, component diagram and sequence diagram (include a few Chinese labels such as 老師 / 學生 / 組別 to check CJK font rendering), render them with Java 21, confirm the PNG files exist (`ls -la`), and note any font or layout problems. Also record the exact commands that worked and the time they took.
+3. Hands-on proof: in a temp dir created with `mktemp -d /tmp/plantuml-try.XXXX` (NEVER inside <repo>), download the jar, write a tiny class diagram, component diagram and sequence diagram (include a few Chinese labels such as 老師 / 學生 / 組別 to check CJK font rendering), render them with Java 21, confirm the PNG files exist (`ls -la`), and note any font or layout problems. Also record the exact commands that worked and the time they took.
 4. Recommend how a team on mixed Mac/Windows should pin the PlantUML version (e.g. a script `scripts/render-diagrams.sh` that downloads a pinned jar into a git-ignored `tools/` folder), and whether to commit the jar or not.
 
 ## ② Acceptance criteria
-- Report file `/Users/Pig0902/Answering-System_speckit/_research/W3-pstack-aidlc-plantuml.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, with sections A, B, C.
+- Report file `<repo>/_research/W3-pstack-aidlc-plantuml.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, with sections A, B, C.
 - Every factual claim cites its source (URL, or `local: <command>`); unverified items are marked `UNVERIFIED`. Section C.3 includes the real commands and real `ls -la` output.
-- You may copy the rendered test PNGs to `/Users/Pig0902/Answering-System_speckit/_research/plantuml-test/` so they can be inspected.
+- You may copy the rendered test PNGs to `<repo>/_research/plantuml-test/` so they can be inspected.
 
 ## ③ Report format (your final message, keep it short)
 結果 TLDR: <one sentence>
@@ -76,14 +76,14 @@ The course requires: during the specify phase, generate PlantUML component, clas
 
 結果 TLDR: 三個主題均已完成查證；PlantUML 以 Java 21 成功實測，三張含中文標籤的 UML PNG 均在未安裝 Graphviz 的環境產生。
 
-報告路徑: [\`W3-pstack-aidlc-plantuml.md\`](/Users/Pig0902/Answering-System_speckit/_research/W3-pstack-aidlc-plantuml.md)
+報告路徑: [\`W3-pstack-aidlc-plantuml.md\`](<repo>/_research/W3-pstack-aidlc-plantuml.md)
 
 五個最重要發現:
 - **pstack**：MIT plugin，含 58 skills、23 playbooks、2 agents，沒有獨立 commands/rules/hooks/MCP server；Claude Code 有官方 adapter，但 Codex 不能假設可直接使用。
 - **Spec Kit 分工**：pstack 的 poteto-mode/architect/playbooks 與 plan/tasks 路由重疊；建議只取 TDD、evidence-based review、驗證及技術寫作作為輔助。
 - **AI-DLC**：原始方法論為 Inception／Construction／Operations 與 Mob 工作模式；現行 `awslabs/aidlc-workflows` 已擴成 5 phases／33 stages，並提供多種 coding-agent harnesses。
 - **PlantUML**：最新 stable 為 `v1.2026.9`；檔內 `!pragma layout smetana` 與 CLI `-Playout=smetana` 都已實測成功，class/component 不需 `dot`。
-- **實測與 pinning**：下載 1.63 秒，三圖 render 2.88 秒，中文沒有缺字；建議固定版本及 SHA-256、jar 放 git-ignored `tools/`，不要 commit jar。PNG/PUML 已保存至 [\`plantuml-test/\`](/Users/Pig0902/Answering-System_speckit/_research/plantuml-test/)。
+- **實測與 pinning**：下載 1.63 秒，三圖 render 2.88 秒，中文沒有缺字；建議固定版本及 SHA-256、jar 放 git-ignored `tools/`，不要 commit jar。PNG/PUML 已保存至 [\`plantuml-test/\`](<repo>/_research/plantuml-test/)。
 
 未驗證/風險:
 - Windows、PowerShell script 與 Windows CJK 字型呈現未實機測試。

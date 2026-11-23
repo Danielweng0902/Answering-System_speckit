@@ -76,6 +76,22 @@ const KNOWN_TEST_VALUES = [
   'test-password',
 ];
 
+/**
+ * 本機絕對路徑 → 佔位符。
+ *
+ * 理由：repo 是公開的，紀錄裡帶著 `/Users/<使用者名稱>/…` 會暴露本機使用者名稱
+ * 與家目錄結構。repo 自己的路徑換成 `<repo>`，其他家目錄路徑換成 `<home>/…`，
+ * 語意保留、資訊不外洩。
+ */
+const REPO_DIR_NAME = 'Answering-System_speckit';
+
+function redactPaths(text) {
+  return text
+    .replace(new RegExp(`\\/Users\\/[^/\\s"']+\\/${REPO_DIR_NAME}`, 'g'), '<repo>')
+    .replace(/\/Users\/[^/\s"']+\//g, '<home>/')
+    .replace(/[A-Za-z]:\\Users\\[^\\\s"']+\\/g, '<home>\\');
+}
+
 function redact(text) {
   let result = text;
   for (const { re, to } of REDACTIONS) {
@@ -84,7 +100,8 @@ function redact(text) {
   for (const value of KNOWN_TEST_VALUES) {
     result = result.split(value).join('<redacted-test-password>');
   }
-  return result;
+  // 最後才遮蔽路徑：前面的規則可能會把路徑裡的片段改掉，先做路徑會漏掉。
+  return redactPaths(result);
 }
 
 function slugify(title) {

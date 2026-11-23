@@ -13,7 +13,7 @@
 
 檔名格式：`<日期>-<session 標題>.md`。檔頭有 session id、日期、模型與輪次。
 
-目前 **73 個 session、2,237 輪對話**（實際檔案內容約 1.5 MB）。
+目前 **73 個 session、2,323 輪對話**（實際檔案內容約 1.5 MB）。
 
 ## 怎麼產生的
 
@@ -26,7 +26,8 @@ node scripts/export-ai-logs.mjs --list   # 只列出 session
 
 1. `opencode session export <session-id>` 取得原始紀錄（**未遮蔽**）。
 2. 只保留「對話本身」—— 工具呼叫與推理內容不收錄（那是執行細節，而且體積大 30 倍）。
-3. 機敏值換成佔位符（`<redacted>`、`<redacted-private-key>`、`<redacted-bearer-token>` 等）。
+3. 機敏值換成佔位符（`<redacted>`、`<redacted-private-key>`、`<redacted-bearer-token>` 等），
+   **本機絕對路徑也一併換掉**（見下）。
 4. 產出後用 `scripts/scan-ai-log-secrets.mjs` 掃描確認乾淨。
 5. 暫存的原始匯出檔一律刪除，不留在磁碟上。
 
@@ -49,6 +50,20 @@ JWT、GitHub token、AWS key、密碼／憑證關鍵字後的值、看起來像�
 以及本專案用過的測試密碼值。
 
 掃描器本身也驗證過有效（對未遮蔽的原始匯出能抓到 548 處），不是「壞掉所以沒掃到」。
+
+## 絕對路徑的遮蔽
+
+2026-11-23 的 review 指出：紀錄裡有大量 `/Users/<使用者名稱>/…` 絕對路徑。repo 是公開的，
+不適合帶著本機使用者名稱。匯出工具現在會把：
+
+| 原始                                            | 匯出後             |
+| ----------------------------------------------- | ------------------ |
+| `/Users/<名稱>/Answering-System_speckit/docs/…` | `<repo>/docs/…`    |
+| `/Users/<名稱>/Desktop/…`                       | `<home>/Desktop/…` |
+| `C:\Users\<名稱>\…`                             | `<home>\…`         |
+
+相對路徑（`docs/…`）不動。目前 73 個匯出檔中：`<repo>` 出現 388 處、`<home>/` 162 處、
+殘留的 `/Users/` **0 處**。
 
 ## 檔名撞名
 

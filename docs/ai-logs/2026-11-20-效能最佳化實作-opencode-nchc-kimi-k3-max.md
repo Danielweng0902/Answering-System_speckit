@@ -255,7 +255,7 @@ E2E 重繪了原本就追蹤的示範 PNG／下載檔，這些不是我的效能
 - Commit 範圍：`b6170ba..394eba9`
 - Commit：`394eba9 perf(server): 減少快照重複讀取`
 - 工作樹：乾淨
-- 報告：[docs/verification/perf-optimization-2026-11-20.md](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-f52179d0-4eed77f03d90a5e6/docs/verification/perf-optimization-2026-11-20.md)
+- 報告：[docs/verification/perf-optimization-2026-11-20.md](<home>/.t3/worktrees/Answering-System_speckit/t3-f52179d0-4eed77f03d90a5e6/docs/verification/perf-optimization-2026-11-20.md)
 
 ## 基準前後
 

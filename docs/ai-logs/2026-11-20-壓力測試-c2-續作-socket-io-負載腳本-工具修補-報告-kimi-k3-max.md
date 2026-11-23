@@ -16,7 +16,7 @@
 
 ## 背景：上一輪（同一個目標）被中斷了，但檔案已經寫好
 上一輪的工作留在這個 worktree（未 commit）：
-  /Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-f02736c3-eb02271dcc47ade7
+  <home>/.t3/worktrees/Answering-System_speckit/t3-f02736c3-eb02271dcc47ade7
 其中已新增（未 commit）：e2e/load/socket.mjs、e2e/load/lib/socketLoad.mjs、e2e/load/tests/socketLoad.test.mjs，
 並修改了 e2e/load/lib/server.mjs。
 
@@ -174,24 +174,24 @@ staged 16 個檔案的憑證掃描、`git diff --check` 與最後一次完整 `n
    全部為新增；未修改 `server/src`、`web/src`、`shared/src` 或既有 E2E 測試。
 
    - 文件與實測證據：
-     - [load-test-2026-11-21.md](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21.md)
-     - [http-medium.json](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21/http-medium.json)
-     - [socket-medium-websocket.json](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21/socket-medium-websocket.json)
-     - [socket-medium-polling.json](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21/socket-medium-polling.json)
+     - [load-test-2026-11-21.md](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21.md)
+     - [http-medium.json](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21/http-medium.json)
+     - [socket-medium-websocket.json](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21/socket-medium-websocket.json)
+     - [socket-medium-polling.json](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/docs/verification/load-test-2026-11-21/socket-medium-polling.json)
    - 負載工具：
-     - [README.md](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/README.md)
-     - [http.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/http.mjs)
-     - [socket.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/socket.mjs)
-     - [httpClient.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/httpClient.mjs)
-     - [measure.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/measure.mjs)
-     - [server.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/server.mjs)
-     - [socketLoad.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/socketLoad.mjs)
-     - [socketSetup.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/socketSetup.mjs)
-     - [targetSafety.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/targetSafety.mjs)
+     - [README.md](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/README.md)
+     - [http.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/http.mjs)
+     - [socket.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/socket.mjs)
+     - [httpClient.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/httpClient.mjs)
+     - [measure.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/measure.mjs)
+     - [server.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/server.mjs)
+     - [socketLoad.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/socketLoad.mjs)
+     - [socketSetup.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/socketSetup.mjs)
+     - [targetSafety.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/lib/targetSafety.mjs)
    - 測試：
-     - [measure.test.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/tests/measure.test.mjs)
-     - [socketLoad.test.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/tests/socketLoad.test.mjs)
-     - [toolSafety.test.mjs](/Users/Pig0902/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/tests/toolSafety.test.mjs)
+     - [measure.test.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/tests/measure.test.mjs)
+     - [socketLoad.test.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/tests/socketLoad.test.mjs)
+     - [toolSafety.test.mjs](<home>/.t3/worktrees/Answering-System_speckit/t3-b5b0d876-bd754b4f477c410b/e2e/load/tests/toolSafety.test.mjs)
 
 3. **測試結果**
    - `node --test 'e2e/load/tests/*.mjs'`：**25 passed / 0 failed**

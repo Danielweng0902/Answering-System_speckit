@@ -20,8 +20,8 @@ You are a research worker. Do the work yourself; do not spawn or delegate to oth
 A 4-person student team is split into two subgroups for a software-engineering final project ("Vibe Coding 課堂搶答系統", a classroom buzz-in answering system): the SpecKit subgroup (us) and the OpenSpec subgroup. The course rule says both subgroups' systems must have IDENTICAL functionality, and any change during implementation must be discussed with the other subgroup. The TAs grade OpenSpec artifacts (proposal, spec, design, tasks) and SpecKit artifacts (constitution, spec, plan, tasks, diagrams). We need a precise digest of the course's tutorial material so we can (a) follow the course's expected workflow exactly and (b) design a coordination protocol between the two subgroups.
 
 ## Inputs (all local, read-only)
-- Extracted text (thin, because the slides are mostly screenshots): `/Users/Pig0902/Answering-System_speckit/_research/raw/OpenSpec_簡易小投票器_一次完成_完整教學.txt`, `/Users/Pig0902/Answering-System_speckit/_research/raw/OpenSpec開發簡易流程圖.txt`, `/Users/Pig0902/Answering-System_speckit/_research/raw/SpecKit 教學.txt`
-- Page images (read them with your image-capable read tool; they hold the real content): `/Users/Pig0902/Answering-System_speckit/_research/raw/png/OpenSpec_簡易小投票器_一次完成_完整教學/p01.png` … `p33.png`, `/Users/Pig0902/Answering-System_speckit/_research/raw/png/OpenSpec開發簡易流程圖/p01.png`, `/Users/Pig0902/Answering-System_speckit/_research/raw/png/SpecKit 教學/p01.png` … `p22.png`
+- Extracted text (thin, because the slides are mostly screenshots): `<repo>/_research/raw/OpenSpec_簡易小投票器_一次完成_完整教學.txt`, `<repo>/_research/raw/OpenSpec開發簡易流程圖.txt`, `<repo>/_research/raw/SpecKit 教學.txt`
+- Page images (read them with your image-capable read tool; they hold the real content): `<repo>/_research/raw/png/OpenSpec_簡易小投票器_一次完成_完整教學/p01.png` … `p33.png`, `<repo>/_research/raw/png/OpenSpec開發簡易流程圖/p01.png`, `<repo>/_research/raw/png/SpecKit 教學/p01.png` … `p22.png`
 
 ## Tasks
 1. OpenSpec tutorial (33 pages): step-by-step digest of the workflow: install, `openspec init` options, config profile/update, explore → propose → apply → verify → sync → archive, and "固化規則" (openspec/config.yaml). For each step give: the exact command or prompt shown, what the AI produces (file paths such as openspec/changes/<name>/proposal.md, design.md, tasks.md, specs/...), and any tip or warning on the slide. Note the example prompts used for the lunch-voting app.
@@ -30,7 +30,7 @@ A 4-person student team is split into two subgroups for a software-engineering f
 4. Alignment analysis: build a table mapping OpenSpec artifacts ↔ SpecKit artifacts (proposal ↔ ?, spec ↔ spec, design ↔ plan/diagrams, tasks ↔ tasks, verify ↔ analyze/converge, archive ↔ ?). Then list concrete "alignment points" the two subgroups must agree on BEFORE writing specs so that both systems end up functionally identical (for example: shared feature list and scope of optional features, user roles and login method, activity phases/state machine, the buzz-in winner rule, Guided Notes import/export behaviour, CSV columns, UI flow for the demo video). Mark which items come directly from the slides and which are your own suggestions.
 
 ## ② Acceptance criteria
-- Report file `/Users/Pig0902/Answering-System_speckit/_research/W4-course-tutorials.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, sections 1–4.
+- Report file `<repo>/_research/W4-course-tutorials.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, sections 1–4.
 - Every item from the slides cites its page (e.g. `[OpenSpec p12]`, `[SpecKit p11]`). Anything unreadable is marked `UNREADABLE` instead of guessed.
 
 ## ③ Report format (your final message, keep it short)
@@ -50,7 +50,7 @@ A 4-person student team is split into two subgroups for a software-engineering f
 
 結果 TLDR: 已完成 56 頁課程教材研究，並整理出 OpenSpec／SpecKit workflow、artifact 對照與兩組事前協調協定。
 
-報告路徑: `/Users/Pig0902/Answering-System_speckit/_research/W4-course-tutorials.md`
+報告路徑: `<repo>/_research/W4-course-tutorials.md`
 
 五個最重要發現:
 - OpenSpec 主線是 install → init → explore → propose → apply → verify → sync → archive → 固化規則；`Sync` 與 `Archive` 是不同動作，不能混同。

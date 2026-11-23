@@ -14,7 +14,7 @@
 
 Act as the research sub-agent for this task.
 
-工作目錄 /Users/Pig0902/Answering-System_speckit。你是 GLM-5.3-max，做 004（匯出）plan 階段的**技術可行性實驗**。這是只讀研究任務，但允許你在暫存目錄建立實驗腳本。
+工作目錄 <repo>。你是 GLM-5.3-max，做 004（匯出）plan 階段的**技術可行性實驗**。這是只讀研究任務，但允許你在暫存目錄建立實驗腳本。
 
 限制：
 - 不得修改 repo 內任何檔案（不得改 server/、web/、shared/、specs/、docs/、fixtures/、package.json）。

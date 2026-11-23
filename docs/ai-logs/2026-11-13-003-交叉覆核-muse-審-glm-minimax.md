@@ -14,7 +14,7 @@
 
 Act as the review sub-agent for this task.
 
-工作目錄 /Users/Pig0902/Answering-System_speckit（003-buzz-in；HEAD ee6326e＋未提交 T059-T061 修正）。你是交叉覆核 worker：不得不委派；不得修改工作區；不得執行 git 寫入；不得安裝套件；不要讀 .env/金鑰。你現在必須只針對另外兩份報告的主張逐項裁定，不能另立無關項目。對每個主張明確回覆 ACCEPT／REJECT／PARTIAL／UNVERIFIABLE，附檔案:行號、最小證據（讀碼或現有測試）與修正優先級。工具受限時回 UNVERIFIABLE，不得把未知當 bug。輸出以「## 交叉覆核結論」開頭，1000 字內；T052 人工驗證未完成，不得冒充。
+工作目錄 <repo>（003-buzz-in；HEAD ee6326e＋未提交 T059-T061 修正）。你是交叉覆核 worker：不得不委派；不得修改工作區；不得執行 git 寫入；不得安裝套件；不要讀 .env/金鑰。你現在必須只針對另外兩份報告的主張逐項裁定，不能另立無關項目。對每個主張明確回覆 ACCEPT／REJECT／PARTIAL／UNVERIFIABLE，附檔案:行號、最小證據（讀碼或現有測試）與修正優先級。工具受限時回 UNVERIFIABLE，不得把未知當 bug。輸出以「## 交叉覆核結論」開頭，1000 字內；T052 人工驗證未完成，不得冒充。
 你要覆核其他兩份：
 GLM 報告主張：
 G1 T060 基本成立：use-case COMMIT 後 broadcast 拋例時原 ack 恰一次、socket 存活、log 只含事件名；定向不會退化成全域；errorHandling.test 4/4。G2 use-case 例外仍不送 ack，前端 10 秒逾時，草稿只在 ok 後刪除。G3 T059 修正在同一題補空字串，不跨題/跨組覆蓋，invalid persisted value 不會放行。G4 換組/token 是需人決策的規格洞：新 token 不使舊 token 失效；003 未定義活動中換組，且新進場不能與換組混為一談。G5 推測性低風險：broadcaster.ts 迴圈中任一 socket 的 createSnapshot 拋例可能中止之后的連線廣播，無重試；建議 per-socket try/catch。

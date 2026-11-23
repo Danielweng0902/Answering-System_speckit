@@ -28,10 +28,10 @@ The graders check these Spec Kit artifacts: constitution, spec, plan, tasks, and
 2. Commands & integrations: from the official docs (start at https://github.github.com/spec-kit/quickstart.html and https://github.github.com/spec-kit/reference/integrations.html, follow links within https://github.github.com/spec-kit/ ) and the repo README: list EVERY command with a one-line purpose (constitution, specify, clarify, plan, tasks, analyze, checklist, implement, converge, taskstoissues, or whatever exists now). List supported `--integration` values and how commands are invoked in each (e.g. `/speckit.plan` slash command in Claude Code vs `$speckit-plan` skill in Codex). List `specify init` options (`specify init --help`).
 3. Multi-feature mechanics: how a new feature directory/branch is created (e.g. specs/NNN-name/ and git branch), what `.specify/feature.json` contains and how it is updated/switched, how two people can develop two features in parallel on separate git branches, and which files are likely merge-conflict hotspots.
 4. Extension points: constitution, `.specify/templates/*`, any extension / preset / hook system (e.g. `specify extension ...`), and how one would enforce a custom rule such as "during the specify phase, generate PlantUML component/class/sequence diagrams into ./diagrams/ and render them to PNG". Mention any community extensions relevant to UML/diagrams, verification, or bridging to obra/superpowers skills, with links.
-5. Hands-on check: create fresh temp dirs with `mktemp -d /tmp/speckit-try.XXXX` (NEVER inside /Users/Pig0902/Answering-System_speckit). In one: `git init` then `specify init --here --integration claude --script sh` (add `--ignore-agent-tools` and answer prompts non-interactively, e.g. `yes | ...` or a `--force` flag if it exists). Record the generated file tree (`find . -maxdepth 4 -not -path './.git/*' | sort`) and the list of generated commands/skills. Repeat with `--integration codex` and `--integration opencode` in separate temp dirs if supported. Record exact error output if something fails.
+5. Hands-on check: create fresh temp dirs with `mktemp -d /tmp/speckit-try.XXXX` (NEVER inside <repo>). In one: `git init` then `specify init --here --integration claude --script sh` (add `--ignore-agent-tools` and answer prompts non-interactively, e.g. `yes | ...` or a `--force` flag if it exists). Record the generated file tree (`find . -maxdepth 4 -not -path './.git/*' | sort`) and the list of generated commands/skills. Repeat with `--integration codex` and `--integration opencode` in separate temp dirs if supported. Record exact error output if something fails.
 
 ## ② Acceptance criteria
-- Report file `/Users/Pig0902/Answering-System_speckit/_research/W1-speckit.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, with sections 1–5 above.
+- Report file `<repo>/_research/W1-speckit.md` exists, written in Traditional Chinese (zh-TW) with English technical terms, with sections 1–5 above.
 - Every factual claim is tagged with its source: a URL, or `local: <command>`. Anything you could not verify is marked `UNVERIFIED`. Do not invent command names or flags.
 - Section 5 contains the real file trees from the commands you ran (trim to the relevant parts if very long).
 
@@ -42,8 +42,8 @@ The graders check these Spec Kit artifacts: constitution, spec, plan, tasks, and
 未驗證/風險: <bullets, or 無 + reason>
 
 ## ④ Scope / ⑤ Non-goals / ⑥ Allowed paths / ⑦ Stop conditions
-- Write ONLY `/Users/Pig0902/Answering-System_speckit/_research/W1-speckit.md` plus temp dirs under /tmp.
-- Do NOT modify anything else in /Users/Pig0902/Answering-System_speckit; do not touch ~/.claude, ~/.codex, ~/.config or any global config; do not run `uv tool upgrade`/install; do not create GitHub repos, commits, issues or PRs.
+- Write ONLY `<repo>/_research/W1-speckit.md` plus temp dirs under /tmp.
+- Do NOT modify anything else in <repo>; do not touch ~/.claude, ~/.codex, ~/.config or any global config; do not run `uv tool upgrade`/install; do not create GitHub repos, commits, issues or PRs.
 - If a command needs credentials or would change global state, skip it and note that in the report.
 
 ## 助理
@@ -70,7 +70,7 @@ All verification complete. One final local check (PlantUML availability for the 
 
 結果 TLDR: Spec Kit 已完成核心驗證——本機 1.2.1 實測三種 integration 的 init／feature 建立／git extension 安裝全部成功，課程講義的 `feature.json` 提醒完全正確（它是 per-checkout 指標、已被 gitignore、branch 生成交給 opt-in `git` extension），但 **1.3.0 起 `taskstoissues` 已移出 core**、最新版已 1.3.3，PlantUML 強制產圖需自訂 preset/extension hook 且本機無 plantuml 需另行安裝。
 
-報告路徑: `/Users/Pig0902/Answering-System_speckit/_research/W1-speckit.md`
+報告路徑: `<repo>/_research/W1-speckit.md`
 
 五個最重要發現:
 - **版本差異**：本機 1.2.1，最新 v1.3.3（2026-11-09）；1.3.0 起 core 移除 `/speckit.taskstoissues`，改用 bundled `github` extension，但 1.2.1 init 三種 agent 都仍產生該指令。【releases + local 檔案樹】

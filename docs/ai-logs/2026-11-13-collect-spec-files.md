@@ -12,7 +12,7 @@
 
 ## 使用者
 
-Read files and output them. For each file path, use your filesystem read tool to return contents. Files: /Users/Pig0902/Answering-System_speckit/specs/003-buzz-in/plan.md, /Users/Pig0902/Answering-System_speckit/specs/003-buzz-in/data-model.md, /Users/Pig0902/Answering-System_speckit/specs/003-buzz-in/contracts/socket-events.md, /Users/Pig0902/Answering-System_speckit/specs/003-buzz-in/quickstart.md
+Read files and output them. For each file path, use your filesystem read tool to return contents. Files: <repo>/specs/003-buzz-in/plan.md, <repo>/specs/003-buzz-in/data-model.md, <repo>/specs/003-buzz-in/contracts/socket-events.md, <repo>/specs/003-buzz-in/quickstart.md
 
 ## 助理
 

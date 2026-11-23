@@ -1,4 +1,4 @@
-# 在 /Users/Pig0902/Answering-System_speckit 執行 npm test --workspace ser...
+# 在 <repo> 執行 npm test --workspace ser...
 
 - session id：`ses_e29bb70e2ffe7BRVYGzFj60FcP`
 - 日期：2026-11-13
@@ -12,7 +12,7 @@
 
 ## 使用者
 
-在 /Users/Pig0902/Answering-System_speckit 執行 npm test --workspace server，只讀，回報輸出
+在 <repo> 執行 npm test --workspace server，只讀，回報輸出
 
 ## 助理
 
@@ -29,7 +29,7 @@
 **指令：**
 ```
 npm test --workspace server
-Workdir: /Users/Pig0902/Answering-System_speckit
+Workdir: <repo>
 ```
 
 **輸出：**
@@ -38,7 +38,7 @@ Workdir: /Users/Pig0902/Answering-System_speckit
 > vitest run --passWithNoTests
 
 
- RUN  v4.1.12 /Users/Pig0902/Answering-System_speckit/server
+ RUN  v4.1.12 <repo>/server
 
 
  Test Files  35 passed (35)

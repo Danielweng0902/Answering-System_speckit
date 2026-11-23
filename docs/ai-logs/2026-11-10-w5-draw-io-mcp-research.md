@@ -26,7 +26,7 @@ A student team builds a course project with GitHub Spec Kit. The course REQUIRES
 4. Recommendation: given PlantUML stays the graded source for the three required diagram types, propose 2 options for adding draw.io (for example: draw.io for an extra hand-editable architecture/UI-flow/state diagram; or keeping a `.drawio` twin of each PlantUML diagram) with the cost and the drift risk of each, and say which you would pick for a 2-person team with 19 days.
 
 ## Acceptance criteria
-- Report at `/Users/Pig0902/Answering-System_speckit/_research/W5-drawio.md`, written in Traditional Chinese (zh-TW) with English technical terms, sections 1–4, every factual claim citing a URL or `local: <command>`.
+- Report at `<repo>/_research/W5-drawio.md`, written in Traditional Chinese (zh-TW) with English technical terms, sections 1–4, every factual claim citing a URL or `local: <command>`.
 - Do not invent repo names, tool names or flags.
 
 ## Final message format (short)
@@ -36,7 +36,7 @@ A student team builds a course project with GitHub Spec Kit. The course REQUIRES
 未驗證/風險: <bullets>
 
 ## Limits
-- Write ONLY that report file (plus temp dirs under /tmp made with mktemp). Do not install anything globally, do not modify any config in ~/, do not add MCP servers to any config, do not touch other files in /Users/Pig0902/Answering-System_speckit, no repos/commits/PRs.
+- Write ONLY that report file (plus temp dirs under /tmp made with mktemp). Do not install anything globally, do not modify any config in ~/, do not add MCP servers to any config, do not touch other files in <repo>, no repos/commits/PRs.
 
 ## 助理
 

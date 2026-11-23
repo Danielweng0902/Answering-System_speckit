@@ -17,17 +17,17 @@ Act as the implementation sub-agent for this task.
 You are an implementation worker. Do the work yourself; do not spawn or delegate to other agents. A previous worker stopped after step 1 of this job; finish it. Do NOT end your turn until the acceptance command passes.
 
 ## State right now
-In `/Users/Pig0902/Answering-System_speckit/fixtures/guided-notes/` there are only `expected.json` and `_build/verify_fixtures.py` (an independent structural parser that compares each fixture to `expected.json`). Running `python3 -I fixtures/guided-notes/_build/verify_fixtures.py` from `/Users/Pig0902/Answering-System_speckit` currently prints 8 FAIL lines "fixture file not found". Read both files first; keep them unless they are wrong, and fix them if they disagree with the spec below.
+In `<repo>/fixtures/guided-notes/` there are only `expected.json` and `_build/verify_fixtures.py` (an independent structural parser that compares each fixture to `expected.json`). Running `python3 -I fixtures/guided-notes/_build/verify_fixtures.py` from `<repo>` currently prints 8 FAIL lines "fixture file not found". Read both files first; keep them unless they are wrong, and fix them if they disagree with the spec below.
 
 ## Goal & Why
 A course project (classroom buzz-in answering system) must import "Guided Notes" spreadsheets and write the winning answers back into the answer blanks. The TA will test with a DIFFERENT sheet than the samples, so cell positions must never be hard-coded. These fixtures exercise a parser that locates things by structure.
 
 ## Inputs (read-only, the TA's official samples — highest-priority reference)
-- `/Users/Pig0902/Answering-System_speckit/docs/軟工期末專案_單題_範例.xlsx`
-- `/Users/Pig0902/Answering-System_speckit/docs/軟工期末專案_題組_範例.xlsx`
+- `<repo>/docs/軟工期末專案_單題_範例.xlsx`
+- `<repo>/docs/軟工期末專案_題組_範例.xlsx`
 Structure (verify with openpyxl): one sheet `學習單`; title in B2 (merged B2:H2); header row 4 with B4 `題號`, C4:F4 `題目`, G4:H4 `作答`; numeric question numbers in column B; a single question's answer blank is the merged G:H cell on its row (empty); a question GROUP has its 題號 cell merged vertically over its sub-question rows (e.g. B5:B6) and each sub-row has its own answer cell in G pre-filled with a prefix `（1）`, `（2）`; blank spacer rows between questions.
 
-## Deliverables (write ONLY under `/Users/Pig0902/Answering-System_speckit/fixtures/guided-notes/`)
+## Deliverables (write ONLY under `<repo>/fixtures/guided-notes/`)
 1. `01-official-single.xlsx`, `02-official-group.xlsx`: byte-for-byte copies of the two TA samples (`cp`).
 2. `03-shifted-layout.xlsx`: same visual style (fonts, borders, merge pattern, column widths where practical) but different layout: extra instruction row/column so the header row is NOT row 4 and 題號 is NOT column B; different title; 8 questions with original short-answer computer-science questions in Traditional Chinese; different number of spacer rows.
 3. `04-mixed-groups.xlsx`: at least 7 question numbers of which 3 are groups, one group with THREE sub-questions (`（1）`,`（2）`,`（3）`), groups and singles interleaved, answer column merged over a different width than the samples.
@@ -38,7 +38,7 @@ Structure (verify with openpyxl): one sheet `學習單`; title in B2 (merged B2:
 8. `_build/make_fixtures.py`: openpyxl script that generates 03–05 and 90–92 (deterministic, re-runnable). `_build/verify_fixtures.py`: must not hard-code coordinates.
 
 ## Acceptance (run these yourself and paste the REAL output in your final message)
-- `cd /Users/Pig0902/Answering-System_speckit && cmp docs/軟工期末專案_單題_範例.xlsx fixtures/guided-notes/01-official-single.xlsx && cmp docs/軟工期末專案_題組_範例.xlsx fixtures/guided-notes/02-official-group.xlsx && echo IDENTICAL`
+- `cd <repo> && cmp docs/軟工期末專案_單題_範例.xlsx fixtures/guided-notes/01-official-single.xlsx && cmp docs/軟工期末專案_題組_範例.xlsx fixtures/guided-notes/02-official-group.xlsx && echo IDENTICAL`
 - `python3 -I fixtures/guided-notes/_build/verify_fixtures.py` prints PASS for all 8 files and exits 0.
 - expected.json: 01 has 6 questions / 6 blanks; 02 has 4 questions / 6 blanks.
 - No answers filled in; all short-answer. System `python3` with openpyxl 3.0.10 only; no new packages.
@@ -92,7 +92,7 @@ No application code, nothing outside `fixtures/guided-notes/`, do not modify `do
 證據:
 
 ```bash
-cd /Users/Pig0902/Answering-System_speckit && cmp docs/軟工期末專案_單題_範例.xlsx fixtures/guided-notes/01-official-single.xlsx && cmp docs/軟工期末專案_題組_範例.xlsx fixtures/guided-notes/02-official-group.xlsx && echo IDENTICAL
+cd <repo> && cmp docs/軟工期末專案_單題_範例.xlsx fixtures/guided-notes/01-official-single.xlsx && cmp docs/軟工期末專案_題組_範例.xlsx fixtures/guided-notes/02-official-group.xlsx && echo IDENTICAL
 ```
 
 ```text
@@ -100,7 +100,7 @@ IDENTICAL
 ```
 
 ```bash
-cd /Users/Pig0902/Answering-System_speckit && python3 -I fixtures/guided-notes/_build/verify_fixtures.py
+cd <repo> && python3 -I fixtures/guided-notes/_build/verify_fixtures.py
 ```
 
 ```text
