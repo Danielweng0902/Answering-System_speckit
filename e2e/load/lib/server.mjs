@@ -177,6 +177,12 @@ export async function startServer(options = {}) {
       NODE_ENV: 'production',
       DATA_DIR: dataDir,
       PORT: '0',
+      // 壓測伺服器只綁 loopback（B4）。
+      //
+      // 產品端預設綁「所有介面」（課堂內學生要連得到），但壓測期間
+      // 這台機器不需要被同網段的任何人連到 —— 反而是量測時被打到
+      // 會污染結果。managed 模式只在本機量測，所以明確綁 127.0.0.1。
+      HOST: '127.0.0.1',
       TEACHER_PASSWORD: teacherPassword,
       // 壓測工具量的是**伺服器本身的容量**，不是速率限制的行為：它會用單一
       // 來源送出上萬次 join，會把正常的進場節流（預設 burst 600／分鐘 30）
