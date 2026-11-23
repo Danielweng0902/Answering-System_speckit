@@ -48,7 +48,7 @@
 | D11 | 匯入 | 貼 Google Sheets 連結或上傳 xlsx；依表頭「題號／題目／作答」與合併範圍辨識題目與空格；匯入後顯示摘要讓老師確認 | `server/src/app/importService.ts`、`server/src/domain/importValidator.ts` | 002 |
 | D15 | 倒數計時 | 老師開啟時可選是否設定時間；範圍 10 秒～60 分鐘；時間到自動結束 | `server/src/app/countdown.ts`、`server/src/app/activityCommands.ts` | 001 |
 | D17 | 組別建立 | 老師在準備階段設定組數與組名（可新增／改名／刪除）| `server/src/app/groupCommands.ts` | 001 |
-| **D18** | **老師身分** | **老師端需要密碼才能進入**（密碼由環境變數 `TEACHER_PASSWORD` 設定）；**登入狀態存 HttpOnly cookie**（頁面 JS 讀不到）、可登出、**伺服器重啟後須重新登入**；未登入呼叫老師端點回 **401 `TEACHER_AUTH_REQUIRED`** | `server/src/infra/http/authRoutes.ts`、`server/src/infra/http/teacherSession.ts` | 001 |
+| **D18** | **老師身分** | **老師端需要密碼才能進入**（密碼由環境變數 `TEACHER_PASSWORD` 設定）；**登入狀態存 HttpOnly cookie**（`HttpOnly; SameSite=Strict; Path=/`，不設 `Max-Age`、不設 `Secure`；頁面 JS 讀不到）、可登出、**伺服器重啟後須重新登入**；未登入呼叫老師端點回 **401 `TEACHER_AUTH_REQUIRED`** | `server/src/infra/http/authRoutes.ts`、`server/src/infra/http/teacherSession.ts` | 001 |
 | D19 | 重設活動 | 老師可在「已結束」後重設回到「準備中」（需再次確認）；組別保留、本次作答清空 | `server/src/app/activityCommands.ts` | 001 |
 | **D20** | **數量限制** | **組名 1–30 字元且不重複、最多 100 組**；倒數 10 秒～60 分鐘；答案每格 1–200 字元 | `server/src/domain/groupRegistry.ts`、`server/src/app/countdown.ts`、`server/src/domain/answerValidation.ts` | 001／003 |
 | D21 | 換組與重連 | 學生只能在「準備中」換組；重新整理或斷線重連後回到原組別與目前階段 | `server/src/app/studentCommands.ts`、`web/src/features/student/answerDrafts.ts` | 001／003 |

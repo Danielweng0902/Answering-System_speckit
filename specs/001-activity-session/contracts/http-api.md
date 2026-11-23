@@ -8,7 +8,7 @@
 
 - Request: `{ "password": string }`
 - 200: `{ "role": "teacher", "authenticated": true }`，並以 `Set-Cookie` 發出登入狀態
-  （`classroom.teacher.session=<token>; HttpOnly; SameSite=Lax; Path=/`）
+  （`classroom.teacher.session=<token>; HttpOnly; SameSite=Strict; Path=/`，工作階段 cookie、不設 `Secure`）
 - 401 `WRONG_PASSWORD`：密碼錯誤
 - 503 `TEACHER_PASSWORD_NOT_SET`：系統未設定老師密碼
 - 429 `TOO_MANY_ATTEMPTS`：短時間內嘗試太多次
