@@ -48,7 +48,21 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
   }, [editingGroupId, restoreFocusToGroupId]);
 
   const isPreparing = snapshot.phase === 'preparing';
+  /**
+   * 送出期間（isSending）只用 readOnly、不用 disabled。
+   *
+   * 2026-11-23 review（Philip 在 Windows + Chrome 實測）：**真實瀏覽器在已聚焦的
+   * 元素變成 disabled 時，會把焦點移到 `<body>`**。所以送出期間把輸入框 disabled
+   * 的話，回覆失敗、輸入框恢復可用時，焦點已經掉了，使用者按 Tab 也回不到輸入框。
+   *
+   * readOnly 仍然不能修改內容，但不會失去焦點 → 失敗後可以直接繼續改。
+   * （jsdom 不會在 disabled 時移走焦點，所以這條只有真實瀏覽器才測得到。）
+   */
   const controlsDisabled = !isPreparing || isSending;
+  /** 送出期間：輸入框改成 readOnly（保住焦點），按鈕維持 disabled。 */
+  const inputReadOnly = isPreparing && isSending;
+
+  const newNameInputRef = useRef<HTMLInputElement>(null);
 
   async function createGroup(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -62,6 +76,8 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
         setNewName('');
       } else {
         setErrorMessage(ack.error.message);
+        // 失敗時把焦點放回輸入框，使用者可以直接改（2026-11-23 review）。
+        newNameInputRef.current?.focus();
       }
     } finally {
       setIsSending(false);
@@ -104,6 +120,8 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
         cancelRename(true);
       } else {
         setErrorMessage(ack.error.message);
+        // 失敗時把焦點放回輸入框，使用者可以直接繼續改（2026-11-23 review）。
+        renameInputRef.current?.focus();
       }
     } finally {
       setIsSending(false);
@@ -154,11 +172,13 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
           </label>
           <input
             id={newNameId}
+            ref={newNameInputRef}
             className={styles.input}
             type="text"
             name="new-group-name"
             value={newName}
-            disabled={controlsDisabled}
+            readOnly={inputReadOnly}
+            disabled={!isPreparing}
             onChange={(event) => {
               setNewName(event.target.value);
             }}
@@ -212,9 +232,18 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                         type="text"
                         name="rename-group-name"
                         value={renameName}
-                        disabled={controlsDisabled}
+                        readOnly={inputReadOnly}
+                        disabled={!isPreparing}
                         onChange={(event) => {
                           setRenameName(event.target.value);
+                        }}
+                        onKeyDown={(event) => {
+                          // Esc 取消改名（2026-11-23 review 的建議）。
+                          // 焦點同樣還給「改名」按鈕，與按「取消」一致。
+                          if (event.key === 'Escape') {
+                            event.preventDefault();
+                            cancelRename(true);
+                          }
                         }}
                       />
                     </div>

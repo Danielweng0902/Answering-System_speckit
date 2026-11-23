@@ -167,4 +167,96 @@ describe('GroupManager 的改名鍵盤焦點（issue #31）', () => {
     await screen.findByRole('alert');
     expect(document.activeElement).toBe(input);
   });
+
+  /**
+   * 2026-11-23 review（Philip 在 Windows + Chrome 實測）：
+   * **真實瀏覽器在已聚焦的元素變成 disabled 時會把焦點移到 `<body>`**。
+   * jsdom 不會做這個動作，所以只靠「焦點還在輸入框」的測試抓不到這個 bug。
+   *
+   * 因此送出期間輸入框必須是 readOnly（不可改但不會失焦），不能是 disabled。
+   */
+  it('送出期間輸入框是 readOnly 而非 disabled（否則真實瀏覽器會把焦點移走）', async () => {
+    let resolveAck: ((ack: Ack) => void) | undefined;
+    vi.mocked(sendCommand).mockReturnValue(
+      new Promise<Ack>((resolve) => {
+        resolveAck = resolve;
+      }),
+    );
+
+    render(<GroupManager snapshot={makeSnapshot()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '改名 第一組' }));
+    const input = (await screen.findByLabelText('組別 第一組 的新名稱')) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '新名字' } });
+    fireEvent.click(screen.getByRole('button', { name: '儲存' }));
+
+    // 送出中：readOnly = true、disabled = false。
+    expect(input.readOnly).toBe(true);
+    expect(input.disabled).toBe(false);
+    // 按鈕維持 disabled（避免重複送出）。
+    expect((screen.getByRole('button', { name: '儲存' }) as HTMLButtonElement).disabled).toBe(true);
+
+    resolveAck?.({ ok: true } as Ack);
+    await waitFor(() => {
+      expect(screen.queryByLabelText('組別 第一組 的新名稱')).toBeNull();
+    });
+  });
+
+  it('新增組別送出失敗時焦點回到新增組別的輸入框', async () => {
+    vi.mocked(sendCommand).mockResolvedValue({
+      ok: false,
+      error: { code: 'GROUP_NAME_DUPLICATE', message: '組名已重複' },
+    } as Ack);
+    render(<GroupManager snapshot={makeSnapshot()} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('新增組別名稱');
+    input.focus();
+    fireEvent.change(input, { target: { value: '第一組' } });
+    fireEvent.click(screen.getByRole('button', { name: '新增組別' }));
+
+    await screen.findByRole('alert');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('新增組別的輸入框在送出期間也是 readOnly 而非 disabled', async () => {
+    let resolveAck: ((ack: Ack) => void) | undefined;
+    vi.mocked(sendCommand).mockReturnValue(
+      new Promise<Ack>((resolve) => {
+        resolveAck = resolve;
+      }),
+    );
+
+    render(<GroupManager snapshot={makeSnapshot()} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('新增組別名稱');
+    fireEvent.change(input, { target: { value: '新組別' } });
+    fireEvent.click(screen.getByRole('button', { name: '新增組別' }));
+
+    expect(input.readOnly).toBe(true);
+    expect(input.disabled).toBe(false);
+    expect((screen.getByRole('button', { name: '新增組別' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+
+    resolveAck?.({ ok: true } as Ack);
+    await waitFor(() => {
+      expect((screen.getByRole('button', { name: '新增組別' }) as HTMLButtonElement).disabled).toBe(
+        false,
+      );
+    });
+  });
+
+  it('改名輸入框按 Esc 會取消，並把焦點還給「改名」按鈕', async () => {
+    render(<GroupManager snapshot={makeSnapshot()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: '改名 第一組' }));
+    const input = await screen.findByLabelText('組別 第一組 的新名稱');
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: '改名 第一組' }));
+    });
+    // 表單已關閉、輸入框不再存在。
+    expect(screen.queryByLabelText('組別 第一組 的新名稱')).toBeNull();
+  });
 });
