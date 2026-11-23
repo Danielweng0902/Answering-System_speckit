@@ -66,7 +66,7 @@ describe('POST /api/teacher/login', () => {
     const setCookie = response.headers.get('set-cookie') ?? '';
     expect(setCookie).toContain(`${TEACHER_SESSION_COOKIE}=`);
     expect(setCookie).toContain('HttpOnly');
-    expect(setCookie).toContain('SameSite=Lax');
+    expect(setCookie).toContain('SameSite=Strict');
   });
 
   it('帶 cookie 連線會拿到老師快照', async () => {

@@ -14,9 +14,12 @@
  *
  * Cookie 屬性：
  * - `HttpOnly`：頁面 JavaScript 讀不到。
- * - `SameSite=Lax`：同源的呼叫一定會帶；從別的網站連過來的 top-level
- *   導覽也會帶（Lax），避免老師從 messenger 的連結點進來就被登出。
+ * - `SameSite=Strict`：同源的呼叫一定會帶；**從別的網站連過來的連結不會帶**
+ *   （跨站導覽時視為未登入，要重新輸入密碼）。2026-11-23 與 OpenSpec 組
+ *   統一成 Strict：兩組的行為一致比較重要，而老師端本來就在自己開的頁面操作。
  * - `Path=/`：老師端與 API 都在同一個來源。
+ * - **不設 `Max-Age`**（session cookie）：關掉瀏覽器就沒有；登出時以
+ *   `Max-Age=0` 清除（與 OpenSpec 組一致）。
  * - 不設 `Secure`：課堂多數是區網 HTTP，設了 Secure cookie 反而會登入不了。
  *   （正式環境要走 HTTPS 時再加。）
  */
@@ -83,7 +86,7 @@ export function setTeacherSessionCookie(
 ): void {
   response.setHeader(
     'Set-Cookie',
-    `${TEACHER_SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/`,
+    `${TEACHER_SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/`,
   );
 }
 
@@ -91,6 +94,6 @@ export function setTeacherSessionCookie(
 export function clearTeacherSessionCookie(response: Response): void {
   response.setHeader(
     'Set-Cookie',
-    `${TEACHER_SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`,
+    `${TEACHER_SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`,
   );
 }
