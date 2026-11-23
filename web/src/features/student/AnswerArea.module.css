@@ -133,7 +133,15 @@
 
 .button {
   justify-self: start;
-  padding: var(--space-3) var(--space-8);
+  /*
+   * 2026-11-23：所有表單控制項統一高度（--control-height = 44px）。
+   * 輸入框與按鈕同一列時才會自然對齊；按鈕只留左右留白。
+   */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 var(--control-padding-inline);
   color: var(--color-paper);
   background: var(--color-ink);
   border: var(--border-width-thin) solid var(--color-ink);

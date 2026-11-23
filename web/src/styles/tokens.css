@@ -106,6 +106,21 @@
    */
   --space-block: 2rem;
 
+  /*
+   * 表單控制項的統一高度（2026-11-23，設計負責人意見）。
+   *
+   * 問題：同一列的輸入框與按鈕高度不一樣（輸入框上下 --space-2、按鈕上下
+   * --space-3），底部對齊時按鈕上緣凸出，看起來沒有對齊；而且按鈕高 50px
+   * 對這一版的視覺來說偏大。
+   *
+   * 2.75rem = 44px，正好是 constitution 原則 VII 要求的點擊目標最小高度
+   * （44×44px）。輸入框與按鈕都用它 → 同一列自然對齊。
+   */
+  --control-height: 2.75rem;
+
+  /* 表單控制項的左右留白（按鈕只留左右，上下由 --control-height 決定） */
+  --control-padding-inline: var(--space-4);
+
   /* 結構 */
   --page-min-height: 100vh;
   --content-max-width: 72rem;
