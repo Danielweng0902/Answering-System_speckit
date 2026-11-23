@@ -138,6 +138,14 @@ describe('組別管理每列的版面（design/DESIGN.md §5）', () => {
     expect(renameForm).toContain('flex: 1 1 100%');
   });
 
+  it('長組名可以斷行，不會把整頁撐寬成水平溢出', () => {
+    const groupHeader = ruleBody(groupManagerCss(), '.groupHeader');
+
+    // 組名最長 30 字；不可斷開的長字串需要能斷行。
+    expect(groupHeader).toContain('overflow-wrap: anywhere');
+    expect(groupHeader).toContain('min-width: 0');
+  });
+
   it('按鈕仍保留 DESIGN.md §5 規定的留白（不能為了密度拿掉）', () => {
     const button = ruleBody(groupManagerCss(), '.button');
 
