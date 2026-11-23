@@ -20,6 +20,13 @@ import console from 'node:console';
 import { startServer } from './lib/server.mjs';
 import { runSocketLoad } from './lib/socketLoad.mjs';
 import { resolveTargetUrl } from './lib/targetSafety.mjs';
+import {
+  assertWithinLimit,
+  MAX_COOLDOWN_SECONDS,
+  MAX_GROUPS,
+  MAX_QUESTIONS,
+  MAX_ROUNDS,
+} from './lib/limits.mjs';
 
 function positiveNumber(value, name, { integer = false, allowZero = false } = {}) {
   const number = Number(value);
@@ -80,6 +87,19 @@ function parseArgs(argv) {
   if (options.groups < 2) {
     throw new Error('公平順位「第二組晚到勝出」需要至少 2 組，請設 --groups 2 以上');
   }
+  // B2：參數本身也要有上限，否則加上 --allow-remote 就等同對外壓測器。
+  // 組數上限對齊 D20 的 100 組課堂上限；題數與輪數留了課堂規模的餘裕。
+  assertWithinLimit('--groups', options.groups, { min: 2, max: MAX_GROUPS, integer: true });
+  assertWithinLimit('--questions', options.questions, {
+    min: 1,
+    max: MAX_QUESTIONS,
+    integer: true,
+  });
+  assertWithinLimit('--rounds', options.rounds, { min: 1, max: MAX_ROUNDS, integer: true });
+  assertWithinLimit('--cooldown-seconds', options.cooldownSeconds, {
+    min: 0,
+    max: MAX_COOLDOWN_SECONDS,
+  });
   if (options.transport !== null && !['websocket', 'polling', 'both'].includes(options.transport)) {
     throw new Error('--transport 需為 websocket、polling 或 both');
   }

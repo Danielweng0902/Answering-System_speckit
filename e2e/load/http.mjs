@@ -23,6 +23,13 @@ import { summarizeSamples } from './lib/measure.mjs';
 import { loginTeacher, createGroupViaTeacherSocket } from './lib/socketSetup.mjs';
 import { createAnswerFlood } from './lib/socketLoad.mjs';
 import { resolveTargetUrl } from './lib/targetSafety.mjs';
+import {
+  assertWithinLimit,
+  MAX_RATE_PER_SECOND,
+  MAX_SECONDS,
+  MAX_STUDENTS,
+  MAX_WARMUP_SECONDS,
+} from './lib/limits.mjs';
 
 const FULL_ROOM_NOTE =
   'health 探測同時以 WebSocket 老師／投影／學生連線進行 answer:submit；背景作答同速率，未用 join 冒充作答壓力';
@@ -56,6 +63,9 @@ function parseArgs(argv) {
       if (!rates.length || rates.some((rate) => !Number.isFinite(rate) || rate <= 0)) {
         throw new Error('--rate 需為正數或以逗號分隔的正數清單');
       }
+      for (const rate of rates) {
+        assertWithinLimit('--rate', rate, { min: 1, max: MAX_RATE_PER_SECOND });
+      }
       options.rates = rates;
     } else if (key === '--url') options.url = value.replace(/\/+$/, '');
     else if (key === '--json') options.jsonPath = value;
@@ -77,6 +87,10 @@ function parseArgs(argv) {
   ) {
     throw new Error('--seconds/--timeout-ms 需為正數，--warmup 不能為負，--students 須為非負整數');
   }
+  // B2：參數本身也要有上限，否則加上 --allow-remote 就等同對外壓測器。
+  assertWithinLimit('--seconds', options.seconds, { min: 1, max: MAX_SECONDS });
+  assertWithinLimit('--warmup', options.warmupSeconds, { min: 0, max: MAX_WARMUP_SECONDS });
+  assertWithinLimit('--students', options.students, { min: 0, max: MAX_STUDENTS, integer: true });
   if (options.url !== null) {
     const target = resolveTargetUrl(options.url, { allowRemote: options.allowRemote });
     options.url = `${target.origin}${target.pathname === '/' ? '' : target.pathname.replace(/\/+$/, '')}`;
