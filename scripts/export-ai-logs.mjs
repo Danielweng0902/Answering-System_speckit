@@ -168,6 +168,9 @@ if (!dryRun) mkdirSync(OUT_DIR, { recursive: true });
 const tmp = mkdtempSync(join(tmpdir(), 'ai-log-export-'));
 let written = 0;
 let totalTurns = 0;
+/** 已用掉的檔名 → session id。用來偵測並避免檔名撞名把紀錄蓋掉。 */
+const usedNames = new Map();
+const collisions = [];
 
 try {
   for (const session of sessions) {
@@ -184,7 +187,20 @@ try {
     const turns = extractConversation(parsed.messages ?? []);
     const info = parsed.info ?? { id: session.id, title: session.title };
     const markdown = redact(formatSession(info, turns));
-    const name = `${String(info.time?.created ? new Date(info.time.created).toISOString().slice(0, 10) : 'undated')}-${slugify(info.title ?? session.id)}.md`;
+    const base = `${String(info.time?.created ? new Date(info.time.created).toISOString().slice(0, 10) : 'undated')}-${slugify(info.title ?? session.id)}`;
+
+    // 檔名撞名會讓後一個 session 覆蓋前一個 → 紀錄遺失。
+    // `opencode session list` 的標題與匯出檔的 `info.title` 不一定相同，
+    // 所以唯一性必須以「實際要寫的檔名」為準來檢查。
+    let name = `${base}.md`;
+    if (usedNames.has(name)) {
+      collisions.push({ name, kept: usedNames.get(name), dropped: info.id });
+      let suffix = 2;
+      while (usedNames.has(`${base}-${suffix}.md`)) suffix += 1;
+      name = `${base}-${suffix}.md`;
+    }
+    usedNames.set(name, info.id);
+
     if (!dryRun) writeFileSync(join(OUT_DIR, name), markdown, 'utf8');
     written += 1;
     totalTurns += turns.length;
@@ -194,6 +210,13 @@ try {
   rmSync(tmp, { recursive: true, force: true });
 }
 
+if (collisions.length > 0) {
+  console.error(`\n⚠ 有 ${collisions.length} 處檔名撞名，已加上序號避免紀錄被覆蓋：`);
+  for (const c of collisions) {
+    console.error(`   ${c.name}：保留 ${c.kept}，另存 ${c.dropped}`);
+  }
+}
+
 console.log(
-  `${dryRun ? '（dry run）將匯出' : '已匯出'} ${written} 個 session，共 ${totalTurns} 輪對話 → ${dryRun ? OUT_DIR : OUT_DIR}`,
+  `${dryRun ? '（dry run）將匯出' : '已匯出'} ${written} 個 session，共 ${totalTurns} 輪對話 → ${OUT_DIR}`,
 );
