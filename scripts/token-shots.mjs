@@ -12,10 +12,12 @@
  *   # 2. 拍攝（50 組 / 100 組兩種規模）
  *   node scripts/token-shots.mjs /tmp/shots-50 base
  *   node scripts/token-shots.mjs /tmp/shots-100 dense
+ *   SHOT_GROUPS=12 node scripts/token-shots.mjs /tmp/shots-12   # 自訂組數
  *
  * 環境變數：
  *   SHOT_BASE     伺服器網址（預設 http://127.0.0.1:3000）
- *   SHOT_PASSWORD 老師密碼（預設讀 .env 的 TEACHER_PASSWORD）
+ *   SHOT_PASSWORD 老師密碼（**必填**，沒有預設值：密碼不進版本控制）
+ *   SHOT_GROUPS   建立的組別數（預設 50；`dense` 情境為 100，D20 的上限）
  *
  * 產生的畫面：
  *   01-teacher-prepared   老師端（準備中，含匯入的題目）
@@ -25,6 +27,11 @@
  *   05-teacher-closed     老師端（已結束）
  *   06-projector-reveal   投影看板（已結束＋全部揭曉）→ 8 公尺判讀用
  *   07-student-results    學生端（結果）
+ *
+ * 量的部分（會把數字印出來，讓截圖的結論有可重現的依據）：
+ *   - 老師端各區塊之間的間距（--space-block 取代 --space-10 的成果）
+ *   - 學生端題目／輸入框／字數計數的字級層級
+ *   - 投影看板的 Q 號／贏家組別／答案的字級（8 公尺判讀用）
  *
  * 註：老師端自 2026-11-22（D18）改用 HttpOnly cookie 認證，所以投影頁
  * 必須在**同一個 browser context** 另開分頁，才能沿用 cookie。
@@ -39,7 +46,7 @@ const BASE = process.env.SHOT_BASE ?? 'http://127.0.0.1:3000';
 const PASSWORD = process.env.SHOT_PASSWORD ?? 'token-demo-pw-2026';
 const outDir = process.argv[2] ?? '/tmp/token-shots';
 const scenario = process.argv[3] ?? 'base';
-const groupCount = scenario === 'dense' ? 100 : 50;
+const groupCount = Number(process.env.SHOT_GROUPS ?? (scenario === 'dense' ? 100 : 50));
 const FIXTURE = join(
   dirname(fileURLToPath(import.meta.url)),
   '../fixtures/guided-notes/01-official-single.xlsx',
@@ -62,6 +69,51 @@ async function shot(page, name) {
   await page.waitForTimeout(500);
   await page.screenshot({ path: join(outDir, `${name}.png`), fullPage: true });
   console.log(`saved ${name}.png`);
+}
+
+/**
+ * 量測指定選擇器的實際字級（computed font-size，px）。
+ *
+ * 為什麼要量：字級調整的成果是「答案從 22px 變 28px」這種數字，
+ * 只看截圖沒辦法證明是哪一個元素、變成多少。用 computed style 量
+ * 才會跟 CSS 註解裡的數字對得起來。
+ */
+async function measureFontSizes(page, selectors) {
+  const result = await page.evaluate((targets) => {
+    const measured = {};
+    for (const [label, selector] of Object.entries(targets)) {
+      const el = document.querySelector(selector);
+      if (el === null) {
+        measured[label] = null;
+        continue;
+      }
+      const style = getComputedStyle(el);
+      measured[label] = {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        lineHeight: style.lineHeight,
+      };
+    }
+    return measured;
+  }, selectors);
+  console.log(`字級量測（${await page.title()}）:`);
+  for (const [label, value] of Object.entries(result)) {
+    console.log(
+      `  ${label}: ${value === null ? '（元素不存在）' : `${value.fontSize} / ${value.lineHeight} / w${value.fontWeight}`}`,
+    );
+  }
+  return result;
+}
+
+/** 量測相鄰兩行的垂直間距（用來證明「區塊間距收緊」）。 */
+async function measureGaps(page, selector) {
+  const gaps = await page.evaluate((sel) => {
+    const nodes = [...document.querySelectorAll(sel)];
+    const tops = nodes.map((node) => Math.round(node.getBoundingClientRect().top));
+    return tops.slice(1).map((top, index) => top - (tops[index] ?? top));
+  }, selector);
+  console.log(`間距量測 ${selector}: ${JSON.stringify(gaps)}`);
+  return gaps;
 }
 
 // ── 老師端：登入並取得 cookie ──
@@ -114,6 +166,9 @@ await teacher.reload();
 await teacher.getByRole('button', { name: '開啟搶答', exact: true }).waitFor();
 await shot(teacher, `01-teacher-prepared-${groupCount}groups`);
 
+// 老師端：區塊之間的間距（--space-block 取代 --space-10 的成果）
+await measureGaps(teacher, '[class*="_section_"]');
+
 // ── 開搶答 ──
 await teacher.getByRole('button', { name: '開啟搶答', exact: true }).click();
 await teacher.getByText('目前階段：搶答中').waitFor();
@@ -128,6 +183,13 @@ await firstGroup.waitFor();
 await firstGroup.click();
 await student.waitForTimeout(900);
 await shot(student, `03-student-open-${groupCount}groups`);
+
+// 學生端：題目 / 輸入框 / 字數計數 三者的字級層級
+await measureFontSizes(student, {
+  題目: '[class*="_questionTitle_"]',
+  輸入框: '[class*="_input_"]',
+  字數計數: '[class*="_counter_"]',
+});
 
 // ── 學生作答（讓揭曉結果有內容）──
 // 用 aria-label 精準定位輸入框；前 3 題各填一個答案 → 揭曉後投影看板
@@ -176,6 +238,13 @@ await teacher.waitForTimeout(1200);
 await projector.reload();
 await projector.waitForTimeout(1500);
 await shot(projector, `06-projector-reveal-${groupCount}groups`);
+
+// 投影看板：8 公尺判讀用的三個關鍵字級
+await measureFontSizes(projector, {
+  'Q 號': '[class*="_revealNumber_"]',
+  贏家組別: '[class*="_revealWinner_"]',
+  答案: '[class*="_revealAnswers_"]',
+});
 
 await student.reload();
 await student.waitForTimeout(1200);
