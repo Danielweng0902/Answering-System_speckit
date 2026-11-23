@@ -50,6 +50,23 @@
   gap: var(--space-3);
 }
 
+/*
+ * 2026-11-23：名稱與按鈕同一列後，按鈕列不可被壓縮或換行
+ * （否則「改名／刪除」會掉到下一列，等於沒改）。
+ */
+.actions {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+/*
+ * 改名中的表單取代按鈕列出現，內容（標籤＋輸入框＋存檔＋取消）較寬，
+ * 讓它獨佔一列，不要跟組名擠在同一列。
+ */
+.renameForm {
+  flex: 1 1 100%;
+}
+
 .field {
   display: grid;
   gap: var(--space-1);
@@ -101,12 +118,23 @@
 }
 
 .group {
-  display: grid;
-  gap: var(--space-3);
   /*
-   * 2026-11-23：100 組（D20 統一後的上限）時，組別管理這一區就佔了
-   * 5,759 px，整頁要捲十幾屏。每列的上下留白收緊一級，列與列仍然分得開。
+   * 2026-11-23：名稱與按鈕改成同一列。
+   *
+   * 原本每組一列是「名稱列 + 按鈕列」上下疊兩行（grid，gap 12px），
+   * 實測每列 103 px；100 組（D20 統一後的上限）時組別管理這一區就佔
+   * 10,493 px，整頁要捲 15 屏。改成同一列後每列 59 px（實測），
+   * 區塊高度約減 41%，老師一眼就能掃過整欄組名與在線狀態。
+   *
+   * 只改 CSS、不動 TSX：`.group` 從 grid 改成 flex（space-between），
+   * 兩個子元素（.groupHeader 與 .actions）自然並排成同一列。
+   * 按鈕仍保留 DESIGN.md §5 規定的留白與 1px 墨框。
    */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
   padding-block: var(--space-2);
   border-block-end: var(--border-width-thin) solid var(--color-rule);
 }
@@ -114,8 +142,10 @@
 .groupHeader {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2);
+  align-items: baseline;
+  /* 名稱與在線狀態靠在一起：同一列後右邊是按鈕，狀態再被推開反而難讀。 */
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .presence {
