@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import JSZip from 'jszip';
 import ExcelJS from 'exceljs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   getWorksheetXml,
   isMergedWithRightCell,
@@ -226,4 +226,27 @@ describe('xlsxEditor（004 Foundational；T002～T005）', () => {
       }
     }
   }, 10_000);
+});
+
+describe('匯出結果可重現（2026-11-23）', () => {
+  it('同一份輸入改同一格，輸出位元組不隨「現在」改變', async () => {
+    // JSZip 在重新加入檔案時若沒指定 date，會用「現在」當 zip 時間戳
+    // （DOS 時間只有 2 秒精度）→ 同一份輸入在不同秒數匯出會得到不同位元組，
+    // 讓「同一場活動匯出兩次內容相同」（AC-004-07）有時失敗。
+    // 這裡把時間往前推五個月，確認輸出位元組完全不變。
+    const original = await fixtureBytes('01-official-single.xlsx');
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      const first = await replaceCellText(original, '學習單', 'G5', '答案一');
+
+      vi.setSystemTime(new Date('2026-06-01T00:00:00.000Z'));
+      const second = await replaceCellText(original, '學習單', 'G5', '答案一');
+
+      expect(Buffer.from(first).equals(Buffer.from(second))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
