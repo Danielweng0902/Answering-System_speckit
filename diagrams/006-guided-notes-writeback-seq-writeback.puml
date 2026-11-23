@@ -5,6 +5,8 @@ actor 老師
 participant "老師端畫面" as T
 participant "匯出路由" as R
 participant "寫回服務" as S
+participant "線上版面讀取" as F
+participant "版面比對" as C
 participant "目標儲存格判定" as G
 participant "服務帳號認證" as A
 participant "Google Sheets API" as P
@@ -18,26 +20,40 @@ else 伺服器沒有服務帳號設定
   R --> T : SHEET_NOT_CONFIGURED（請改用下載 xlsx）
 else 可以寫回
   R -> S : writeBackGuidedNotes()
-  S -> G : 解析要寫的儲存格與內容
-  G --> S : 02 → H5／H6；04 → 合併格；單題 → 原格
-  S -> A : 取得 access token（服務帳號 JWT，快取重用）
-  A --> S : access token
-  S -> P : POST /v4/spreadsheets/{id}/values:batchUpdate\n（只寫值，保留格式）
-  alt 寫入成功
-    P --> S : 200
-    S --> R : 寫入 N 格
-    R --> T : 200 { writtenCells: N }
-    T --> 老師 : 已寫回 N 格答案到 Google 試算表
-  else 沒有編輯權限
-    P --> S : 403
-    S --> R : SHEET_NOT_EDITABLE
-    R --> T : 錯誤訊息（請把試算表共用給服務帳號）
-    T --> 老師 : 顯示原因，並可改用下載 xlsx
-  else 找不到試算表／暫時不可用
-    P --> S : 404／429／5xx
-    S --> R : SHEET_NOT_FOUND／SHEET_UNAVAILABLE
-    R --> T : 錯誤訊息
-    T --> 老師 : 顯示原因，並可改用下載 xlsx
+  S -> F : 讀取線上試算表（xlsx）
+  F -> P : GET /v4/spreadsheets/{id}/export
+  P --> F : 線上試算表內容
+  F --> S : 線上題目（題幹／空格數／前綴／位置）
+  S -> C : 比對匯入時的題目與線上題目
+  C --> S : same／remapped／modified
+  alt 讀不到或解析不出線上試算表
+    S --> R : SHEET_CHECK_FAILED
+    R --> T : 錯誤訊息（請改用下載 xlsx）
+  else 線上題目被改動（modified）
+    S --> R : SHEET_MODIFIED
+    R --> T : 錯誤訊息（題目不一致，請改用下載 xlsx）
+  else 內容相同（same／remapped）
+    S -> G : 解析要寫的儲存格與內容（用線上現在的座標）
+    G --> S : 02 → H5／H6；04 → 合併格；單題 → 原格
+    S -> A : 取得 access token（服務帳號 JWT，快取重用）
+    A --> S : access token
+    S -> P : POST /v4/spreadsheets/{id}/values:batchUpdate\n（只寫值，保留格式）
+    alt 寫入成功
+      P --> S : 200
+      S --> R : 寫入 N 格（remapped = 是否自動對位）
+      R --> T : 200 { writtenCells: N, remapped }
+      T --> 老師 : 已寫回 N 格答案到 Google 試算表\n（remapped 時另提示已對到現在的位置）
+    else 沒有編輯權限
+      P --> S : 403
+      S --> R : SHEET_NOT_EDITABLE
+      R --> T : 錯誤訊息（請把試算表共用給服務帳號）
+      T --> 老師 : 顯示原因，並可改用下載 xlsx
+    else 找不到試算表／暫時不可用
+      P --> S : 404／429／5xx
+      S --> R : SHEET_NOT_FOUND／SHEET_UNAVAILABLE
+      R --> T : 錯誤訊息
+      T --> 老師 : 顯示原因，並可改用下載 xlsx
+    end
   end
 end
 

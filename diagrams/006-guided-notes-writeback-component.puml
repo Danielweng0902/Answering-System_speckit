@@ -6,28 +6,49 @@ actor 老師
 component "老師端畫面\n（寫回按鈕）" as TeacherUI
 component "匯出路由\n(POST /writeback)" as Route
 component "寫回服務\n(Write Back)" as Service
+component "線上版面讀取\n(SheetFetcher)" as Fetcher
 component "目標儲存格判定\n（與 004 共用）" as Targets
+component "版面比對\n(內容＋位置)" as Compare
 component "試算表寫入器\n(SheetWriter)" as Writer
 component "服務帳號認證\n(JWT bearer)" as Auth
-component "Google Sheets API\n(values.batchUpdate)" as Api
+component "Google Sheets API\n(export／values.batchUpdate)" as Api
 
 老師 --> TeacherUI
 TeacherUI --> Route : 按「寫回 Google 試算表」
 Route --> Service : writeBackGuidedNotes()
+Service --> Fetcher : 讀取線上試算表（xlsx）
+Fetcher --> Api : GET /v4/spreadsheets/{id}/export
+Api --> Fetcher : 線上試算表內容
+Fetcher --> Service : 線上題目（题幹／空格／前綴／位置）
+Service --> Compare : 比對匯入時的題目與線上題目
+Compare --> Service : same／remapped／modified
 Service --> Targets : 解析要寫的儲存格與內容
+Targets --> Service : 目標儲存格（用線上現在的座標）
 Service --> Writer : 寫入答案值
 Writer --> Auth : 取得 access token
 Auth --> Writer : access token
 Writer --> Api : POST /v4/spreadsheets/{id}/values:batchUpdate
 Api --> Writer : 成功／錯誤
 Writer --> Service : 失敗時回錯誤代碼
-Service --> Route : 寫入格數或錯誤代碼
+Service --> Route : 寫入格數（含 remapped）或錯誤代碼
 Route --> TeacherUI : 成功訊息／失敗原因與下載備援
 
 note bottom of Service
   只有老師、只有「已結束」階段可以寫回
   匯入來源是上傳的 xlsx 時沒有雲端目標 → 提示改用下載
   本地資料完全不變（唯讀）
+end note
+
+note bottom of Compare
+  **寫回前一定要重新讀取線上試算表並比對**（不信任匯入時的座標）：
+  same     → 內容與位置都相同 → 照原位寫
+  remapped → 內容相同、位置不同（老師插了一列）→ 自動對到線上現在的座標
+  modified → 題幹／空格數／前綴被改，或題目被刪或重排 → **不寫回**
+end note
+
+note bottom of Fetcher
+  讀不到或解析不出 → SHEET_CHECK_FAILED，一樣不寫回
+  （讀不到不代表服務帳號不能寫，但無法確認座標就不冒險覆蓋）
 end note
 
 note bottom of Writer
