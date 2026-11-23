@@ -149,9 +149,13 @@ describe('組別管理每列的版面（design/DESIGN.md §5）', () => {
     expect(groupHeader).toContain('min-width: 0');
   });
 
-  it('按鈕仍保留 DESIGN.md §5 規定的留白（不能為了密度拿掉）', () => {
+  it('按鈕仍保留 DESIGN.md §5 規定的規格（不能為了密度拿掉）', () => {
     const button = ruleBody(groupManagerCss(), '.button');
 
-    expect(button).toContain('padding: var(--space-3) var(--space-6);');
+    // 2026-11-23（DESIGN.md v1.2，設計負責人意見）：按鈕高度統一
+    // --control-height，只留左右留白 —— 這是「留白沒被拿掉」的新寫法，
+    // 不是把留白刪掉。
+    expect(button).toContain('min-height: var(--control-height);');
+    expect(button).toContain('padding: 0 var(--control-padding-inline);');
   });
 });
