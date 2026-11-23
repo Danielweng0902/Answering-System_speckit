@@ -143,7 +143,21 @@ type WorksheetHandle = {
   zip: JSZip;
   path: string;
   xml: string;
+  /**
+   * 原檔每個 zip 項目的時間戳。
+   *
+   * 2026-11-23：JSZip 在重新加入檔案時，會把**資料夾項目**（`xl/`、
+   * `xl/worksheets/`）的時間戳設成「現在」；zip 的 DOS 時間只有 2 秒精度，
+   * 所以同一份輸入在不同的秒數匯出會得到不同的位元組，讓「同一場活動匯出
+   * 兩次內容相同」（AC-004-07）有時會失敗。
+   *
+   * 還原所有項目的原始時間戳，輸出就只取決於輸入 → 匯出結果可重現。
+   */
+  originalDates: Map<string, Date>;
 };
+
+/** 找不到原檔時間戳時的固定值（zip 能表示的最早時間）。 */
+const FALLBACK_ZIP_DATE = new Date('1980-01-01T00:00:00.000Z');
 
 async function openWorksheet(xlsxBytes: Uint8Array, sheetName: string): Promise<WorksheetHandle> {
   const zip = await JSZip.loadAsync(xlsxBytes);
@@ -162,7 +176,11 @@ async function openWorksheet(xlsxBytes: Uint8Array, sheetName: string): Promise<
   if (!sheet) {
     throw new Error(`找不到工作表檔案：${path}`);
   }
-  return { zip, path, xml: await sheet.async('string') };
+  const originalDates = new Map<string, Date>();
+  for (const [name, entry] of Object.entries(zip.files)) {
+    originalDates.set(name, entry.date);
+  }
+  return { zip, path, xml: await sheet.async('string'), originalDates };
 }
 
 /** 供匯出流程一次讀取原檔的 merge range，用來判定右側是否為獨立答案格。 */
@@ -221,8 +239,16 @@ export async function replaceCellText(
   cellCoordinate: string,
   text: string,
 ): Promise<Uint8Array> {
-  const { zip, path, xml } = await openWorksheet(xlsxBytes, sheetName);
+  const { zip, path, xml, originalDates } = await openWorksheet(xlsxBytes, sheetName);
   zip.file(path, setCellText(xml, cellCoordinate, text));
+  // 2026-11-23：還原每個項目的原始時間戳（JSZip 會把資料夾項目設成「現在」），
+  // 讓「同一份輸入 → 同一份位元組」成立（AC-004-07：同一場活動匯出兩次相同）。
+  for (const [name, entry] of Object.entries(zip.files)) {
+    const original = originalDates.get(name);
+    entry.date = original === undefined || Number.isNaN(original.getTime())
+      ? FALLBACK_ZIP_DATE
+      : original;
+  }
   const result = await zip.generateAsync({
     type: 'nodebuffer',
     compression: 'DEFLATE',
