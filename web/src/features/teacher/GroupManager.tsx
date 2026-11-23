@@ -1,6 +1,6 @@
 import { useI18n } from '../../lib/i18n/LanguageProvider';
 import type { TeacherSnapshot } from '@classroom/shared';
-import { useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { sendCommand } from '../../lib/socket';
 import styles from './GroupManager.module.css';
 
@@ -17,6 +17,35 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  /*
+   * 2026-11-23（issue #31）：改名時的鍵盤焦點。
+   *
+   * 原本點「改名」後，含被聚焦按鈕的 `.actions` 會被卸載、改名表單掛上，
+   * 瀏覽器因此把焦點掉回 `<body>` —— 鍵盤使用者接下來按 Tab 會從頁首重新
+   * 開始，螢幕閱讀器使用者也會突然失去上下文。
+   *
+   * 這裡改成：
+   * 1. 進入改名 → 焦點移到改名輸入框並選取原文字（可直接改字）；
+   * 2. 取消或存檔成功 → 焦點回到剛才那一列的「改名」按鈕，位置不跳走。
+   */
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const renameButtonRef = useRef<HTMLButtonElement>(null);
+  // 要把焦點還給哪一組的「改名」按鈕。用 state（不是 ref）→ render 期間可以讀它
+  // 來決定按鈕要不要掛 ref；由 startRename 清掉，所以不需要在 effect 裡 setState。
+  const [restoreFocusToGroupId, setRestoreFocusToGroupId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (editingGroupId !== null) {
+      renameInputRef.current?.focus();
+      renameInputRef.current?.select();
+      return;
+    }
+    if (restoreFocusToGroupId !== null) {
+      // 取消或存檔後，該列的「改名」按鈕已重新掛上 → 把焦點還回去。
+      renameButtonRef.current?.focus();
+    }
+  }, [editingGroupId, restoreFocusToGroupId]);
 
   const isPreparing = snapshot.phase === 'preparing';
   const controlsDisabled = !isPreparing || isSending;
@@ -43,9 +72,18 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
     setErrorMessage(null);
     setEditingGroupId(groupId);
     setRenameName(currentName);
+    // 這次是「進去改名」，不是「從改名出來」→ 不還原焦點到按鈕。
+    setRestoreFocusToGroupId(null);
   }
 
-  function cancelRename(): void {
+  /**
+   * 結束改名。
+   * @param restoreFocus 取消或存檔成功時，把焦點還回該列的「改名」按鈕。
+   */
+  function cancelRename(restoreFocus = false): void {
+    if (restoreFocus && editingGroupId !== null) {
+      setRestoreFocusToGroupId(editingGroupId);
+    }
     setEditingGroupId(null);
     setRenameName('');
   }
@@ -62,7 +100,8 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
       });
 
       if (ack.ok) {
-        cancelRename();
+        // 存檔成功 → 焦點回到「改名」按鈕（按鈕此時才重新出現）。
+        cancelRename(true);
       } else {
         setErrorMessage(ack.error.message);
       }
@@ -168,6 +207,7 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                       </label>
                       <input
                         id={renameNameId}
+                        ref={renameInputRef}
                         className={styles.input}
                         type="text"
                         name="rename-group-name"
@@ -185,7 +225,10 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                       className={styles.button}
                       type="button"
                       disabled={controlsDisabled}
-                      onClick={cancelRename}
+                      onClick={() => {
+                        // 取消 → 焦點還回剛才那一列的「改名」按鈕（issue #31）。
+                        cancelRename(true);
+                      }}
                     >
                       {t('groups.cancel')}
                     </button>
@@ -195,6 +238,9 @@ export function GroupManager({ snapshot }: GroupManagerProps) {
                     <button
                       className={styles.button}
                       type="button"
+                      // 只有「剛才正在改名的那一組」掛 ref —— 取消或存檔後
+                      // 焦點要還回這一列的「改名」按鈕（issue #31）。
+                      ref={group.id === restoreFocusToGroupId ? renameButtonRef : undefined}
                       disabled={controlsDisabled}
                       aria-label={t('groups.renameAria', { name: group.name })}
                       onClick={() => {
