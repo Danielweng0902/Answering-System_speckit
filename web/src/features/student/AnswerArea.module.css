@@ -108,7 +108,7 @@
   border-block-end: var(--border-width-thin) solid var(--color-ink);
   border-radius: 0;
   font-family: var(--font-family-display);
-  font-size: var(--font-size-question);
+  font-size: var(--font-size-input);
 }
 
 .input:disabled {
