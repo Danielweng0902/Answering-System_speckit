@@ -74,3 +74,19 @@
 - **介面呈現**：我們的介面改成「試卷／報紙」風格（視覺正本：[`design/DESIGN.md`](https://github.com/Danielweng0902/Answering-System_speckit/blob/main/design/DESIGN.md)），題號用 Q1／Q2、介面可切繁體中文／English（預設依使用者系統語言）。這些屬於**介面層**，不影響契約行為，但如果你們想對齊風格，可以直接參考那份文件。
 - **契約版本**：你們那邊若有更新（例如 D18／D20 的回覆），請告訴我們，我們同步更新 `FEATURE-CONTRACT.md` 與本表。
 - **我們的 repo**：https://github.com/Danielweng0902/Answering-System_speckit
+
+## 五、資安加固（2026-11-21；要不要對齊請回覆）
+
+這兩項是**部署面的保護**，不影響正常課堂的行為，但會改變「邊界情況」的可見行為，
+所以先講一聲，看你們要不要採同樣的做法：
+
+| # | 項目 | 我們的實際做法 | 實作位置 | 邊界行為 |
+|---|---|---|---|---|
+| S1 | 進場速率限制 | `POST /api/student/join` 加上「爆發額度＋持續速率」的令牌桶：同一來源瞬間可進場 600 次、持續 30 次／分（環境變數可調） | `server/src/infra/http/rateLimiter.ts`、`server/src/infra/http/authRoutes.ts` | 超過時回 429 `TOO_MANY_ATTEMPTS`（沿用既有的錯誤代碼）。門檻遠高於 50 組班級的合法規模，正常上課不會遇到 |
+| S2 | 同時在線連線數上限 | 預設 500 條 Socket.IO 連線；超過上限時**新的**連線在握手階段被拒（HTTP 403），既有連線不受影響 | `server/src/infra/socket/connectionCap.ts` | 客戶端會自動退避重連，名額空出來就能進場。正常上課不會遇到 |
+
+> 為什麼門檻開那麼寬：50 組班級約 200 人，而且雲端部署時**全班共用同一個對外 IP**，
+> 門檻必須容得下整班同時進場，否則會擋掉自己的學生。真正要防的是「持續灌水」，
+> 那是 `JOIN_RATE_LIMIT_PER_MINUTE` 這一側在擋。
+
+說明見 [`docs/deployment.md`](../deployment.md)。

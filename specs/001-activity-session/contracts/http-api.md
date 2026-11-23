@@ -20,6 +20,7 @@
 - Request: `{ "groupId": string }`
 - 200: `{ "token": string, "role": "student", "groupId": string }`
 - 404 `GROUP_NOT_FOUND`：組別不存在
+- 429 `TOO_MANY_ATTEMPTS`：同一來源的進場請求過多（速率限制；門檻可由環境變數調整，預設遠高於一堂課的合法規模）
 - 400 `INVALID_INPUT`
 
 ## GET /api/health

@@ -17,7 +17,7 @@ import {
   exportGuidedNotes,
   exportResultCsv,
 } from '../../app/exportCommands.js';
-import { createAuthRouter } from './authRoutes.js';
+import { createAuthRouter, createJoinRateLimiter } from './authRoutes.js';
 import { createQuestionRouter } from './questionRoutes.js';
 import { createExportRouter } from './exportRoutes.js';
 
@@ -30,6 +30,13 @@ export type HttpAppOptions = {
   teacherPassword?: string | undefined;
   /** 002 匯入服務；未注入時以資料庫建立預設實例（時鐘與 fetch 不可控）。 */
   importService?: ImportService | undefined;
+  /**
+   * 進場請求的速率限制參數（2026-11-21 資安審計 D2-3）。
+   *
+   * burst 是瞬間額度（整班學生同時進場要能通過），perMinute 是持續速率
+   * （持續灌水要被壓住）。任一為 0 即不限制。
+   */
+  joinRateLimit?: { burst: number; perMinute: number } | undefined;
   /**
    * 006：寫回線上 Google 試算表的用處；未注入時該功能回
    * SHEET_NOT_CONFIGURED（伺服器沒有服務帳號設定）。
@@ -88,6 +95,7 @@ export function createApp(options: HttpAppOptions): Express {
       database: options.database,
       getTeacherPassword: () =>
         app.locals.teacherPassword as string | undefined,
+      joinRateLimiter: createJoinRateLimiter(options.joinRateLimit),
     }),
   );
 

@@ -30,6 +30,7 @@ import { list as listQuestions } from './infra/db/questionRepo.js';
 import { openDatabase } from './infra/db/database.js';
 import { createApp } from './infra/http/app.js';
 import { createSocketBroadcaster, type StateBroadcaster } from './infra/socket/broadcaster.js';
+import { createConnectionCap } from './infra/socket/connectionCap.js';
 import { createCommandRouter } from './infra/socket/commandRouter.js';
 
 export type CreateServerOptions = {
@@ -55,6 +56,16 @@ export type CreateServerOptions = {
    * 未注入且沒有設定服務帳號時，該功能回 SHEET_NOT_CONFIGURED。
    */
   sheetWriter?: SheetWriter | null;
+  /**
+   * 同時在線的 Socket.IO 連線數上限；未指定時用環境變數的設定
+   * （MAX_CONNECTIONS，預設 500；0 = 不限制）。測試用小值驗證上限。
+   */
+  maxConnections?: number;
+  /**
+   * 進場請求的速率限制參數；未指定時用環境變數的設定
+   * （JOIN_RATE_LIMIT_BURST / JOIN_RATE_LIMIT_PER_MINUTE）。測試用小值驗證節流。
+   */
+  joinRateLimit?: { burst: number; perMinute: number } | undefined;
 };
 
 export type ServerControl = Pick<StateBroadcaster, 'broadcastState'> & {
@@ -157,6 +168,10 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
       webDistPath: options.webDistPath,
       teacherPassword: options.teacherPassword ?? config.teacherPassword,
       importService,
+      joinRateLimit: options.joinRateLimit ?? {
+        burst: config.joinRateLimitBurst,
+        perMinute: config.joinRateLimitPerMinute,
+      },
       writeBackGuidedNotes: (target: DatabaseSync) =>
         writeBackGuidedNotes(target, sheetWriter, new Date(), {
           // 讀取線上試算表以取得「現在」的座標；測試注入假的 fetch，不連網路。
@@ -164,7 +179,16 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
         }),
     }),
   );
-  const io = new SocketIOServer(httpServer);
+  // 2026-11-21 資安審計 C3：同時在線的連線數上限。在 Engine.IO 握手層
+  // 攔截，被拒的連線不進入 Socket.IO 的連線集合，因此不會被廣播；
+  // 客戶端收到傳輸層錯誤會自動退避重連，名額空出來就能進場。
+  const connectionCap = createConnectionCap({
+    maxConnections: options.maxConnections ?? config.maxConnections,
+  });
+  const io = new SocketIOServer(httpServer, {
+    allowRequest: connectionCap.allowRequest,
+  });
+  connectionCap.attach(io);
   // 2026-11-21 冷啟效能修正 P1：行程內作答索引。廣播改由索引投影老師
   // 看板／結果／進度與學生本組作答，不再每次全場重讀 submissions；
   // 索引由 answer:submit／answer:void 的 COMMIT 後掛鉤增量維護，

@@ -48,6 +48,7 @@ cp .env.example .env        # Windows：copy .env.example .env
 - `.env` 已被 `.gitignore` 排除，**不要 commit、不要貼到群組或 issue**。
 - 沒有設定密碼時，老師端會顯示「系統尚未設定老師密碼」並拒絕登入，這是規格要求的行為。
 - `PORT` 預設 3000；`DATA_DIR` 是 SQLite 資料檔的位置，預設 `./data`（已被 git 排除）。
+- **部署（兩種上課方式、反向代理、連線數與進場限流）見 [`docs/deployment.md`](docs/deployment.md)**。
 
 ## 3. 啟動
 
