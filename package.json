@@ -21,7 +21,7 @@
     "lint": "eslint eslint.config.js shared server web e2e --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run lint && bash scripts/check-diagrams.sh"
+    "check": "npm run typecheck && npm run lint && bash scripts/check-diagrams.sh && node --test 'scripts/tests/*.mjs'"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

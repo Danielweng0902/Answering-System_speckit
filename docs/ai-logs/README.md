@@ -13,14 +13,31 @@
 
 檔名格式：`<日期>-<session 標題>.md`。檔頭有 session id、日期、模型與輪次。
 
-目前 **73 個 session、2,323 輪對話**（實際檔案內容約 1.5 MB）。
+### 兩個來源
+
+| 來源                        | 檔名開頭               | 產出方式                                                | 內容                                                            |
+| --------------------------- | ---------------------- | ------------------------------------------------------- | --------------------------------------------------------------- |
+| **本 thread（SpecKit 組）** | `2026-11-…`            | `scripts/export-ai-logs.mjs` 匯出 opencode session      | 規格、實作、審查、壓測、資安審計等 73 個工作階段                |
+| **Philip（組員）**          | `2026-11-…-philip-NN-` | `scripts/import-ai-logs.mjs` 匯入他用其他工具整理的紀錄 | 他自己的測試與 review 對話 15 個階段（2026-11-09 → 2026-11-23） |
+
+Philip 的紀錄涵蓋：前端設計方向的決定（避免 AI 千篇一律的風格）、002～006 的人工驗證過程、
+前端 UI 分工討論、PR #2～#39 的審查與實機測試、以及 i18n 與效能重構的驗證 ——
+這些是本 thread 看不到的面向，必須一併收錄才算完整的對話紀錄。
+
+目前合計 **88 個 session 檔**（約 1.9 MB）。
 
 ## 怎麼產生的
 
 ```bash
+# 本機 opencode 的 session
 node scripts/export-ai-logs.mjs          # 匯出本專案全部 session
 node scripts/export-ai-logs.mjs --list   # 只列出 session
+
+# 組員用其他工具整理的紀錄
+node scripts/import-ai-logs.mjs <來源資料夾>
 ```
+
+兩個工具**共用同一套遮蔽規則**（`scripts/lib/redact.mjs`），行為一致。
 
 流程：
 
@@ -45,11 +62,18 @@ node scripts/export-ai-logs.mjs --list   # 只列出 session
 | 未遮蔽的原始匯出（單一 session）   | **548 處**（含 7 處 Google 服務帳號私鑰） |
 | 本目錄的匯出結果（全部 73 個檔案） | **0 處**                                  |
 
-替換規則集中在 `scripts/export-ai-logs.mjs` 的 `REDACTIONS`：服務帳號私鑰、Bearer token、
+替換規則集中在 `scripts/lib/redact.mjs` 的 `REDACTIONS`：服務帳號私鑰、Bearer token、
 JWT、GitHub token、AWS key、密碼／憑證關鍵字後的值、看起來像憑證的環境變數指派，
 以及本專案用過的測試密碼值。
 
-掃描器本身也驗證過有效（對未遮蔽的原始匯出能抓到 548 處），不是「壞掉所以沒掃到」。
+**掃描器直接引用同一套規則**（`scripts/scan-ai-log-secrets.mjs`），所以掃描結果就是
+「實際套用遮蔽時會被改動的地方」—— 不會出現「掃描報了但其實沒問題」或反過來的落差。
+（2026-11-23 就發生過：兩套實作各自演化，掃描器把 `SHEET_URL = "貼上你的試算表網址"`
+這種說明文字報成機敏。）
+
+掃描器本身也驗證過有效（對未遮蔽的原始匯出能抓到 548 處、對 Philip 的原始紀錄能抓到 15 處），
+不是「壞掉所以沒掃到」。遮蔽規則的測試在 `scripts/tests/redact.test.mjs`（6 項，已接進
+`npm run check`）。
 
 ## 絕對路徑的遮蔽
 
