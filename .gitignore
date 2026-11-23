@@ -14,7 +14,10 @@ _research/
 
 # 工具與產物
 tools/
-node_modules/
+# 不加尾斜線：尾斜線只忽略「目錄」，而 symlink 對 git 來說是檔案，
+# 會被當成普通檔案 commit 進去（2026-11-23 review 發現 PR #36 誤收了
+# 5 個指向本機絕對路徑的 node_modules symlink）。不加斜線兩種都擋。
+node_modules
 data/
 dist/
 coverage/
