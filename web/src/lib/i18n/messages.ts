@@ -200,6 +200,9 @@ export const zhTW = {
   // ── 老師端 ──────────────────────────────────────────────
   'teacher.title': '老師端',
   'teacher.loginPending': '已送出登入資訊，等待同步老師狀態。',
+  'teacher.logout': '登出',
+  'teacher.passwordNotSet':
+    '伺服器尚未設定老師密碼，請先設定環境變數 TEACHER_PASSWORD 再重新整理本頁。',
   'teacher.exportTitle': '匯出結果',
   'teacher.writeBack': '寫回 Google 試算表',
   'teacher.exportGuided': '匯出 Guided Notes',
@@ -406,6 +409,9 @@ export const en: Messages = {
 
   'teacher.title': 'Teacher',
   'teacher.loginPending': 'Signed in — waiting for the teacher state.',
+  'teacher.logout': 'Sign out',
+  'teacher.passwordNotSet':
+    'The server has no teacher password set yet. Set the TEACHER_PASSWORD environment variable and reload this page.',
   'teacher.exportTitle': 'Export',
   'teacher.writeBack': 'Write back to Google Sheets',
   'teacher.exportGuided': 'Export Guided Notes',

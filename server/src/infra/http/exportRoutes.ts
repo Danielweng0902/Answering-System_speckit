@@ -10,6 +10,7 @@ import {
   authorizeExport,
   type ExportFile,
 } from '../../app/exportCommands.js';
+import { readTeacherToken } from './teacherSession.js';
 
 export type ExportRoutesDependencies = {
   database: DatabaseSync;
@@ -29,7 +30,7 @@ export type ExportRoutesDependencies = {
 };
 
 const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
-  UNAUTHORIZED: 401,
+  TEACHER_AUTH_REQUIRED: 401,
   FORBIDDEN: 403,
   INVALID_PHASE: 409,
   NO_GUIDED_NOTES: 422,
@@ -45,15 +46,6 @@ const ERROR_STATUS: Partial<Record<ErrorCode, number>> = {
   SHEET_CHECK_FAILED: 409,
   SHEET_UNAVAILABLE: 502,
 };
-
-function bearerToken(request: Request): string | null {
-  const header = request.headers.authorization;
-  if (!header) {
-    return null;
-  }
-  const match = /^Bearer\s+(.+)$/i.exec(header);
-  return match?.[1]?.trim() || null;
-}
 
 function sendExportError(
   response: Response,
@@ -98,7 +90,7 @@ export function createExportRouter(
     async (request: Request, response: Response, next: NextFunction) => {
       const authorization = authorizeExport(
         database,
-        bearerToken(request),
+        readTeacherToken(request),
       );
       if (!authorization.ok) {
         sendExportError(response, authorization.code);
@@ -123,7 +115,7 @@ export function createExportRouter(
     async (request: Request, response: Response, next: NextFunction) => {
       const authorization = authorizeExport(
         database,
-        bearerToken(request),
+        readTeacherToken(request),
       );
       if (!authorization.ok) {
         sendExportError(response, authorization.code);
@@ -148,7 +140,7 @@ export function createExportRouter(
     async (request: Request, response: Response, next: NextFunction) => {
       const authorization = authorizeExport(
         database,
-        bearerToken(request),
+        readTeacherToken(request),
       );
       if (!authorization.ok) {
         sendExportError(response, authorization.code);

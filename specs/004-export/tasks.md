@@ -51,12 +51,12 @@ description: "Task list for 004 匯出結果（export）"
 ### Tests for Foundational ⚠️ 先寫、先失敗
 
 - [x] T002 [P] 寫 `server/tests/unit/xlsxEditor.test.ts`：以 `fixtures/guided-notes/02-official-group.xlsx` 為輸入——(a) 解析工作表名稱「學習單」到實際的 sheet XML 路徑，且**不依賴 XML 屬性順序**（`Target` 排在 `Id` 之前、`r:id` 排在 `name` 之後都要能解析；research R3）；(b) 把空殼 cell `<c r="G5" s="15"/>` 換成文字後，樣式索引 `s="15"` 保留；(c) 把有內容且已帶 `t="s"` 的 cell 換成文字後**不得產生重複的 `t` 屬性**，輸出仍是合法 XML、exceljs 讀得開（research R4）；(d) 寫入 `=1+1` 這類內容時不得產生 `<f>` 元素、讀回是字串不是公式（FR-006、research R6）；(e) 寫入內容含 `&`、`<`、`>` 時要正確跳脫；含前後空白時要加 `xml:space="preserve"`；(f) 替換後除目標 sheet XML 外，其餘 zip entry 全部 byte-identical（research R1、SC-002）；(g) 工作表名稱不存在時要回報明確錯誤，不得靜默產生錯的檔案
-- [x] T003 [P] 寫 `server/tests/unit/exportCommands.test.ts` 的權限與階段案例（以 001 的 helpers 建測試伺服器）：沒有 token → `UNAUTHORIZED`；無效 token → `UNAUTHORIZED`；學生 token → `FORBIDDEN`；老師 token 但活動在 preparing → `INVALID_PHASE`；在 open → `INVALID_PHASE`；在 closed 但沒有匯入過學習單 → `NO_GUIDED_NOTES`（FR-016、FR-017、AC-004-05、AC-004-06）；每種失敗都不產生檔案、也不改變任何資料（原則 III）
+- [x] T003 [P] 寫 `server/tests/unit/exportCommands.test.ts` 的權限與階段案例（以 001 的 helpers 建測試伺服器）：沒有 token → `TEACHER_AUTH_REQUIRED`；無效 token → `TEACHER_AUTH_REQUIRED`；學生 token → `FORBIDDEN`；老師 token 但活動在 preparing → `INVALID_PHASE`；在 open → `INVALID_PHASE`；在 closed 但沒有匯入過學習單 → `NO_GUIDED_NOTES`（FR-016、FR-017、AC-004-05、AC-004-06）；每種失敗都不產生檔案、也不改變任何資料（原則 III）
 
 ### Implementation for Foundational
 
 - [x] T004 新增 `server/src/infra/xlsx/xlsxEditor.ts`（讓 T002 通過）：用 `jszip` 讀寫 xlsx 位元組。函式包含——`resolveSheetPath(zip, sheetName)`（先取出完整的 `<sheet .../>` 與 `<Relationship .../>` 標籤再個別取屬性，**不得**用跨屬性的單一正規表示式；research R3）、`setCellText(sheetXml, a1, text)`（先移除原 `<c>` 標籤上的 `t="..."` 再補 `t="inlineStr"`，支援 self-closing 與 paired 兩種型態，XML 跳脫與 `xml:space="preserve"`，不寫 `<f>`；research R4、R6）、`replaceCellText(xlsxBytes, sheetName, a1, text)`（回傳新的 xlsx 位元組，未修改的 entry 保持 byte-identical；research R1）。**不得**修改 `sharedStrings.xml`
-- [x] T005 新增 `server/src/app/exportCommands.ts` 的共用前置檢查與檔名產生（讓 T003 通過）：`authorizeExport(database, token)` 回傳老師身分或回錯誤代碼（`UNAUTHORIZED`／`FORBIDDEN`／`INVALID_PHASE`／`NO_GUIDED_NOTES`，依 contracts/http-api.md 的 HTTP 狀態對應）；`buildExportFileName(now)` 產生「搶答結果_YYYYMMDD_HHmm」加副檔名（FR-007、clarify 2026-11-14：統一格式，不使用原檔名，連結匯入時也相同）
+- [x] T005 新增 `server/src/app/exportCommands.ts` 的共用前置檢查與檔名產生（讓 T003 通過）：`authorizeExport(database, token)` 回傳老師身分或回錯誤代碼（`TEACHER_AUTH_REQUIRED`／`FORBIDDEN`／`INVALID_PHASE`／`NO_GUIDED_NOTES`，依 contracts/http-api.md 的 HTTP 狀態對應）；`buildExportFileName(now)` 產生「搶答結果_YYYYMMDD_HHmm」加副檔名（FR-007、clarify 2026-11-14：統一格式，不使用原檔名，連結匯入時也相同）
 - [x] T006 在 `shared/src/protocol.ts` 新增錯誤代碼 `NO_GUIDED_NOTES`（加入 `ERROR_CODES` 與 `ERROR_MESSAGES`，繁中訊息：「這個活動沒有匯入過學習單，請先匯入學習單」）；在 `shared/src/schemas.ts` 不需新增（匯出無使用者輸入）。**不得覆寫既有的 `NO_QUESTIONS`**——002 已用它表示「匯入的檔案裡找不到題號」且訊息不同，MUST 新增獨立代碼（憲法原則 I：不得使 002 的行為改變）
 - [x] T007 新增 `server/src/infra/http/exportRoutes.ts`：掛載兩個 GET 端點 `/api/export/guided-notes` 與 `/api/export/results.csv`；沿用 `questionRoutes.ts` 的 `bearerToken()`、`resolveIdentity()` 與錯誤 JSON 格式（`{ error: { code, message } }`）；成功時以 `Content-Type` + `Content-Disposition: attachment` 回傳檔案位元組（檔名含 UTF-8 字元時一併提供 `filename*=UTF-8''<percent-encoded>`）；log 只記錄事件名稱與檔案大小（原則 IV）。本 Phase 只掛路由與共用檢查，Guided Notes 與 CSV 的內容組裝分別由 US1 與 US3 的 task 補上
 
@@ -199,3 +199,5 @@ Phase 1 → Phase 2 → Phase 3。完成後老師就能下載到填好搶答成�
 - **兩個已知陷阱**必須有測試覆蓋：目標 cell 原本帶 `t="s"` 時不能產生重複屬性（research R4）；工作表名稱到 sheet 檔案的解析不能依賴 XML 屬性順序（research R3）。
 - **格式驗收採分層標準**（clarify 2026-11-14）：內容、合併範圍、欄寬、列高、框線、字型、對齊皆必須保留；驗收以逐項比對原檔與匯出檔為準。若讀寫路線無法達成，MUST 改用能保留的寫入方式，不得放寬驗收標準。
 - **待兩組決策的事**（不阻擋本子功能實作，但結果畫面與匯出的一致性需留意）：換組／token 設計（001 層）、看板是否顯示原前綴（teacher protocol 變更）。
+
+> （2026-11-22 D18：未登入的代碼已由 `UNAUTHORIZED` 改為 `TEACHER_AUTH_REQUIRED`，並改以 HttpOnly cookie 認證）

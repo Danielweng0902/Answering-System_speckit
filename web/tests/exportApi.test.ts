@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { downloadGuidedNotes, downloadResultCsv } from '../src/lib/api';
-import { saveToken } from '../src/lib/session';
 
 describe('Guided Notes 下載 API（004 T012）', () => {
   beforeEach(() => {
     sessionStorage.clear();
-    saveToken('teacher-token');
   });
 
   afterEach(() => {
@@ -13,7 +11,7 @@ describe('Guided Notes 下載 API（004 T012）', () => {
     sessionStorage.clear();
   });
 
-  it('帶 bearer token 下載 blob，解析 UTF-8 檔名', async () => {
+  it('以同源 cookie 下載 blob，解析 UTF-8 檔名（2026-11-22 D18）', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(new Uint8Array([80, 75, 3, 4]), {
         status: 200,
@@ -29,7 +27,7 @@ describe('Guided Notes 下載 API（004 T012）', () => {
     const result = await downloadGuidedNotes();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/export/guided-notes', {
-      headers: { authorization: 'Bearer teacher-token' },
+      credentials: 'same-origin',
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -38,7 +36,7 @@ describe('Guided Notes 下載 API（004 T012）', () => {
     }
   });
 
-  it('CSV 使用 results.csv 端點與相同 token，並解析檔名', async () => {
+  it('CSV 使用 results.csv 端點與同一個同源請求，並解析檔名', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(new Uint8Array([0xef, 0xbb, 0xbf]), {
         status: 200,
@@ -53,7 +51,7 @@ describe('Guided Notes 下載 API（004 T012）', () => {
     const result = await downloadResultCsv();
 
     expect(fetchMock).toHaveBeenCalledWith('/api/export/results.csv', {
-      headers: { authorization: 'Bearer teacher-token' },
+      credentials: 'same-origin',
     });
     if (result.ok) {
       expect(result.fileName).toBe('搶答結果_20261114_0908.csv');

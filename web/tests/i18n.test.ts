@@ -52,7 +52,7 @@ describe('007 i18n：語言判定與訊息', () => {
   it('伺服器錯誤訊息有英文對應（共用契約不動，客戶端翻譯）', () => {
     // 幾個會直接顯示在畫面上的錯誤一定要有英文。
     for (const code of [
-      'UNAUTHORIZED',
+      'TEACHER_AUTH_REQUIRED',
       'WRONG_PASSWORD',
       'ANSWER_EMPTY',
       'ALREADY_SUBMITTED',

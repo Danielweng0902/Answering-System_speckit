@@ -16,10 +16,10 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ PORT: '30.5' })).toThrow('PORT');
   });
 
-  it('未設定連線上限時使用預設值（500 條連線、進場爆發 600、持續 30／分）', () => {
+  it('未設定連線上限時使用預設值（1000 條連線、進場爆發 1000、持續 30／分）', () => {
     const config = loadConfig({});
-    expect(config.maxConnections).toBe(500);
-    expect(config.joinRateLimitBurst).toBe(600);
+    expect(config.maxConnections).toBe(1000);
+    expect(config.joinRateLimitBurst).toBe(1000);
     expect(config.joinRateLimitPerMinute).toBe(30);
   });
 

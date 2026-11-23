@@ -17,7 +17,7 @@
   - `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
   - `Content-Disposition: attachment; filename="搶答結果_YYYYMMDD_HHmm.xlsx"`（檔名含 UTF-8 字元時以 `filename*=UTF-8''<percent-encoded>` 一併提供）
   - Body：xlsx 位元組
-- 401 `UNAUTHORIZED`：沒有帶 token 或 token 無效
+- 401 `TEACHER_AUTH_REQUIRED`：沒有登入狀態或登入狀態已失效
 - 403 `FORBIDDEN`：不是老師
 - 409 `INVALID_PHASE`：活動不在「已結束」階段（FR-016）
 - 422 `NO_GUIDED_NOTES`：這個活動沒有匯入過學習單（沒有題目也沒有原檔）（FR-017）
@@ -39,7 +39,7 @@
   - `Content-Type: text/csv; charset=utf-8`
   - `Content-Disposition: attachment; filename="搶答結果_YYYYMMDD_HHmm.csv"`（FR-007）
   - Body：UTF-8 位元組，**開頭為 BOM**（`EF BB BF`），讓 Excel 直接開啟不亂碼（FR-012、AC-004-12）
-- 401 `UNAUTHORIZED`、403 `FORBIDDEN`、409 `INVALID_PHASE`：同上（FR-016）
+- 401 `TEACHER_AUTH_REQUIRED`、403 `FORBIDDEN`、409 `INVALID_PHASE`：同上（FR-016）
 
 **欄位**（FR-010，依 Feature Contract D13）：
 
@@ -76,7 +76,7 @@
 |---|---|---|---|
 | `NO_GUIDED_NOTES` | 這個活動沒有匯入過學習單，無法匯出 | 這個活動沒有匯入過學習單，請先匯入學習單 | 422 |
 
-`UNAUTHORIZED`、`FORBIDDEN`、`INVALID_PHASE` 沿用 001／002 的既有代碼與訊息。
+`TEACHER_AUTH_REQUIRED`、`FORBIDDEN`、`INVALID_PHASE` 沿用 001／002 的既有代碼與訊息。
 
 > **注意**：002 已使用 `NO_QUESTIONS` 表示「匯入的檔案裡找不到題號」，訊息不同。004 必須使用**獨立的** `NO_GUIDED_NOTES`，不得覆寫 `NO_QUESTIONS` 的既有訊息（憲法原則 I：不得使其他子功能的行為改變）。
 

@@ -16,6 +16,10 @@ import { issueSession } from '../../src/app/access.js';
 import { getActivity } from '../../src/infra/db/activityRepo.js';
 import { insertGroup } from '../../src/infra/db/groupRepo.js';
 import {
+  TEACHER_SESSION_COOKIE,
+  readTeacherCookieToken,
+} from '../../src/infra/http/teacherSession.js';
+import {
   count as countQuestions,
   getStoredGuidedNotes,
   list as listQuestions,
@@ -72,11 +76,15 @@ afterEach(async () => {
 
 async function start(
   options: Parameters<typeof startTestServer>[0] = {},
-): Promise<{ server: TestServer; token: string }> {
+): Promise<{ server: TestServer; cookie: string }> {
   server = await startTestServer({ teacherPassword: TEACHER_PW, ...options });
-  return { server, token: await loginTeacher(server) };
+  return { server, cookie: await loginTeacher(server) };
 }
 
+/**
+ * 2026-11-22（D18）：老師登入狀態在 HttpOnly cookie 裡，測試走同一條路。
+ * 回傳值是可直接放進 `Cookie` 標頭的字串。
+ */
 async function loginTeacher(target: TestServer): Promise<string> {
   const response = await fetch(`${target.url}/api/teacher/login`, {
     method: 'POST',
@@ -84,13 +92,16 @@ async function loginTeacher(target: TestServer): Promise<string> {
     body: JSON.stringify({ password: TEACHER_PW }),
   });
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { token: string };
-  return body.token;
+  const cookie = readTeacherCookieToken(
+    response.headers.get('set-cookie') ?? undefined,
+  );
+  expect(cookie).not.toBeNull();
+  return `${TEACHER_SESSION_COOKIE}=${cookie as string}`;
 }
 
 function uploadFile(
   target: TestServer,
-  token: string | null,
+  cookie: string | null,
   bytes: Uint8Array = fixture01,
   fileName?: string,
   contentType = 'application/octet-stream',
@@ -98,8 +109,8 @@ function uploadFile(
   const headers: Record<string, string> = {
     'content-type': contentType,
   };
-  if (token !== null) {
-    headers.authorization = `Bearer ${token}`;
+  if (cookie !== null) {
+    headers.cookie = cookie;
   }
   if (fileName !== undefined) {
     headers['x-file-name'] = encodeURIComponent(fileName);
@@ -113,19 +124,19 @@ function uploadFile(
 
 async function preview(
   target: TestServer,
-  token: string,
+  cookie: string,
   fileName?: string,
 ): Promise<ImportSummary> {
-  const response = await uploadFile(target, token, fixture01, fileName);
+  const response = await uploadFile(target, cookie, fixture01, fileName);
   expect(response.status).toBe(200);
   return (await response.json()) as ImportSummary;
 }
 
 async function connectTeacher(
   target: TestServer,
-  token: string,
+  cookie: string,
 ): Promise<{ socket: Socket; initial: TeacherSnapshot }> {
-  const socket = target.connect({ token, autoConnect: false });
+  const socket = target.connect({ cookie, autoConnect: false });
   const statePromise = waitForState(socket);
   socket.connect();
   const initial = (await statePromise) as TeacherSnapshot;
@@ -175,10 +186,10 @@ function expectOfficialSummary(summary: ImportSummary): void {
 
 describe('上傳 01 的讀取與確認（AC-002-01–03）', () => {
   it('讀取回傳 ImportSummary（6 題、6 空格、題號 1–6、replacesExisting=false），資料庫題目仍為空', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     const revisionBefore = getActivity(target.db)?.revision;
 
-    const summary = await preview(target, token, '01-學習單.xlsx');
+    const summary = await preview(target, cookie, '01-學習單.xlsx');
 
     expectOfficialSummary(summary);
     expect(summary.replacesExisting).toBe(false);
@@ -189,15 +200,15 @@ describe('上傳 01 的讀取與確認（AC-002-01–03）', () => {
   });
 
   it('confirm 後老師快照為題號 1–6、guidedNotes.sheetName=學習單、revision +1，另一個老師分頁同步；學生與訪客快照不含 questions、guidedNotes', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     insertGroup(target.db, { id: 'group-1', name: '第一組', position: 1 });
     const studentToken = issueSession(target.db, {
       role: 'student',
       groupId: 'group-1',
     });
 
-    const teacherOne = await connectTeacher(target, token);
-    const teacherTwo = await connectTeacher(target, token);
+    const teacherOne = await connectTeacher(target, cookie);
+    const teacherTwo = await connectTeacher(target, cookie);
     const studentSocket = target.connect({ token: studentToken });
     const guestSocket = target.connect();
     await Promise.all([waitForState(studentSocket), waitForState(guestSocket)]);
@@ -205,7 +216,7 @@ describe('上傳 01 的讀取與確認（AC-002-01–03）', () => {
     expect(teacherOne.initial.questions).toEqual([]);
     expect(teacherOne.initial.guidedNotes).toBeNull();
 
-    const summary = await preview(target, token);
+    const summary = await preview(target, cookie);
     // 學生連線會改變 presence 並使 revision +1，所以在送出確認前才讀取。
     const revisionBefore = getActivity(target.db)?.revision ?? 0;
 
@@ -239,12 +250,12 @@ describe('上傳 01 的讀取與確認（AC-002-01–03）', () => {
   });
 
   it('不確認（取消）時題目不變', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
 
-    await preview(target, token);
+    await preview(target, cookie);
 
     // 取消不需要通知伺服器；老師重新連線仍沒有題目。
-    const { initial } = await connectTeacher(target, token);
+    const { initial } = await connectTeacher(target, cookie);
     expect(initial.questions).toEqual([]);
     expect(initial.guidedNotes).toBeNull();
     expect(countQuestions(target.db)).toBe(0);
@@ -253,15 +264,15 @@ describe('上傳 01 的讀取與確認（AC-002-01–03）', () => {
 
 describe('取代既有題目（AC-002-05、FR-015）', () => {
   it('已有題目時 replacesExisting=true，確認後完全取代', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     seedQuestion(target.db);
     expect(countQuestions(target.db)).toBe(1);
 
-    const summary = await preview(target, token, '新學習單.xlsx');
+    const summary = await preview(target, cookie, '新學習單.xlsx');
     expect(summary.replacesExisting).toBe(true);
     expectOfficialSummary(summary);
 
-    const teacher = await connectTeacher(target, token);
+    const teacher = await connectTeacher(target, cookie);
     const nextState = waitForState(teacher.socket);
     expect(
       await sendCommand(teacher.socket, 'questions:confirm', {
@@ -280,8 +291,8 @@ describe('取代既有題目（AC-002-05、FR-015）', () => {
 
 describe('IMPORT_EXPIRED（AC-002-06；importId 不存在、被取代、過期）', () => {
   it('不存在的 importId 回 IMPORT_EXPIRED，資料不變也不廣播', async () => {
-    const { server: target, token } = await start();
-    const teacher = await connectTeacher(target, token);
+    const { server: target, cookie } = await start();
+    const teacher = await connectTeacher(target, cookie);
 
     expect(
       await sendCommand(teacher.socket, 'questions:confirm', {
@@ -294,12 +305,12 @@ describe('IMPORT_EXPIRED（AC-002-06；importId 不存在、被取代、過期�
   });
 
   it('已被較新讀取取代的 importId 回 IMPORT_EXPIRED', async () => {
-    const { server: target, token } = await start();
-    const first = await preview(target, token);
-    const second = await preview(target, token);
+    const { server: target, cookie } = await start();
+    const first = await preview(target, cookie);
+    const second = await preview(target, cookie);
     expect(second.importId).not.toBe(first.importId);
 
-    const teacher = await connectTeacher(target, token);
+    const teacher = await connectTeacher(target, cookie);
     expect(
       await sendCommand(teacher.socket, 'questions:confirm', {
         importId: first.importId,
@@ -310,12 +321,12 @@ describe('IMPORT_EXPIRED（AC-002-06；importId 不存在、被取代、過期�
 
   it('超過 15 分鐘的 importId 回 IMPORT_EXPIRED（注入時鐘）', async () => {
     let current = new Date('2026-11-12T10:00:00.000Z');
-    const { server: target, token } = await start({ now: () => current });
-    const summary = await preview(target, token);
+    const { server: target, cookie } = await start({ now: () => current });
+    const summary = await preview(target, cookie);
 
     current = new Date(current.getTime() + 15 * 60 * 1_000 + 1);
 
-    const teacher = await connectTeacher(target, token);
+    const teacher = await connectTeacher(target, cookie);
     expect(
       await sendCommand(teacher.socket, 'questions:confirm', {
         importId: summary.importId,
@@ -327,30 +338,30 @@ describe('IMPORT_EXPIRED（AC-002-06；importId 不存在、被取代、過期�
 });
 
 describe('身分與階段檢查（401／403／409，FR-004、019）', () => {
-  it('沒有 token 與無效 token 回 401 UNAUTHORIZED，學生 token 回 403 FORBIDDEN', async () => {
+  it('沒有 cookie 與無效 cookie 回 401 TEACHER_AUTH_REQUIRED，學生 cookie 回 403 FORBIDDEN', async () => {
     const { server: target } = await start();
 
-    await expectError(await uploadFile(target, null), 401, 'UNAUTHORIZED');
-    await expectError(await uploadFile(target, 'invalid-token'), 401, 'UNAUTHORIZED');
+    await expectError(await uploadFile(target, null), 401, 'TEACHER_AUTH_REQUIRED');
+    await expectError(await uploadFile(target, `${TEACHER_SESSION_COOKIE}=invalid-token`), 401, 'TEACHER_AUTH_REQUIRED');
 
     insertGroup(target.db, { id: 'group-1', name: '第一組', position: 1 });
     const studentToken = issueSession(target.db, {
       role: 'student',
       groupId: 'group-1',
     });
-    await expectError(await uploadFile(target, studentToken), 403, 'FORBIDDEN');
+    await expectError(await uploadFile(target, `${TEACHER_SESSION_COOKIE}=${studentToken}`), 403, 'FORBIDDEN');
     expect(countQuestions(target.db)).toBe(0);
   });
 
   it.each(['open', 'closed'] as const)(
     '%s 時讀取回 409、questions:confirm 回 INVALID_PHASE，題目不變',
     async (phase) => {
-      const { server: target, token } = await start();
+      const { server: target, cookie } = await start();
       insertGroup(target.db, { id: 'group-1', name: '第一組', position: 1 });
       seedQuestion(target.db);
-      const summary = await preview(target, token);
+      const summary = await preview(target, cookie);
 
-      const teacher = await connectTeacher(target, token);
+      const teacher = await connectTeacher(target, cookie);
       // 先收 open（與 close）的 state，再送指令。
       let statePromise = waitForState(teacher.socket);
       expect(await sendCommand(teacher.socket, 'activity:open', {})).toEqual({ ok: true });
@@ -361,7 +372,7 @@ describe('身分與階段檢查（401／403／409，FR-004、019）', () => {
         await statePromise;
       }
 
-      await expectError(await uploadFile(target, token), 409, 'INVALID_PHASE');
+      await expectError(await uploadFile(target, cookie), 409, 'INVALID_PHASE');
       expect(
         await sendCommand(teacher.socket, 'questions:confirm', {
           importId: summary.importId,
@@ -383,11 +394,11 @@ describe('身分與階段檢查（401／403／409，FR-004、019）', () => {
 describe('保留性（FR-021；重設與重啟後題目保留，FR-010 原檔保存）', () => {
   async function importAndConfirm(
     target: TestServer,
-    token: string,
+    cookie: string,
     fileName = '01-學習單.xlsx',
   ): Promise<ImportSummary> {
-    const summary = await preview(target, token, fileName);
-    const teacher = await connectTeacher(target, token);
+    const summary = await preview(target, cookie, fileName);
+    const teacher = await connectTeacher(target, cookie);
     const statePromise = waitForState(teacher.socket);
     expect(
       await sendCommand(teacher.socket, 'questions:confirm', {
@@ -399,12 +410,12 @@ describe('保留性（FR-021；重設與重啟後題目保留，FR-010 原檔保
   }
 
   it('重設活動後題目保留', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     insertGroup(target.db, { id: 'group-1', name: '第一組', position: 1 });
-    await importAndConfirm(target, token);
+    await importAndConfirm(target, cookie);
     expect(countQuestions(target.db)).toBe(6);
 
-    const teacher = await connectTeacher(target, token);
+    const teacher = await connectTeacher(target, cookie);
     for (const [event, payload] of [
       ['activity:open', {}],
       ['activity:close', {}],
@@ -423,8 +434,8 @@ describe('保留性（FR-021；重設與重啟後題目保留，FR-010 原檔保
   });
 
   it('重新啟動伺服器後題目、原檔位元組與每個空格的 cell/prefix 都保留', async () => {
-    const { server: target, token } = await start();
-    const summary = await importAndConfirm(target, token);
+    const { server: target, cookie } = await start();
+    const summary = await importAndConfirm(target, cookie);
     const dataDir = target.dataDir;
 
     await target.close({ preserveDataDir: true });
@@ -471,7 +482,7 @@ describe('保留性（FR-021；重設與重啟後題目保留，FR-010 原檔保
 
 describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () => {
   it('PDF 位元組與損壞的 zip 都回 400 FILE_INVALID，已存資料完全不變', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     seedQuestion(target.db);
     const pdfBytes = new TextEncoder().encode('%PDF-1.4 not a real xlsx');
     const zip = new JSZip();
@@ -481,28 +492,28 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
 
     for (const bytes of [pdfBytes, damagedZip]) {
       const before = storedImportState(target);
-      await expectError(await uploadFile(target, token, bytes), 400, 'FILE_INVALID');
+      await expectError(await uploadFile(target, cookie, bytes), 400, 'FILE_INVALID');
       expectStoredStateUnchanged(target, before);
     }
   });
 
-  it('沒有 token 時即使本體超過 5 MB 也先回 401，不讀取本體（T051）', async () => {
+  it('沒有 cookie 時即使本體超過 5 MB 也先回 401，不讀取本體（T051）', async () => {
     const { server: target } = await start();
     await expectError(
       await uploadFile(target, null, new Uint8Array(5 * 1024 * 1024 + 1)),
       401,
-      'UNAUTHORIZED',
+      'TEACHER_AUTH_REQUIRED',
     );
   });
 
   it('超過 express.raw 5 MB 上限回 413 FILE_TOO_LARGE JSON，資料完全不變', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     seedQuestion(target.db);
     const before = storedImportState(target);
     const overFiveMegabytes = new Uint8Array(5 * 1024 * 1024 + 1);
 
     await expectError(
-      await uploadFile(target, token, overFiveMegabytes),
+      await uploadFile(target, cookie, overFiveMegabytes),
       413,
       'FILE_TOO_LARGE',
     );
@@ -510,7 +521,7 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
   });
 
   it('壓縮檔很小但解壓後超過 50 MB 的 xlsx 回 413 FILE_TOO_LARGE，資料完全不變', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     seedQuestion(target.db);
     const before = storedImportState(target);
     const zip = new JSZip();
@@ -528,7 +539,7 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
     expect(compressed.length).toBeLessThan(5 * 1024 * 1024);
 
     await expectError(
-      await uploadFile(target, token, compressed),
+      await uploadFile(target, cookie, compressed),
       413,
       'FILE_TOO_LARGE',
     );
@@ -536,7 +547,7 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
   });
 
   it('90、91、92 分別回 422 的三種內容錯誤，資料完全不變', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     seedQuestion(target.db);
     const cases: ReadonlyArray<readonly [Uint8Array, string]> = [
       [fixture90, 'HEADER_NOT_FOUND'],
@@ -546,18 +557,18 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
 
     for (const [bytes, code] of cases) {
       const before = storedImportState(target);
-      await expectError(await uploadFile(target, token, bytes), 422, code);
+      await expectError(await uploadFile(target, cookie, bytes), 422, code);
       expectStoredStateUnchanged(target, before);
     }
   });
 
   it('Content-Type 不是允許的兩種值回 400 FILE_INVALID，資料完全不變', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     seedQuestion(target.db);
     const before = storedImportState(target);
 
     await expectError(
-      await uploadFile(target, token, fixture01, undefined, 'application/pdf'),
+      await uploadFile(target, cookie, fixture01, undefined, 'application/pdf'),
       400,
       'FILE_INVALID',
     );
@@ -565,7 +576,7 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
 
     const response = await uploadFile(
       target,
-      token,
+      cookie,
       fixture01,
       undefined,
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=binary',
@@ -574,15 +585,15 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
   });
 
   it('X-File-Name 解碼後只取最後一段，且最多保留 255 字', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
     const longFileName = `${'學'.repeat(300)}.xlsx`;
     const summary = await preview(
       target,
-      token,
+      cookie,
       `C:\\老師的資料\\${longFileName}`,
     );
 
-    const teacher = await connectTeacher(target, token);
+    const teacher = await connectTeacher(target, cookie);
     const statePromise = waitForState(teacher.socket);
     expect(
       await sendCommand(teacher.socket, 'questions:confirm', {
@@ -598,10 +609,10 @@ describe('US4 檔案錯誤路徑（T043；AC-002-17、19；FR-003、019）', () 
 
 describe('匯入效能（T052；SC-003）', () => {
   it('上傳 01 到收到摘要的時間在 5 秒內', async () => {
-    const { server: target, token } = await start();
+    const { server: target, cookie } = await start();
 
     const startedAt = performance.now();
-    const summary = await preview(target, token, '01-official-single.xlsx');
+    const summary = await preview(target, cookie, '01-official-single.xlsx');
     const elapsedMs = performance.now() - startedAt;
 
     expectOfficialSummary(summary);

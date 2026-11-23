@@ -55,7 +55,7 @@ type TeacherSnapshot = SnapshotBase & { role: 'teacher'; presence: Record<string
 | `GROUP_NAME_EMPTY` | 組名空白 | 請輸入組名 |
 | `GROUP_NAME_TOO_LONG` | 組名超過 30 字元 | 組名最多 30 個字 |
 | `GROUP_NAME_DUPLICATE` | 組名重複 | 已經有同名的組別 |
-| `GROUP_LIMIT_REACHED` | 已有 50 組 | 最多只能建立 50 組 |
+| `GROUP_LIMIT_REACHED` | 已有 100 組 | 最多只能建立 100 組 |
 | `GROUP_NOT_FOUND` | 組別不存在 | 找不到這個組別，請重新選擇 |
 | `NO_GROUPS` | 沒有組別就開啟搶答 | 請先建立至少一個組別 |
 | `COUNTDOWN_OUT_OF_RANGE` | 倒數不在 10–3600 秒 | 倒數時間需介於 10 秒到 60 分鐘 |

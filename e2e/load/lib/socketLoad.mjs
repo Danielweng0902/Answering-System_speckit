@@ -582,6 +582,7 @@ class TrackedSocketClient {
 async function connectTrackedClient({
   baseUrl,
   token,
+  cookie,
   role,
   groupId = null,
   view = undefined,
@@ -599,9 +600,20 @@ async function connectTrackedClient({
     rejectFirst = reject;
   });
   let firstSettled = false;
-  const auth = view === undefined ? { token } : { token, view };
+  // 2026-11-22（D18）：老師與投影改以 HttpOnly cookie 認證（不帶 token）；
+  // 學生仍帶 sessionStorage 的 token。
+  const auth = {};
+  if (token !== undefined && token !== null) {
+    auth.token = token;
+  }
+  if (view !== undefined) {
+    auth.view = view;
+  }
   const socket = createSocketIOClient(baseUrl, {
     auth,
+    ...(cookie === undefined || cookie === null
+      ? {}
+      : { extraHeaders: { Cookie: cookie } }),
     transports: transportsForMode(transportMode),
     // polling 模式必須留在 polling；升級成 WebSocket 會讓兩組數字無法分開解讀。
     upgrade: false,
@@ -750,13 +762,13 @@ async function buildWorkbookBytes(questionCount, blankCount) {
   return Buffer.from(new Uint8Array(bytes));
 }
 
-async function importQuestions(baseUrl, teacherToken, teacher, questionCount, timeoutMs) {
+async function importQuestions(baseUrl, teacherCookie, teacher, questionCount, timeoutMs) {
   const bytes = await buildWorkbookBytes(questionCount, 4);
   const result = await timedRequest({
     url: `${baseUrl}/api/questions/import/file`,
     method: 'POST',
     headers: {
-      authorization: `Bearer ${teacherToken}`,
+      cookie: teacherCookie,
       'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'x-file-name': 'socket-load.xlsx',
     },
@@ -1001,7 +1013,7 @@ export async function runSocketLoad(options) {
     cooldownSeconds,
     log = () => {},
   } = options;
-  if (requestedGroups < 1 || requestedGroups > 50) throw new Error('--groups 需介於 1 與 50');
+  if (requestedGroups < 1 || requestedGroups > 100) throw new Error('--groups 需介於 1 與 100');
   if (questions < 1 || questions > 100) throw new Error('--questions 需介於 1 與 100');
   if (rounds < 1) throw new Error('--rounds 至少為 1');
 
@@ -1021,7 +1033,7 @@ export async function runSocketLoad(options) {
   const allClients = new Set();
   const groups = [];
   const students = [];
-  let teacherToken = null;
+  let teacherCookie = null;
   let teacher = null;
   let projector = null;
   let extraBundle = null;
@@ -1043,10 +1055,10 @@ export async function runSocketLoad(options) {
 
   try {
     log('登入老師並建立量測組別…');
-    teacherToken = await loginTeacher(baseUrl, password);
-    for (let index = 0; index < 50; index += 1) {
+    teacherCookie = await loginTeacher(baseUrl, password);
+    for (let index = 0; index < requestedGroups; index += 1) {
       groups.push({
-        id: await createGroupViaTeacherSocket(baseUrl, teacherToken, { timeoutMs: setupTimeoutMs }),
+        id: await createGroupViaTeacherSocket(baseUrl, teacherCookie, { timeoutMs: setupTimeoutMs }),
         index,
       });
     }
@@ -1054,7 +1066,7 @@ export async function runSocketLoad(options) {
     log(`以 ${transportMode} 模式連接老師與投影…`);
     const teacherConnected = await createClient({
       baseUrl,
-      token: teacherToken,
+      cookie: teacherCookie,
       role: 'teacher',
       transportMode,
       timeoutMs,
@@ -1064,7 +1076,7 @@ export async function runSocketLoad(options) {
     teacher = teacherConnected.client;
     const projectorConnected = await createClient({
       baseUrl,
-      token: teacherToken,
+      cookie: teacherCookie,
       role: 'projector',
       view: 'projector',
       transportMode,
@@ -1083,7 +1095,7 @@ export async function runSocketLoad(options) {
         : null;
 
     await ensurePreparing(teacher, setupTimeoutMs);
-    await importQuestions(baseUrl, teacherToken, teacher, Math.max(questions, 20), setupTimeoutMs);
+    await importQuestions(baseUrl, teacherCookie, teacher, Math.max(questions, 20), setupTimeoutMs);
 
     log(`加入 ${requestedGroups} 組的主要學生與同組觀察者…`);
     for (let index = 0; index < requestedGroups; index += 1) {
@@ -1240,7 +1252,7 @@ export async function runSocketLoad(options) {
     // 量測用的老師／投影若留在線上，種子期間每筆作答都會替他們累積
     // 1000 筆 unread state（polling 下會讓後續 reset ACK 被積壓）。暫時關掉；
     // 種子完成後再重接，後續必要送達才是在量新作答而不是 setup 廣播。
-    log('重建恰好 1,000 筆作答後量測 50 組依序重連…');
+    log(`重建恰好 ${requestedGroups * 20} 筆作答後量測 ${requestedGroups} 組依序重連…`);
     await ensurePreparing(teacher, setupTimeoutMs);
     await openActivity(teacher, setupTimeoutMs);
     teacher.close();
@@ -1285,7 +1297,7 @@ export async function runSocketLoad(options) {
     }
     const seedPending = [];
     for (let questionNumber = 1; questionNumber <= 20; questionNumber += 1) {
-      const items = Array.from({ length: 50 }, (_value, groupIndex) => ({
+      const items = Array.from({ length: requestedGroups }, (_value, groupIndex) => ({
         groupIndex,
         offsetMs: 0,
         questionNumber,
@@ -1329,7 +1341,7 @@ export async function runSocketLoad(options) {
     // 種子期間刻意停線的量測角色，先在乾淨佇列下重接，再進入公平順位情境。
     const teacherRestored = await createClient({
       baseUrl,
-      token: teacherToken,
+      cookie: teacherCookie,
       role: 'teacher',
       transportMode,
       timeoutMs,
@@ -1338,7 +1350,7 @@ export async function runSocketLoad(options) {
     teacher = teacherRestored.client;
     const projectorRestored = await createClient({
       baseUrl,
-      token: teacherToken,
+      cookie: teacherCookie,
       role: 'projector',
       view: 'projector',
       transportMode,
@@ -1550,7 +1562,7 @@ export async function runSocketLoad(options) {
       finishedAt: null,
       config: {
         activeGroups: requestedGroups,
-        totalGroupsCreated: 50,
+        totalGroupsCreated: requestedGroups,
         questions,
         rounds,
         timeoutMs,
@@ -1612,7 +1624,7 @@ export async function runSocketLoad(options) {
       // 例外路徑也必須停止 interval；否則故障的負載腳本會被資源監視器掛住。
       await monitor.stop({ warmupEndIndex, loadEndIndex });
     }
-    teacherToken = null;
+    teacherCookie = null;
     for (const bundle of [...students, extraBundle].filter(Boolean)) {
       bundle.senderToken = null;
       bundle.peerToken = null;
@@ -1630,7 +1642,7 @@ export async function runSocketLoad(options) {
  */
 export async function createAnswerFlood({
   baseUrl,
-  teacherToken,
+  teacherCookie,
   groupIds,
   studentTokensByGroup,
   questionCount = 20,
@@ -1641,7 +1653,7 @@ export async function createAnswerFlood({
   const setupTimeoutMs = Math.max(timeoutMs, 30_000);
   const teacherConnected = await connectTrackedClient({
     baseUrl,
-    token: teacherToken,
+    cookie: teacherCookie,
     role: 'teacher',
     transportMode: 'websocket',
     timeoutMs,
@@ -1649,7 +1661,7 @@ export async function createAnswerFlood({
   const teacher = teacherConnected.client;
   const projectorConnected = await connectTrackedClient({
     baseUrl,
-    token: teacherToken,
+    cookie: teacherCookie,
     role: 'projector',
     view: 'projector',
     transportMode: 'websocket',
@@ -1671,7 +1683,7 @@ export async function createAnswerFlood({
     }
   }
   await ensurePreparing(teacher, setupTimeoutMs);
-  await importQuestions(baseUrl, teacherToken, teacher, questionCount, timeoutMs);
+  await importQuestions(baseUrl, teacherCookie, teacher, questionCount, timeoutMs);
   await openActivity(teacher, setupTimeoutMs);
   log(`作答洪流已連接 ${students.length + projectors.length + 1} 條 Socket.IO 連線`);
 

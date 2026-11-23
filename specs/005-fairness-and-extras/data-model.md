@@ -83,4 +83,4 @@
 | `reveal:all` | client → server | 老師全部揭曉 |
 | `state` | server → client | 既有快照事件；投影連線收到的是 `ProjectorSnapshot`（R6） |
 
-錯誤代碼沿用既有：`UNAUTHORIZED`（未登入）、`FORBIDDEN`（非老師）、`INVALID_PHASE`（非準備中／非已結束）。**不新增錯誤代碼**。
+錯誤代碼沿用既有：`TEACHER_AUTH_REQUIRED`（未登入）、`FORBIDDEN`（非老師）、`INVALID_PHASE`（非準備中／非已結束）。**不新增錯誤代碼**。

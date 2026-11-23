@@ -48,7 +48,7 @@ description: "Task list for 002 Guided Notes 匯入"
 
 **⚠️ CRITICAL**: 本 Phase 完成前不得開始任何 user story。
 
-- [x] T002 [P] 在 `shared/src/protocol.ts` 新增：錯誤代碼 `UNAUTHORIZED`、`FILE_INVALID`、`FILE_TOO_LARGE`、`HEADER_NOT_FOUND`、`NO_QUESTIONS`、`DUPLICATE_QUESTION_NUMBER`、`LINK_INVALID`、`LINK_NOT_SHARED`、`LINK_UNREACHABLE`、`IMPORT_EXPIRED`、`QUESTIONS_REQUIRED`；型別 `QuestionKind = 'single' | 'group'`、`QuestionSummary = { number, kind, prompt, blankCount }`、`ImportWarning`（`code`：`NUMBERS_NOT_SEQUENTIAL`、`BLANK_HAS_CONTENT`、`MULTIPLE_SHEETS_WITH_HEADER`，附中文 `message`）、`ImportSummary = { importId, sheetName, questionCount, blankCount, questions: { number, kind, prompt, blankCount, blanks: { prefix, cell }[] }[], warnings, replacesExisting }`（contracts/socket-events.md、data-model.md）。`TeacherSnapshot` 的延伸放在 T021，避免本 Phase 讓 `snapshot.ts` 編譯失敗
+- [x] T002 [P] 在 `shared/src/protocol.ts` 新增：錯誤代碼 `TEACHER_AUTH_REQUIRED`、`FILE_INVALID`、`FILE_TOO_LARGE`、`HEADER_NOT_FOUND`、`NO_QUESTIONS`、`DUPLICATE_QUESTION_NUMBER`、`LINK_INVALID`、`LINK_NOT_SHARED`、`LINK_UNREACHABLE`、`IMPORT_EXPIRED`、`QUESTIONS_REQUIRED`；型別 `QuestionKind = 'single' | 'group'`、`QuestionSummary = { number, kind, prompt, blankCount }`、`ImportWarning`（`code`：`NUMBERS_NOT_SEQUENTIAL`、`BLANK_HAS_CONTENT`、`MULTIPLE_SHEETS_WITH_HEADER`，附中文 `message`）、`ImportSummary = { importId, sheetName, questionCount, blankCount, questions: { number, kind, prompt, blankCount, blanks: { prefix, cell }[] }[], warnings, replacesExisting }`（contracts/socket-events.md、data-model.md）。`TeacherSnapshot` 的延伸放在 T021，避免本 Phase 讓 `snapshot.ts` 編譯失敗
 - [x] T003 [P] 在 `shared/src/schemas.ts` 新增 `questions:confirm` 的 `{ importId: string }` 與 `POST /api/questions/import/link` 的 `{ url: string }` schema
 - [x] T004 [P] 寫 `server/tests/unit/database.test.ts` 的新案例：建立 `guided_notes`（`id INTEGER PRIMARY KEY CHECK (id = 1)`）、`questions`（`number INTEGER UNIQUE`）、`blanks`（`REFERENCES questions(id) ON DELETE CASCADE`，`PRIMARY KEY (question_id, position)`）三張表；刪除題目時空格一起刪除
 - [x] T005 在 `server/src/infra/db/database.ts` 依 data-model.md「SQLite 資料表」建立三張表並開啟 foreign keys（讓 T004 通過）
@@ -71,7 +71,7 @@ description: "Task list for 002 Guided Notes 匯入"
 
 - [x] T010 [P] [US1] 寫 `server/tests/unit/guidedNotesParser.test.ts` 的基本案例（手寫 `SheetGrid`）：同一列有「題號」「題目」「作答」三格才是表頭，三欄位置以該列為準；表頭以下題號欄每個正整數是一題，一題一個空格，空格位置是作答欄該列的格子（作答欄橫向合併時取左上角，例如合併 `G5:J5` 得 `G5`）；題目敘述取題目欄同一列文字，空白時為空字串；`position` 依由上而下的順序（FR-005–007、011）
 - [x] T011 [P] [US1] 寫 `server/tests/unit/activity.test.ts` 的新案例：題目數為 0 時 `open` 回 `QUESTIONS_REQUIRED`；檢查順序 `NO_GROUPS` → `QUESTIONS_REQUIRED` → `COUNTDOWN_OUT_OF_RANGE`（FR-020；contracts/socket-events.md）
-- [x] T012 [P] [US1] 寫 `server/tests/integration/questionImport.test.ts`：上傳 01 得到 `ImportSummary`（6 題、6 空格、題號 1–6、`replacesExisting = false`），且資料庫題目仍為空；`questions:confirm` 後老師快照 `questions` 為題號 1–6、`guidedNotes.sheetName = '學習單'`、`revision` +1，另一個老師分頁同步收到；不確認（取消）時題目不變；已有題目再讀取時 `replacesExisting = true`，確認後完全取代；確認不存在、已被較新讀取取代、或超過 15 分鐘的 `importId` 回 `IMPORT_EXPIRED` 且資料不變（以注入的時鐘測試）；學生與訪客快照不含 `questions`、`guidedNotes`；沒有 token 回 401 `UNAUTHORIZED`、學生 token 回 403 `FORBIDDEN`、搶答中或已結束讀取回 409 `INVALID_PHASE`、確認回 `INVALID_PHASE`，題目不變；重設活動後題目保留；重新啟動伺服器後題目保留，且資料庫中的原檔位元組與上傳的完全相同、每個空格的 `cell` 與 `prefix` 與摘要一致（AC-002-01–03、05、06；FR-010、013–016、021；research R6、R7、R9）
+- [x] T012 [P] [US1] 寫 `server/tests/integration/questionImport.test.ts`：上傳 01 得到 `ImportSummary`（6 題、6 空格、題號 1–6、`replacesExisting = false`），且資料庫題目仍為空；`questions:confirm` 後老師快照 `questions` 為題號 1–6、`guidedNotes.sheetName = '學習單'`、`revision` +1，另一個老師分頁同步收到；不確認（取消）時題目不變；已有題目再讀取時 `replacesExisting = true`，確認後完全取代；確認不存在、已被較新讀取取代、或超過 15 分鐘的 `importId` 回 `IMPORT_EXPIRED` 且資料不變（以注入的時鐘測試）；學生與訪客快照不含 `questions`、`guidedNotes`；沒有 token 回 401 `TEACHER_AUTH_REQUIRED`、學生 token 回 403 `FORBIDDEN`、搶答中或已結束讀取回 409 `INVALID_PHASE`、確認回 `INVALID_PHASE`，題目不變；重設活動後題目保留；重新啟動伺服器後題目保留，且資料庫中的原檔位元組與上傳的完全相同、每個空格的 `cell` 與 `prefix` 與摘要一致（AC-002-01–03、05、06；FR-010、013–016、021；research R6、R7、R9）
 - [x] T013 [P] [US1] 寫 `server/tests/integration/googleSheetsLink.test.ts`（注入假的 fetch，不連網路）：`https://docs.google.com/spreadsheets/d/<ID>/edit#gid=0` 會被轉成 `https://docs.google.com/spreadsheets/d/<ID>/export?format=xlsx` 下載；回傳 01 的位元組時摘要與上傳 01 完全相同（AC-002-04；FR-001、002；research R4）
 - [x] T014 [P] [US1] 在 `server/tests/integration/fixtures.test.ts` 建立資料驅動測試：讀 `fixtures/guided-notes/expected.json`，對每筆有效檔案比對工作表、題數、空格數、題號、每個空格的 `cell` 與 `prefix`；本 Phase 只啟用 01，其他檔案以 `it.todo` 標示由後續 Phase 啟用（AC-002-01；SC-001）
 
@@ -216,3 +216,5 @@ description: "Task list for 002 Guided Notes 匯入"
 - 每個 task 完成後在本檔勾選 `[x]`。
 - 連結匯入的自動測試一律注入假的 fetch，不連網路；真實 Google 試算表只在人工驗證步驟 9、10 使用。
 - 學生在搶答中看到的題目內容由 003 定義，不在本 tasks 範圍。
+
+> （2026-11-22 D18：未登入的代碼已由 `UNAUTHORIZED` 改為 `TEACHER_AUTH_REQUIRED`，並改以 HttpOnly cookie 認證）
