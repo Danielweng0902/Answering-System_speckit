@@ -43,7 +43,10 @@ import { chromium } from '@playwright/test';
 import { io } from 'socket.io-client';
 
 const BASE = process.env.SHOT_BASE ?? 'http://127.0.0.1:3000';
-const PASSWORD = process.env.SHOT_PASSWORD ?? 'token-demo-pw-2026';
+const PASSWORD = process.env.SHOT_PASSWORD;
+if (PASSWORD === undefined || PASSWORD === '') {
+  throw new Error('SHOT_PASSWORD 未設定：密碼不進版本控制，請用環境變數傳入');
+}
 const outDir = process.argv[2] ?? '/tmp/token-shots';
 const scenario = process.argv[3] ?? 'base';
 const groupCount = Number(process.env.SHOT_GROUPS ?? (scenario === 'dense' ? 100 : 50));
