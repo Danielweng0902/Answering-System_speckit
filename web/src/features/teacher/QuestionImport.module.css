@@ -90,35 +90,101 @@
   border-radius: 0;
 }
 
-.fileInput {
-  color: var(--color-ink-muted);
-  font-size: var(--font-size-small);
+/*
+ * 2026-11-23（007 人工驗證，Philip 在 Windows + Chrome 實測）：
+ * 原生 `<input type="file">` 的「選擇檔案」「未選擇任何檔案」是瀏覽器自己
+ * 畫的字，跟著 Chrome 的介面語言，不跟網頁的語言切換 → 網頁切成英文時
+ * 這一區仍是中文。
+ *
+ * 解法：把原生 input 視覺隱藏（但**仍可 Tab 聚焦**、仍能被螢幕閱讀器讀到），
+ * 另做一個走 i18n 的自製按鈕。
+ */
+.fileInputHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-/*
- * 2026-11-23：把瀏覽器原生的灰色「選擇檔案」按鈕套成次要按鈕的樣式
- * （設計負責人意見）。不改 TSX，只用 ::file-selector-button。
- */
-.fileInput::file-selector-button {
+.filePicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* 自製按鈕：與其他次要按鈕同規格（--control-height、只留左右留白）。 */
+.fileButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: var(--control-height);
-  margin-inline-end: var(--space-3);
   padding: 0 var(--control-padding-inline);
   color: var(--color-ink);
   background: transparent;
   border: var(--border-width-thin) solid var(--color-ink);
   border-radius: 0;
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-base);
   cursor: pointer;
+  transition:
+    background var(--transition-quick),
+    color var(--transition-quick);
 }
 
-.fileInput::file-selector-button:hover {
+.fileButton:hover {
   color: var(--color-paper);
   background: var(--color-ink);
 }
+
+/*
+ * 停用狀態（2026-11-24，Philip 在 Windows + Chrome 實測 PR #42 時發現）：
+ * 搶答進行中時原生 input 會被 disabled，但**自製的 <label> 不會跟著變** ——
+ * 仍是黑框、hover 仍反白、游標仍是 pointer，點了卻沒反應。
+ * 其他按鈕（例如旁邊的「讀取」）都會變灰，兩者不一致。
+ *
+ * 原本用 ::file-selector-button 時，停用外觀是瀏覽器自己給的；改成自製按鈕
+ * 後就必須自己處理。規則與其他按鈕的 `.button:disabled` 一致：
+ * 降成 --color-rule 框＋--color-ink-muted 字，底色透明。
+ */
+.fileInputHidden:disabled + .filePicker .fileButton {
+  color: var(--color-ink-muted);
+  border-color: var(--color-rule);
+  cursor: not-allowed;
+}
+
+/* 停用時 hover 不反轉（與其他停用按鈕一致）。 */
+.fileInputHidden:disabled + .filePicker .fileButton:hover {
+  color: var(--color-ink-muted);
+  background: transparent;
+}
+
+/*
+ * 隱藏的 input 被 Tab 聚焦時，焦點外框要顯示在自製按鈕上
+ * （Philip 在 review 裡特別提醒：藏起來的 input 仍要能用 Tab 聚焦，
+ * 焦點外框要顯示在自製按鈕上）。
+ */
+.fileInputHidden:focus-visible + .filePicker .fileButton {
+  outline: var(--focus-outline-width) solid var(--color-vermilion);
+  outline-offset: 2px;
+}
+
+.fileName {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-small);
+}
+
+/*
+ * 2026-11-23（007 人工驗證，Philip 在 Windows + Chrome 實測）：
+ * 原本這裡用 ::file-selector-button 把瀏覽器原生按鈕套成次要按鈕的樣式。
+ * 但那只改得了**外觀**，改不了按鈕上的**文字** —— 「選擇檔案」「未選擇任何
+ * 檔案」是瀏覽器自己畫的，跟著 Chrome 的介面語言，網頁切成英文時仍是中文。
+ *
+ * 所以改成把原生 input 視覺隱藏、另做自製按鈕（見 .fileInputHidden 與
+ * .fileButton 的註解），::-file-selector-button 的樣式就一併移除了。
+ */
 
 /* 次要動作：四邊留白與主要動作一致（2026-11-19 review）。 */
 .button {

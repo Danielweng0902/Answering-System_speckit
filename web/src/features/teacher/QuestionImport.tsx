@@ -9,11 +9,7 @@ import { useI18n } from '../../lib/i18n/LanguageProvider';
 import type { Language } from '../../lib/i18n/language';
 import type { MessageKey } from '../../lib/i18n/messages';
 import { useId, useState, type ChangeEvent, type FormEvent } from 'react';
-import {
-  importFromFile,
-  importFromLink,
-  type ImportQuestionsResult,
-} from '../../lib/api';
+import { importFromFile, importFromLink, type ImportQuestionsResult } from '../../lib/api';
 import { sendCommand } from '../../lib/socket';
 import styles from './QuestionImport.module.css';
 
@@ -31,10 +27,7 @@ const LINK_ERROR_CODES: readonly ErrorCode[] = [
 ];
 
 /** 依 contracts/http-api.md：檔案類錯誤說明可接受的格式與大小。 */
-const FILE_ERROR_CODES: readonly ErrorCode[] = [
-  'FILE_INVALID',
-  'FILE_TOO_LARGE',
-];
+const FILE_ERROR_CODES: readonly ErrorCode[] = ['FILE_INVALID', 'FILE_TOO_LARGE'];
 
 const QUESTION_KIND_KEYS: Record<ImportSummaryQuestion['kind'], MessageKey> = {
   single: 'import.kindSingle',
@@ -52,11 +45,7 @@ type Translate = ReturnType<typeof useI18n>['t'];
  *   （`code` ＋ 題號／儲存格／工作表名），所以客戶端翻譯即可，
  *   **不必改 API 契約**（2026-11-19 review：匯入警告在英文版沒翻譯）。
  */
-function importWarningText(
-  t: Translate,
-  warning: ImportWarning,
-  language: Language,
-): string {
+function importWarningText(t: Translate, warning: ImportWarning, language: Language): string {
   if (language !== 'en') {
     return warning.message;
   }
@@ -90,13 +79,13 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [importError, setImportError] = useState<ImportError | null>(null);
   const [isSending, setIsSending] = useState(false);
+  /** 自製檔案按鈕旁的檔名；原生 input 的「未選擇任何檔案」是瀏覽器文字，翻譯不到。 */
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   const isPreparing = snapshot.phase === 'preparing';
   const controlsDisabled = !isPreparing || isSending;
 
-  async function readImport(
-    request: () => Promise<ImportQuestionsResult>,
-  ): Promise<void> {
+  async function readImport(request: () => Promise<ImportQuestionsResult>): Promise<void> {
     setSummary(null);
     setImportError(null);
     setIsSending(true);
@@ -124,8 +113,13 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
     const file = input.files?.[0];
 
     if (file === undefined) {
+      setSelectedFileName(null);
       return;
     }
+
+    // 自製按鈕旁的檔名文字（走 i18n；原生 input 的「未選擇任何檔案」是
+    // 瀏覽器文字，無法翻譯 → 2026-11-23 的 007 人工驗證發現）。
+    setSelectedFileName(file.name);
 
     // 清除 input 讓同一個檔案可以連續選取（例如取消後重新讀取）。
     input.value = '';
@@ -166,28 +160,20 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
     .map((question) => question.number);
 
   return (
-    <section
-      className={styles.section}
-      aria-label={t('import.title')}
-      aria-busy={isSending}
-    >
+    <section className={styles.section} aria-label={t('import.title')} aria-busy={isSending}>
       <h2 className={styles.title}>{t('import.title')}</h2>
       {importError !== null && (
         <div className={styles.error} role="alert">
           <p className={styles.errorMessage}>{importError.message}</p>
-          {importError.code !== null &&
-            LINK_ERROR_CODES.includes(importError.code) && (
-              <ul className={styles.errorHints} aria-label={t('import.alternativesLabel')}>
-                <li>{t('import.alternativeShare')}</li>
-                <li>{t('import.alternativeDownload')}</li>
-              </ul>
-            )}
-          {importError.code !== null &&
-            FILE_ERROR_CODES.includes(importError.code) && (
-              <p className={styles.errorHint}>
-                {t('import.formatHint')}
-              </p>
-            )}
+          {importError.code !== null && LINK_ERROR_CODES.includes(importError.code) && (
+            <ul className={styles.errorHints} aria-label={t('import.alternativesLabel')}>
+              <li>{t('import.alternativeShare')}</li>
+              <li>{t('import.alternativeDownload')}</li>
+            </ul>
+          )}
+          {importError.code !== null && FILE_ERROR_CODES.includes(importError.code) && (
+            <p className={styles.errorHint}>{t('import.formatHint')}</p>
+          )}
         </div>
       )}
 
@@ -208,28 +194,48 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
             }}
           />
         </div>
-        <button
-          className={styles.button}
-          type="submit"
-          disabled={controlsDisabled}
-        >
+        <button className={styles.button} type="submit" disabled={controlsDisabled}>
           {t('import.read')}
         </button>
       </form>
 
       <div className={styles.field}>
-        <label className={styles.label} htmlFor={fileId}>
-          {t('import.fileLabel')}
-        </label>
+        {/*
+          這裡是 <span> 不是 <label>：自製按鈕（下面的 .fileButton）已經用
+          <label htmlFor> 指向那個 input，再多一個 label 指向同一個 input
+          會讓螢幕閱讀器把兩個名稱串起來（「上傳 xlsx 檔 選擇檔案」）。
+          input 自己帶 aria-label → 它的可存取名稱清楚。
+        */}
+        <span className={styles.label}>{t('import.fileLabel')}</span>
+        {/*
+          2026-11-23（007 人工驗證，Philip 在 Windows + Chrome 實測）：
+          原生 `<input type="file">` 的「選擇檔案」「未選擇任何檔案」是
+          **瀏覽器自己畫的字**，跟著 Chrome 的介面語言，不跟網頁的語言切換
+          —— 網頁切成英文時這一區仍是中文，介面中英混雜。
+
+          所以把原生 input 視覺隱藏（但仍可 Tab 聚焦、仍能被螢幕閱讀器讀到），
+          另做一個走 i18n 的自製按鈕（<label htmlFor>）與檔名文字。
+        */}
         <input
           id={fileId}
-          className={styles.fileInput}
+          className={styles.fileInputHidden}
           type="file"
           name="guided-notes-file"
           accept=".xlsx"
+          aria-label={t('import.fileLabel')}
           disabled={controlsDisabled}
           onChange={readFile}
         />
+        <div className={styles.filePicker}>
+          <label className={styles.fileButton} htmlFor={fileId}>
+            {t('import.chooseFile')}
+          </label>
+          <span className={styles.fileName}>
+            {selectedFileName === null
+              ? t('import.noFileSelected')
+              : t('import.selectedFile', { name: selectedFileName })}
+          </span>
+        </div>
       </div>
 
       {summary !== null && (
@@ -254,9 +260,7 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
                   <span className={styles.prefixes}>
                     {t('import.prefix', {
                       prefixes: question.blanks
-                        .map((blank) =>
-                          blank.prefix === '' ? t('import.noPrefix') : blank.prefix,
-                        )
+                        .map((blank) => (blank.prefix === '' ? t('import.noPrefix') : blank.prefix))
                         .join('、'),
                     })}
                   </span>
@@ -284,9 +288,7 @@ export function QuestionImport({ snapshot }: QuestionImportProps) {
             </div>
           )}
 
-          {summary.replacesExisting && (
-            <p className={styles.notice}>{t('import.replaceNotice')}</p>
-          )}
+          {summary.replacesExisting && <p className={styles.notice}>{t('import.replaceNotice')}</p>}
 
           <div className={styles.actions}>
             <button

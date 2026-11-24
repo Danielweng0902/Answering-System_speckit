@@ -13,9 +13,7 @@ vi.mock('../../src/lib/socket', () => ({
   sendCommand: vi.fn(),
 }));
 
-function makeSnapshot(
-  overrides: Partial<TeacherSnapshot> = {},
-): TeacherSnapshot {
+function makeSnapshot(overrides: Partial<TeacherSnapshot> = {}): TeacherSnapshot {
   return {
     revision: 1,
     serverNow: '2026-11-12T00:00:00.000Z',
@@ -169,9 +167,7 @@ describe('QuestionImport', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('伺服器：試算表未開放檢視');
-    expect(
-      screen.getByText('把共用設定改成知道連結者可檢視'),
-    ).toBeDefined();
+    expect(screen.getByText('把共用設定改成知道連結者可檢視')).toBeDefined();
     expect(screen.getByText('下載成 xlsx 後上傳')).toBeDefined();
   });
 
@@ -187,9 +183,7 @@ describe('QuestionImport', () => {
 
       const alert = await screen.findByRole('alert');
       expect(alert.textContent).toContain(`伺服器訊息：${code}`);
-      expect(
-        screen.getByText('把共用設定改成知道連結者可檢視'),
-      ).toBeDefined();
+      expect(screen.getByText('把共用設定改成知道連結者可檢視')).toBeDefined();
       expect(screen.getByText('下載成 xlsx 後上傳')).toBeDefined();
     });
   }
@@ -206,12 +200,8 @@ describe('QuestionImport', () => {
 
       const alert = await screen.findByRole('alert');
       expect(alert.textContent).toContain(`伺服器訊息：${code}`);
-      expect(
-        screen.getByText('請使用 xlsx 格式、5 MB 以內的學習單'),
-      ).toBeDefined();
-      expect(
-        screen.queryByText('把共用設定改成知道連結者可檢視'),
-      ).toBeNull();
+      expect(screen.getByText('請使用 xlsx 格式、5 MB 以內的學習單')).toBeDefined();
+      expect(screen.queryByText('把共用設定改成知道連結者可檢視')).toBeNull();
       expect(screen.queryByText('下載成 xlsx 後上傳')).toBeNull();
     });
   }
@@ -230,9 +220,89 @@ describe('QuestionImport', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain('題號 3 重複（第 9、11 列）');
-    expect(
-      screen.queryByText('請使用 xlsx 格式、5 MB 以內的學習單'),
-    ).toBeNull();
+    expect(screen.queryByText('請使用 xlsx 格式、5 MB 以內的學習單')).toBeNull();
     expect(screen.queryByRole('region', { name: '匯入摘要' })).toBeNull();
+  });
+});
+
+/**
+ * 2026-11-23（007 人工驗證，Philip 在 Windows + Chrome 實測）：
+ * 原生 `<input type="file">` 的「選擇檔案」「未選擇任何檔案」是**瀏覽器
+ * 自己畫的字**，跟著 Chrome 的介面語言，不跟網頁的語言切換 → 網頁切成
+ * 英文時那一區仍是中文。
+ *
+ * 所以改成：原生 input 視覺隱藏（仍可 Tab 聚焦、仍能被螢幕閱讀器讀到），
+ * 另做走 i18n 的自製按鈕與檔名文字。
+ */
+describe('檔案上傳的自製按鈕（007 人工驗證）', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('按鈕與「未選擇任何檔案」走 i18n（不是瀏覽器自己畫的字）', () => {
+    render(<QuestionImport snapshot={makeSnapshot()} />);
+
+    expect(screen.getByText('選擇檔案')).toBeDefined();
+    expect(screen.getByText('未選擇任何檔案')).toBeDefined();
+  });
+
+  it('選了檔案後顯示檔名', () => {
+    vi.mocked(importFromFile).mockResolvedValue({
+      ok: false,
+      error: { code: 'FILE_INVALID', message: '不是 xlsx' },
+    });
+    render(<QuestionImport snapshot={makeSnapshot()} />);
+
+    uploadFile();
+
+    expect(screen.getByText('已選擇：guided-notes.xlsx')).toBeDefined();
+    expect(screen.queryByText('未選擇任何檔案')).toBeNull();
+  });
+
+  it('原生 input 視覺隱藏但仍可聚焦（Tab 會停在它上面）', () => {
+    render(<QuestionImport snapshot={makeSnapshot()} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('上傳 xlsx 檔', { exact: true });
+    // 隱藏用 clip-path 而不是 display:none —— 後者會讓它失去可聚焦性。
+    expect(input.className).toContain('fileInputHidden');
+    input.focus();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('原生 input 與自製按鈕以 label 關聯（點按鈕會開啟檔案選擇器）', () => {
+    render(<QuestionImport snapshot={makeSnapshot()} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('上傳 xlsx 檔', { exact: true });
+    const button = screen.getByText('選擇檔案');
+    expect(button.getAttribute('for')).toBe(input.id);
+  });
+
+  /**
+   * 2026-11-24（Philip 在 Windows + Chrome 實測 PR #42 時發現）：
+   * 搶答進行中時原生 input 被 disabled，但**自製的 <label> 不會跟著變** ——
+   * 仍是黑框、hover 仍反白、游標仍是 pointer，點了卻沒反應；
+   * 而旁邊的「讀取」按鈕會變灰，兩者不一致。
+   *
+   * 樣式層由 `web/tests/fileInputStyle.test.ts` 守住；這裡守住 DOM 層的
+   * 前提：input 確實會被停用（樣式才有對應的停用狀態可套）。
+   */
+  it('phase 不是 preparing 時原生 input 會被停用（自製按鈕才有停用樣式可套）', () => {
+    render(<QuestionImport snapshot={makeSnapshot({ phase: 'open' })} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('上傳 xlsx 檔', { exact: true });
+    expect(input.disabled).toBe(true);
+    // 對照：旁邊的「讀取」按鈕也停用（兩者一致）。
+    expect((screen.getByRole('button', { name: '讀取' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('phase 是 preparing 時原生 input 可用', () => {
+    render(<QuestionImport snapshot={makeSnapshot()} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('上傳 xlsx 檔', { exact: true });
+    expect(input.disabled).toBe(false);
   });
 });

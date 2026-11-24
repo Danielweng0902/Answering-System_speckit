@@ -63,8 +63,7 @@ export const zhTW = {
 
   // ── 學生端：結果區 ──────────────────────────────────────
   'results.title': '結果區',
-  'results.description':
-    '搶答已結束，每一題顯示搶答成功的組別與答案，以及本組的答案與順位。',
+  'results.description': '搶答已結束，每一題顯示搶答成功的組別與答案，以及本組的答案與順位。',
   'results.fair': '本場使用公平順位：同批作答依已搶答成功題數排序。',
   'results.firstCome': '本場先到先得：最先送出的組別搶答成功。',
   'results.listLabel': '作答結果',
@@ -95,8 +94,7 @@ export const zhTW = {
 
   // ── 老師端：作答看板 ────────────────────────────────────
   'board.title': '作答看板',
-  'board.description':
-    '每一題、每一組的送出狀態、答案與順位；搶答中即時更新。',
+  'board.description': '每一題、每一組的送出狀態、答案與順位；搶答中即時更新。',
   'board.fairNote': '本場使用公平順位：同批作答依已成功題數排序。',
   'board.empty': '尚未匯入題目，看板會在匯入後顯示每題各組的作答狀態。',
   'board.colQuestion': '題目',
@@ -162,6 +160,13 @@ export const zhTW = {
   'import.linkLabel': 'Google 試算表連結',
   'import.read': '讀取',
   'import.fileLabel': '上傳 xlsx 檔',
+  /*
+   * 2026-11-23（007 人工驗證）：原生檔案元件的「選擇檔案」「未選擇任何檔案」
+   * 是瀏覽器自己畫的字，跟著瀏覽器的介面語言，翻譯不到 → 自製按鈕與檔名文字。
+   */
+  'import.chooseFile': '選擇檔案',
+  'import.noFileSelected': '未選擇任何檔案',
+  'import.selectedFile': '已選擇：{name}',
   'import.summaryLabel': '匯入摘要',
   'import.summaryTitle': '匯入摘要',
   'import.sheet': '工作表：{name}',
@@ -175,8 +180,7 @@ export const zhTW = {
   'import.warningsLabel': '提醒事項',
   'import.warningNumbersNotSequential':
     '題號不是從 1 開始或沒有連續（實際題號：{numbers}），匯入前請確認',
-  'import.warningBlankHasContent':
-    '題號 {number} 的作答格 {cell} 已有內容，匯出時會被取代',
+  'import.warningBlankHasContent': '題號 {number} 的作答格 {cell} 已有內容，匯出時會被取代',
   'import.warningMultipleSheets': '多個工作表都有表頭，已使用「{name}」工作表',
   'import.replaceNotice': '確認後會取代現有題目',
   'import.confirm': '確認匯入',
@@ -255,8 +259,7 @@ export const en: Messages = {
   'answer.inputLabelWithPrefix': 'Answer for question {number} {prefix}',
   'answer.empty': '{blanks} cannot be empty',
   'answer.submitted': 'Your group submitted: {answers}',
-  'answer.voided':
-    'The teacher voided this answer, please submit again',
+  'answer.voided': 'The teacher voided this answer, please submit again',
   'answer.buttonSubmitted': 'Submitted',
   'answer.buttonSending': 'Submitting question {number}…',
   'answer.buttonSendingVisible': 'Submit Q{number}…',
@@ -269,8 +272,7 @@ export const en: Messages = {
 
   'student.title': 'Student',
   'student.preparingTitle': 'Waiting for the teacher to start',
-  'student.preparingDescription':
-    'Stay on this screen; it updates when the teacher starts.',
+  'student.preparingDescription': 'Stay on this screen; it updates when the teacher starts.',
   'student.changeGroup': 'Change group',
 
   'results.title': 'Results',
@@ -278,8 +280,7 @@ export const en: Messages = {
     'Buzzing has ended. Each question shows the winning group and answer, plus your group’s answer and rank.',
   'results.fair':
     'Fair ranking is on: answers in the same batch are ranked by how many questions each group has already won.',
-  'results.firstCome':
-    'First come first served: the first group to submit wins.',
+  'results.firstCome': 'First come first served: the first group to submit wins.',
   'results.listLabel': 'Results',
   'results.noAnswer': 'No answer',
   'results.winner': 'Won by {group}',
@@ -310,8 +311,7 @@ export const en: Messages = {
     'Submission status, answers and ranks for every question and group, updating live.',
   'board.fairNote':
     'Fair ranking is on: answers in the same batch are ranked by questions already won.',
-  'board.empty':
-    'No questions imported yet — the board fills in once you import some.',
+  'board.empty': 'No questions imported yet — the board fills in once you import some.',
   'board.colQuestion': 'Question',
   'board.notSubmitted': 'Not submitted',
   'board.submitted': 'Submitted: ',
@@ -333,8 +333,7 @@ export const en: Messages = {
   'board.blank': 'Blank {number}: {answer}',
 
   'groups.title': 'Groups',
-  'groups.locked':
-    'Groups can only be added, renamed or deleted while preparing.',
+  'groups.locked': 'Groups can only be added, renamed or deleted while preparing.',
   'groups.nameLabel': 'New group name',
   'groups.add': 'Add group',
   'groups.empty': 'No groups yet.',
@@ -373,6 +372,9 @@ export const en: Messages = {
   'import.linkLabel': 'Google Sheets link',
   'import.read': 'Read',
   'import.fileLabel': 'Upload xlsx file',
+  'import.chooseFile': 'Choose file',
+  'import.noFileSelected': 'No file selected',
+  'import.selectedFile': 'Selected: {name}',
   'import.summaryLabel': 'Import summary',
   'import.summaryTitle': 'Import summary',
   'import.sheet': 'Sheet: {name}',
@@ -388,8 +390,7 @@ export const en: Messages = {
     'Question numbers do not start at 1 or are not continuous (actual: {numbers}) — please check before importing',
   'import.warningBlankHasContent':
     'Question {number} already has content in {cell}; it will be replaced on import',
-  'import.warningMultipleSheets':
-    'Several tabs have a header row; the “{name}” tab is being used',
+  'import.warningMultipleSheets': 'Several tabs have a header row; the “{name}” tab is being used',
   'import.replaceNotice': 'Confirming replaces the current questions',
   'import.confirm': 'Import',
   'import.cancel': 'Cancel',

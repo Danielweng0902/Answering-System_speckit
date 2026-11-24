@@ -91,9 +91,13 @@ describe('表單控制項的統一規格（--control-height）', () => {
     }
   });
 
-  it('上傳檔案的原生按鈕套成次要按鈕樣式', () => {
+  it('上傳檔案的自製按鈕走同一組規格', () => {
+    // 2026-11-23（007 人工驗證）：原本是拿 ::file-selector-button 套原生按鈕的
+    // 樣式，但那只改得了外觀、改不了文字（瀏覽器自己畫的，跟著 Chrome 的
+    // 介面語言）→ 改成原生 input 隱藏 ＋ 自製按鈕，細節見
+    // fileInputStyle.test.ts。
     const css = readCss('../src/features/teacher/QuestionImport.module.css');
-    const body = ruleBody(css, '.fileInput::file-selector-button');
+    const body = ruleBody(css, '.fileButton');
 
     expect(body).toContain('min-height: var(--control-height);');
     expect(body).toContain('padding: 0 var(--control-padding-inline);');
