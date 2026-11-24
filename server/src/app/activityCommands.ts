@@ -29,6 +29,7 @@ import {
 import { clearAll as clearAllAnswers } from '../infra/db/answerRepo.js';
 import { countGroups } from '../infra/db/groupRepo.js';
 import { count as countQuestions } from '../infra/db/questionRepo.js';
+import { deleteSessionsByRole } from '../infra/db/sessionRepo.js';
 import {
   commandError,
   type CommandUseCase,
@@ -60,7 +61,8 @@ export type ActivityCommandDependencies = {
   onClosed?: (() => void) | undefined;
   /**
    * reset 成功後（COMMIT 之後）呼叫，讓後續子功能清空各自的資料；
-   * 組別與 sessions 由本子功能保留（data-model.md、FR-022）。
+   * 組別與老師的 session 由本子功能保留（data-model.md、FR-022）——
+   * 學生的 session 在 transaction 內直接作廢（2026-11-24，D2-1）。
    */
   onReset?: (() => void) | undefined;
 };
@@ -195,6 +197,17 @@ export function createActivityCommands(
         // 在同一 transaction 改變；兩個作答 counter 刻意保留以維持單調 revision。
         clearAllAnswers(database);
         newSessionId(database);
+        // 2026-11-24（D2-1）：重設 = 新的一場 → 一併作廢學生的 session
+        // （token 立即失效）。只作廢學生，**老師的 session 保留**（老師還在
+        // 操作同一個後端，重設不該把老師踢出）。
+        //
+        // 影響範圍有限：socket 的身分是在 connection 時解析一次就存著的，
+        // 每個指令不重查 sessions 表 → **已連線的學生不受影響**；只有重設
+        // 之後才連線、或斷線重連的學生需要重新進場。
+        //
+        // ⚠️ 這條行為需要 OpenSpec 組同意（共用契約的 session lifecycle）：
+        // 提案見 docs/shared/REPLY-2026-11-24.md。
+        deleteSessionsByRole(database, 'student');
       }, {
         // 005 FR-001／FR-023：重設後公平順位回到預設（不啟用）、揭曉進度清空。
         fairRankingEnabled: false,

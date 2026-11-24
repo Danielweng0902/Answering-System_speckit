@@ -122,7 +122,7 @@ describe('activity:reset 重設活動（老師＋學生＋guest）', () => {
     await expectNoState(guestSocket);
   });
 
-  it('confirm:true 後老師、學生、guest 都收到 preparing，組別保留，學生 token 重連仍是原組（AC-001-27）', async () => {
+  it('confirm:true 後老師、學生、guest 都收到 preparing，組別保留（AC-001-27）', async () => {
     await openThenClose();
     const before = readActivity(server);
 
@@ -152,18 +152,58 @@ describe('activity:reset 重設活動（老師＋學生＋guest）', () => {
     expect(activity.revision).toBe(before.revision + 1);
     expect(listGroups(server.db)).toHaveLength(2);
 
-    // Session 保留：學生以原 token 重連仍是原組（AC-001-27、data-model.md）。
-    const reconnected = server.connect({
-      token: studentToken,
-      autoConnect: false,
+  });
+
+  /**
+   * 2026-11-24（D2-1）：重設 = 新的一場 → 一併作廢學生的 session。
+   *
+   * 這個測項自建 socket（不用 beforeEach 的），因為要同時觀察三種身分在
+   * 重設前後的差別：學生降為 guest、老師保留、已連線的學生不受影響。
+   */
+  it('重設會作廢學生的 session：舊 token 重連降為 guest，老師的 token 仍可重連（D2-1）', async () => {
+    const teacherToken = issueSession(server.db, { role: 'teacher' });
+    const studentToken = issueSession(server.db, { role: 'student', groupId: 'group-1' });
+
+    const teacher = server.connect({ token: teacherToken, autoConnect: false });
+    const student = server.connect({ token: studentToken, autoConnect: false });
+
+    const teacherInitial = waitForState(teacher);
+    const studentInitial = waitForState(student);
+    teacher.connect();
+    student.connect();
+    await Promise.all([teacherInitial, studentInitial]);
+
+    // 開搶答 → 結束，讓重設的前置條件成立。
+    let states = Promise.all([waitForState(teacher), waitForState(student)]);
+    expect(await sendCommand(teacher, 'activity:open', {})).toEqual({ ok: true });
+    await states;
+    states = Promise.all([waitForState(teacher), waitForState(student)]);
+    expect(await sendCommand(teacher, 'activity:close', {})).toEqual({ ok: true });
+    await states;
+
+    const teacherSaw = waitForState(teacher);
+    const studentSaw = waitForState(student);
+    expect(await sendCommand(teacher, 'activity:reset', { confirm: true })).toEqual({
+      ok: true,
     });
-    const teacherSawStudent = waitForState(teacherSocket);
-    const initial = waitForState(reconnected);
+    // 已連線的學生**沒有被踢掉** → 仍收到重設後的 state，而且身分仍是學生
+    // （身分是在 connection 時解析一次就存著的，每個指令不重查 sessions 表）。
+    const [afterReset, studentAfterReset] = await Promise.all([teacherSaw, studentSaw]);
+    expect(afterReset.phase).toBe('preparing');
+    expect(studentAfterReset.role).toBe('student');
+    expect(studentAfterReset).toMatchObject({ myGroupId: 'group-1' });
+
+    // 但他的 session 已經不存在了 → 用舊 token 重連會降為 guest。
+    const reconnected = server.connect({ token: studentToken, autoConnect: false });
+    const guestSnapshot = waitForState(reconnected);
     reconnected.connect();
-    const [snapshot] = await Promise.all([initial, teacherSawStudent]);
-    expect(snapshot.phase).toBe('preparing');
-    expect(snapshot.role).toBe('student');
-    expect(snapshot).toMatchObject({ myGroupId: 'group-1' });
+    expect((await guestSnapshot).role).toBe('guest');
+
+    // 老師的 session 保留 → 用老師 token 重連仍是老師（不該被踢出）。
+    const teacherReconnected = server.connect({ token: teacherToken, autoConnect: false });
+    const teacherSnapshot = waitForState(teacherReconnected);
+    teacherReconnected.connect();
+    expect((await teacherSnapshot).role).toBe('teacher');
   });
 
   it('preparing 與 open 時 reset 拒絕 INVALID_PHASE，不廣播、狀態不變（AC-001-29）', async () => {
