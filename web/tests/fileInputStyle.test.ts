@@ -59,4 +59,29 @@ describe('檔案上傳的自製按鈕（007 人工驗證）', () => {
     // 註解裡提到它不算，要看的是有沒有「規則」。
     expect(css).not.toMatch(/::file-selector-button\s*\{/);
   });
+
+  /**
+   * 2026-11-24（Philip 在 Windows + Chrome 實測 PR #42 時發現）：
+   * 搶答進行中時原生 input 被 disabled，但**自製的 <label> 不會跟著變** ——
+   * 仍是黑框、hover 仍反白、游標仍是 pointer，點了卻沒反應；
+   * 而旁邊的「讀取」按鈕會變灰，兩者不一致。
+   *
+   * 原本用 ::file-selector-button 時停用外觀是瀏覽器給的，改成自製按鈕後
+   * 就必須自己處理。
+   */
+  it('原生 input 停用時，自製按鈕也變灰且 hover 不反轉', () => {
+    expect(css).toMatch(
+      /\.fileInputHidden:disabled \+ \.filePicker \.fileButton \{[^}]*color: var\(--color-ink-muted\);/,
+    );
+    expect(css).toMatch(
+      /\.fileInputHidden:disabled \+ \.filePicker \.fileButton \{[^}]*border-color: var\(--color-rule\);/,
+    );
+    expect(css).toMatch(
+      /\.fileInputHidden:disabled \+ \.filePicker \.fileButton \{[^}]*cursor: not-allowed;/,
+    );
+    // hover 也要排除停用狀態。
+    expect(css).toMatch(
+      /\.fileInputHidden:disabled \+ \.filePicker \.fileButton:hover \{[^}]*background: transparent;/,
+    );
+  });
 });

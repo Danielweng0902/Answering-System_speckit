@@ -280,4 +280,29 @@ describe('檔案上傳的自製按鈕（007 人工驗證）', () => {
     const button = screen.getByText('選擇檔案');
     expect(button.getAttribute('for')).toBe(input.id);
   });
+
+  /**
+   * 2026-11-24（Philip 在 Windows + Chrome 實測 PR #42 時發現）：
+   * 搶答進行中時原生 input 被 disabled，但**自製的 <label> 不會跟著變** ——
+   * 仍是黑框、hover 仍反白、游標仍是 pointer，點了卻沒反應；
+   * 而旁邊的「讀取」按鈕會變灰，兩者不一致。
+   *
+   * 樣式層由 `web/tests/fileInputStyle.test.ts` 守住；這裡守住 DOM 層的
+   * 前提：input 確實會被停用（樣式才有對應的停用狀態可套）。
+   */
+  it('phase 不是 preparing 時原生 input 會被停用（自製按鈕才有停用樣式可套）', () => {
+    render(<QuestionImport snapshot={makeSnapshot({ phase: 'open' })} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('上傳 xlsx 檔', { exact: true });
+    expect(input.disabled).toBe(true);
+    // 對照：旁邊的「讀取」按鈕也停用（兩者一致）。
+    expect((screen.getByRole('button', { name: '讀取' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('phase 是 preparing 時原生 input 可用', () => {
+    render(<QuestionImport snapshot={makeSnapshot()} />);
+
+    const input = screen.getByLabelText<HTMLInputElement>('上傳 xlsx 檔', { exact: true });
+    expect(input.disabled).toBe(false);
+  });
 });

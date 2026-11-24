@@ -140,6 +140,28 @@
 }
 
 /*
+ * 停用狀態（2026-11-24，Philip 在 Windows + Chrome 實測 PR #42 時發現）：
+ * 搶答進行中時原生 input 會被 disabled，但**自製的 <label> 不會跟著變** ——
+ * 仍是黑框、hover 仍反白、游標仍是 pointer，點了卻沒反應。
+ * 其他按鈕（例如旁邊的「讀取」）都會變灰，兩者不一致。
+ *
+ * 原本用 ::file-selector-button 時，停用外觀是瀏覽器自己給的；改成自製按鈕
+ * 後就必須自己處理。規則與其他按鈕的 `.button:disabled` 一致：
+ * 降成 --color-rule 框＋--color-ink-muted 字，底色透明。
+ */
+.fileInputHidden:disabled + .filePicker .fileButton {
+  color: var(--color-ink-muted);
+  border-color: var(--color-rule);
+  cursor: not-allowed;
+}
+
+/* 停用時 hover 不反轉（與其他停用按鈕一致）。 */
+.fileInputHidden:disabled + .filePicker .fileButton:hover {
+  color: var(--color-ink-muted);
+  background: transparent;
+}
+
+/*
  * 隱藏的 input 被 Tab 聚焦時，焦點外框要顯示在自製按鈕上
  * （Philip 在 review 裡特別提醒：藏起來的 input 仍要能用 Tab 聚焦，
  * 焦點外框要顯示在自製按鈕上）。
