@@ -309,20 +309,48 @@ test('quickstart 人工驗證表流程：登入、設組、倒數開啟、結束
     // 步驟 11（略過）：重新啟動伺服器無法在 e2e 共用的伺服器上進行；
     // 重啟後階段與組別一致由 server 的 restart 整合測試涵蓋（AC-001-21）。
 
-    // 步驟 12：重設活動並確認，三個畫面回到準備中，組別保留（AC-001-27）。
+    // 步驟 12：重設活動並確認，老師回到準備中、組別保留（AC-001-27）；
+    // **已連線的學生**會被通知回到選組頁，並看到「活動已重設」的原因
+    // （D2-1；OpenSpec 組 2026-11-25 同意並要求兩組行為一致 ——
+    //  否則同一班會有人留在原組、有人要重選）。
     await phaseControl.getByRole('button', { name: '重設活動' }).click();
     await phaseControl.getByRole('button', { name: '確認重設' }).click();
-    for (const page of [teacherPage, studentOnePage, studentTwoPage]) {
-      await expect(page.getByText('目前階段：準備中')).toBeVisible();
-    }
+    await expect(teacherPage.getByText('目前階段：準備中')).toBeVisible();
     await expect(groupList).toContainText('A 組');
     await expect(groupList).toContainText('B 組');
+
+    // 學生回到選組頁，說明是「活動已重設」（不是「組別不存在」）。
+    for (const page of [studentOnePage, studentTwoPage]) {
+      await expect(
+        page.getByRole('heading', { name: '選擇組別' }),
+      ).toBeVisible();
+      await expect(page.getByRole('alert')).toContainText(
+        '活動已重設，請重新選擇組別',
+      );
+      // 組別保留 → 學生只要再點一下就能重新進場。
+      await expect(
+        page.getByRole('button', { name: 'A 組', exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'B 組', exact: true }),
+      ).toBeVisible();
+    }
+
+    // 重新選組（點一下）→ 回到學生身分、顯示組別與目前階段。
+    await studentOnePage
+      .getByRole('button', { name: 'A 組', exact: true })
+      .click();
     await expect(
       studentOnePage.getByText('A 組', { exact: true }),
     ).toBeVisible();
+    await expect(studentOnePage.getByText('目前階段：準備中')).toBeVisible();
+    await studentTwoPage
+      .getByRole('button', { name: 'B 組', exact: true })
+      .click();
     await expect(
       studentTwoPage.getByText('B 組', { exact: true }),
     ).toBeVisible();
+    await expect(studentTwoPage.getByText('目前階段：準備中')).toBeVisible();
   } finally {
     await teacherContext.close();
     await studentOneContext.close();

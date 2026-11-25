@@ -358,10 +358,16 @@ export type Ack = { ok: true } | { ok: false; error: CommandError };
 /** 伺服器 → 前端：完整狀態快照。 */
 export const STATE_EVENT = 'state';
 
-/** 伺服器 → 前端：學生 token 對應的組別已不存在。 */
+/**
+ * 伺服器 → 前端：學生的進場狀態已失效。
+ *
+ * - `GROUP_NOT_FOUND`：學生 token 對應的組別已不存在（001 刪組）。
+ * - `ACTIVITY_RESET`：活動被重設，本場的進場狀態一併失效（001 D19／D2-1）——
+ *   學生回到選組頁、組別保留，重新點一次即可。
+ */
 export const SESSION_INVALID_EVENT = 'session:invalid';
 
-export type SessionInvalidPayload = { code: 'GROUP_NOT_FOUND' };
+export type SessionInvalidPayload = { code: 'GROUP_NOT_FOUND' | 'ACTIVITY_RESET' };
 
 export type GroupCreatePayload = { name: string };
 export type GroupRenamePayload = { groupId: string; name: string };

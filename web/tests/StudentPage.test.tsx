@@ -10,6 +10,7 @@ import {
   type Ack,
   type GuestSnapshot,
   type Phase,
+  type SessionInvalidPayload,
   type Snapshot,
   type StudentClosedSnapshot,
   type StudentOpenSnapshot,
@@ -112,14 +113,14 @@ function guestSnapshot(
 
 function renderPage(
   snapshot: Snapshot | null,
-  sessionInvalid = false,
+  sessionInvalidCode: SessionInvalidPayload['code'] | null = null,
 ): ReturnType<typeof render> {
   return render(
     <StudentPage
       snapshot={snapshot}
-      sessionInvalid={sessionInvalid}
+      sessionInvalid={sessionInvalidCode !== null}
       sessionInvalidPayload={
-        sessionInvalid ? { code: 'GROUP_NOT_FOUND' } : null
+        sessionInvalidCode === null ? null : { code: sessionInvalidCode }
       }
     />,
   );
@@ -302,9 +303,24 @@ describe('StudentPage', () => {
   });
 
   it('session:invalid 後顯示重新選組說明', () => {
-    renderPage(studentSnapshot('preparing'), true);
+    renderPage(studentSnapshot('preparing'), 'GROUP_NOT_FOUND');
 
     expect(screen.getByText(ERROR_MESSAGES.GROUP_NOT_FOUND)).toBeDefined();
     expect(screen.getByRole('heading', { name: '選擇組別' })).toBeDefined();
+  });
+
+  /**
+   * 2026-11-25（D2-1）：活動被重設時，學生端要顯示「重設」的原因，
+   * 不是「組別不存在」——兩種 session:invalid 的說法不能混在一起。
+   */
+  it('session:invalid（ACTIVITY_RESET）後顯示活動已重設的說明並回到選組頁', () => {
+    renderPage(studentSnapshot('preparing'), 'ACTIVITY_RESET');
+
+    expect(screen.getByText('活動已重設，請重新選擇組別')).toBeDefined();
+    expect(screen.getByRole('heading', { name: '選擇組別' })).toBeDefined();
+    // 不是「組別不存在」的說明。
+    expect(screen.queryByText(ERROR_MESSAGES.GROUP_NOT_FOUND)).toBeNull();
+    // 組別仍在 → 學生只要點一下就能重新進場。
+    expect(screen.getByRole('button', { name: '第一組' })).toBeDefined();
   });
 });

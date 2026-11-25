@@ -201,12 +201,15 @@ export function createActivityCommands(
         // （token 立即失效）。只作廢學生，**老師的 session 保留**（老師還在
         // 操作同一個後端，重設不該把老師踢出）。
         //
-        // 影響範圍有限：socket 的身分是在 connection 時解析一次就存著的，
-        // 每個指令不重查 sessions 表 → **已連線的學生不受影響**；只有重設
-        // 之後才連線、或斷線重連的學生需要重新進場。
+        // 2026-11-25（OpenSpec 組同意並追加要求）：**已連線的學生也要被通知**
+        // —— socket 的身分是在 connection 時解析一次就存著的，每個指令不重查
+        // sessions 表，所以只刪 sessions 表不足以讓已連線的學生回到選組頁。
+        // 這裡的 onReset 掛載點會呼叫 broadcaster.invalidateAllStudents()
+        // （送 session:invalid、code = 'ACTIVITY_RESET'），把已連線的學生降為
+        // guest。理由：另一組的學生端每次送出都重新檢查，重設後一定全部重選；
+        // 我們不通知的話，同一班會有人留在原組、有人要重選（兩組必須一致）。
         //
-        // ⚠️ 這條行為需要 OpenSpec 組同意（共用契約的 session lifecycle）：
-        // 提案見 docs/shared/REPLY-2026-11-24.md。
+        // 對應條文：Feature Contract D19、001 的 FR-022／AC-001-27。
         deleteSessionsByRole(database, 'student');
       }, {
         // 005 FR-001／FR-023：重設後公平順位回到預設（不啟用）、揭曉進度清空。

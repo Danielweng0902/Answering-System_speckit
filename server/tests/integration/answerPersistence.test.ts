@@ -262,10 +262,13 @@ describe('US6 作答保存（AC-003-27、32；FR-026–FR-028；SC-006）', () =
       await sendCommand(fixture.teacher, 'activity:reset', { confirm: true }),
     ).toEqual({ ok: true });
     const [, resetStudentState] = await Promise.all(resettingStates);
-    const preparingSnapshot = studentSnapshot(
-      requiredState(resetStudentState),
-      'preparing',
-    ) as StudentPreparingSnapshot;
+    // 2026-11-24（D2-1）：重設 → 學生的進場狀態失效 → 身分降為 guest、
+    // 回到選組頁（另一組那邊每次送出都重新檢查 → 重設後一定全部重選；
+    // 我們要一致，所以已連線的學生也會被通知回去）。
+    expect(requiredState(resetStudentState)).toMatchObject({
+      role: 'guest',
+      phase: 'preparing',
+    });
 
     expect(submissions(server.db)).toEqual([]);
     expect(submissionAnswers(server.db)).toEqual([]);
@@ -278,10 +281,11 @@ describe('US6 作答保存（AC-003-27、32；FR-026–FR-028；SC-006）', () =
       beforeReset.groupTwoAnswerRevision,
     );
     expect(getAnswerEventCount(server.db)).toBe(beforeReset.answerEventCount);
-    expect(preparingSnapshot.sessionId).toBe(getSessionId(server.db));
-    expect(preparingSnapshot.revision).toBeGreaterThanOrEqual(
-      acceptedRevisionBeforeReset,
-    );
+    // sessionId 已換新（從資料庫確認；學生的快照現在是 guest，沒有 sessionId）。
+    const sessionIdAfterReset = getSessionId(server.db);
+    expect(sessionIdAfterReset).not.toBe(beforeReset.sessionId);
+    const revisionAfterReset = requiredState(resetStudentState).revision;
+    expect(revisionAfterReset).toBeGreaterThanOrEqual(acceptedRevisionBeforeReset);
 
     // 重新開啟後作答區不再有任何已送出答案，但 counter 仍維持持久值。
     const reopenedStates = fixture.sockets.map((socket) =>
@@ -291,15 +295,18 @@ describe('US6 作答保存（AC-003-27、32；FR-026–FR-028；SC-006）', () =
       await sendCommand(fixture.teacher, 'activity:open', {}),
     ).toEqual({ ok: true });
     const [, reopenedStudentState] = await Promise.all(reopenedStates);
-    const openSnapshot = openStudentSnapshot(
-      requiredState(reopenedStudentState),
+    // 重設後學生尚未重新選組 → 仍是 guest；作答資料已清空由資料庫斷言。
+    expect(requiredState(reopenedStudentState)).toMatchObject({
+      role: 'guest',
+      phase: 'open',
+    });
+    expect(submissions(server.db)).toEqual([]);
+    expect(submissionAnswers(server.db)).toEqual([]);
+    // 重新開啟**不會**再換 sessionId（只有重設會換）→ 與重設後的值相同。
+    expect(getSessionId(server.db)).toBe(sessionIdAfterReset);
+    expect(revisionAfterReset).toBeLessThan(
+      requiredState(reopenedStudentState).revision,
     );
-    expect(openSnapshot.sessionId).toBe(preparingSnapshot.sessionId);
-    expect(openSnapshot.myAnswers).toEqual([
-      { questionNumber: 1, state: 'not_submitted', answers: [] },
-      { questionNumber: 2, state: 'not_submitted', answers: [] },
-    ]);
-    expect(openSnapshot.revision).toBeGreaterThan(preparingSnapshot.revision);
   });
 
   it('questions:confirm 成功取代題目時 sessionId 換新且學生快照同步', async () => {

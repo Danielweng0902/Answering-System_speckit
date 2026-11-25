@@ -1,7 +1,7 @@
 # 決策對照表（D1～D25 × 我們的實作狀態）
 
-> 給 OpenSpec 組（另一小組）的附件｜2026-11-20 初版｜**2026-11-22 更新：D18、D20 已與 OpenSpec 組確認**｜SpecKit 組整理
-> 對應文件：[`FEATURE-CONTRACT.md`](./FEATURE-CONTRACT.md) v0.7（2026-11-22）
+> 給 OpenSpec 組（另一小組）的附件｜2026-11-20 初版｜**2026-11-22 更新：D18、D20 已與 OpenSpec 組確認**｜**2026-11-25 更新：D19 已與 OpenSpec 組確認**｜SpecKit 組整理
+> 對應文件：[`FEATURE-CONTRACT.md`](./FEATURE-CONTRACT.md) v0.10（2026-11-25）
 
 ## 這份表在做什麼
 
@@ -27,11 +27,12 @@
 | D25 | 公平順位下的作廢重判與連鎖重算 | Confirmed（2026-11-17）| `server/src/domain/answerSettlement.ts`；對應子功能 005 |
 | E3／E4 | 公平順位機制、倒數計時與投影看板 | Confirmed（2026-11-17）| 倒數：`server/src/app/countdown.ts`；對應子功能 001／005 |
 
-## 二、尚待你們確認的決策（Default 17 條：D1～D11、D15、D17、D19、D21～D23）
+## 二、尚待你們確認的決策（Default 16 條：D1～D11、D15、D17、D21～D23）
 
 下表是我們的**實際做法**與**實作位置**。最下面三欄是請你們回覆的重點。
 
 > 2026-11-22 更新：D18、D20 已被你們回覆並確認（見第三節），從這 17 條裡移出。
+> 2026-11-25 更新：**D19 已被你們回覆並確認**（重設會作廢所有學生的進場狀態，已連線的學生也會被通知並回到選組頁），從這 16 條裡移出。
 
 | # | 決策 | 我們的實際做法 | 實作位置 | 對應子功能 |
 |---|---|---|---|---|
@@ -49,7 +50,7 @@
 | D15 | 倒數計時 | 老師開啟時可選是否設定時間；範圍 10 秒～60 分鐘；時間到自動結束 | `server/src/app/countdown.ts`、`server/src/app/activityCommands.ts` | 001 |
 | D17 | 組別建立 | 老師在準備階段設定組數與組名（可新增／改名／刪除）| `server/src/app/groupCommands.ts` | 001 |
 | **D18** | **老師身分** | **老師端需要密碼才能進入**（密碼由環境變數 `TEACHER_PASSWORD` 設定）；**登入狀態存 HttpOnly cookie**（`HttpOnly; SameSite=Strict; Path=/`，不設 `Max-Age`、不設 `Secure`；頁面 JS 讀不到）、可登出、**伺服器重啟後須重新登入**；未登入呼叫老師端點回 **401 `TEACHER_AUTH_REQUIRED`** | `server/src/infra/http/authRoutes.ts`、`server/src/infra/http/teacherSession.ts` | 001 |
-| D19 | 重設活動 | 老師可在「已結束」後重設回到「準備中」（需再次確認）；組別保留、本次作答清空 | `server/src/app/activityCommands.ts` | 001 |
+| **D19** | **重設活動** | **老師可在「已結束」後重設回到「準備中」（需再次確認）；組別保留、本次作答清空；學生的進場狀態一併作廢（token 立即失效、老師的登入狀態保留）；**已連線的學生也會被通知（`session:invalid`，`code: 'ACTIVITY_RESET'`）並回到選組頁**，組別保留、重新點一下即可進場**（2026-11-25 兩組確認）** | `server/src/app/activityCommands.ts`、`server/src/infra/socket/broadcaster.ts`（`invalidateAllStudents`）、`web/src/features/student/GroupPicker.tsx` | 001 |
 | **D20** | **數量限制** | **組名 1–30 字元且不重複、最多 100 組**；倒數 10 秒～60 分鐘；答案每格 1–200 字元 | `server/src/domain/groupRegistry.ts`、`server/src/app/countdown.ts`、`server/src/domain/answerValidation.ts` | 001／003 |
 | D21 | 換組與重連 | 學生只能在「準備中」換組；重新整理或斷線重連後回到原組別與目前階段 | `server/src/app/studentCommands.ts`、`web/src/features/student/answerDrafts.ts` | 001／003 |
 | D22 | 題目敘述 | 匯入時若有題目敘述則一併讀取，作答區在題號旁顯示；沒有也不影響 | `server/src/domain/guidedNotesParser.ts`、`web/src/features/student/AnswerArea.tsx` | 002／003 |
@@ -78,13 +79,27 @@
 ACK p50 **88 ms**／p95 **158 ms**、逾時 **0%**、漏送 0、老師看板更新 p95 179 ms。
 （量測方法與原始數字見 [`../verification/load-test-2026-11-22-100groups.md`](../verification/load-test-2026-11-22-100groups.md)。）
 
-### 3️⃣ O3（結束後老師改選最終勝者）：不納入共同契約
+### 3️⃣ D19 重設活動：學生的進場狀態一併作廢 ✅ Confirmed
+
+我們與 OpenSpec 組 2026-11-25（Discord 往來）確認：
+
+- **重設 = 新的一場**：重設時該活動**所有學生**的進場狀態一併作廢（token 立即失效）；
+  **老師的登入狀態保留**（老師還在操作同一個後端，不該被踢出）。
+- **已連線的學生也會被通知**：伺服器送 `session:invalid`（`code: 'ACTIVITY_RESET'`），
+  把連線降為 guest、並從在線人數移除 → 學生回到選組頁並看到「活動已重設，請重新選擇組別」。
+  **組別保留**，學生重新點一下即可進場。
+- 為什麼連已連線的學生都要通知：你們那邊的學生端每次送出都會重新檢查進場狀態，
+  重設後**一定**會全部重選；我們若不通知已連線的學生，同一班會變成「有人留在原組、
+  有人要重選」，兩組行為不一致。
+- 對應條文：001 的 FR-022／AC-001-27、`contracts/socket-events.md`。
+
+### 4️⃣ O3（結束後老師改選最終勝者）：不納入共同契約
 
 我們的結果判定是**純函式衍生**（依送達時間與順位即時計算，不落庫），要支援「結束後改選勝者」
 就得新增覆寫欄位，並連動老師看板、學生結果頁、CSV 第 8 欄與 Guided Notes 寫回；
 核心需求（C1～C11）也沒有這項。**兩邊都不做**，OpenSpec 組已表示尚未實作，維持現狀即可。
 
-### 4️⃣ 其餘 16 條 Default：我們的實作如上，有沒有要調整的？
+### 5️⃣ 其餘 16 條 Default：我們的實作如上，有沒有要調整的？
 
 如果照上表沒有問題，回覆「照你們的」即可，我們就把這些收成 Confirmed（契約升 v0.7）。
 

@@ -274,6 +274,13 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     onReset: () => {
       countdown.cancel();
       fairnessSettler.cancelAll();
+      // 2026-11-25（D2-1；OpenSpec 組同日確認並追加此要求）：重設 = 新的一場
+      // → **已連線的學生也回到選組頁**。
+      // 學生的 session 已在 transaction 內作廢；這裡補上「通知已連線的人」，
+      // 否則他們的 socket 身分仍是學生（身分是連線時解析一次就存著的）。
+      // 另一組那邊的學生端每次送出都重新檢查 → 重設後一定全部重選；我們要一致。
+      broadcaster.invalidateAllStudents();
+      broadcaster.broadcastState();
     },
   });
   const answerCommands = createAnswerCommands(database, {

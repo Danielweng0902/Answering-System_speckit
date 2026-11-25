@@ -52,6 +52,11 @@ export const zhTW = {
 
   // ── 學生端：選組別 ──────────────────────────────────────
   'picker.title': '選擇組別',
+  /*
+   * 2026-11-25（D2-1）：活動被重設時，學生的進場狀態失效、回到選組頁。
+   * 組別保留（老師設的組還在），重新點一次即可。
+   */
+  'picker.activityReset': '活動已重設，請重新選擇組別',
   'picker.empty': '老師尚未建立組別',
   'picker.listLabel': '可選組別',
 
@@ -267,6 +272,7 @@ export const en: Messages = {
   'answer.buttonSubmitVisible': 'Submit Q{number}',
 
   'picker.title': 'Choose your group',
+  'picker.activityReset': 'The activity was reset, please pick a group again',
   'picker.empty': 'The teacher has not created any groups yet',
   'picker.listLabel': 'Available groups',
 

@@ -90,15 +90,18 @@ Phase --> Store : activityRepo / countGroups
 Phase --> Timer : onOpened / onClosed
 Timer --> Phase : 經 index.ts：onExpire → closeExpiredActivity()
 Groups --> Sync : 經 index.ts：onGroupDeleted → invalidateGroup()
+Phase --> Sync : 經 index.ts：onReset → invalidateAllStudents()\n（重設：所有學生的進場狀態失效）
 Timer --> Sync : 經 index.ts：到期且改變時 broadcastState()
 Sync --> Store : 讀取 activity / groups；presence 改變時更新 revision
 
 Sync --> TeacherUI : state（依身分過濾的 Snapshot）
-Sync --> StudentUI : state／session:invalid
+Sync --> StudentUI : state／session:invalid\n（GROUP_NOT_FOUND：組別已刪；\nACTIVITY_RESET：活動已重設）
 
 note bottom of Phase
   階段只能由伺服器改變：
   準備中 → 搶答中 → 已結束
   domain/activity.ts：open() → close() → reset()
+  reset：組別保留、作答清空、學生的進場狀態作廢
+  （老師的登入狀態保留；已連線的學生也會被通知回到選組頁）
 end note
 @enduml

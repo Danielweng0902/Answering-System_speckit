@@ -16,7 +16,11 @@ import styles from './StudentPage.module.css';
 
 export type StudentPageProps = UseSnapshotResult;
 
-export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
+export function StudentPage({
+  snapshot,
+  sessionInvalid,
+  sessionInvalidPayload,
+}: StudentPageProps) {
   const { t } = useI18n();
   const [isLeaving, setIsLeaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -60,7 +64,10 @@ export function StudentPage({ snapshot, sessionInvalid }: StudentPageProps) {
             <LanguageSwitch />
           </div>
         </header>
-        <GroupPicker groups={snapshot?.groups ?? []} sessionInvalid={sessionInvalid} />
+        <GroupPicker
+          groups={snapshot?.groups ?? []}
+          sessionInvalidCode={sessionInvalidPayload?.code ?? null}
+        />
       </section>
     );
   }
