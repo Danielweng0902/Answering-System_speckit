@@ -421,3 +421,38 @@ describe('公平順位判定（005 US1；T011、AC-005-01、AC-005-04、AC-005-1
     expect(snapshot.myAnswers[1]?.rank).toBe(2);
   });
 });
+
+describe('公平順位判定完成後看板更新（005 T014；AC-005-08）', () => {
+  // 2026-11-25 錄 Demo 時實測：3 秒定案提醒有廣播，但老師快照的 revision 沒變，
+  // 前端只接受較新的 revision，於是看板一直停在「判定中」，重新整理才更新。
+  it('3 秒後老師收到 revision 更大的快照、該題不再判定中；活動 revision 不變（投影不受影響）', async () => {
+    const fixture = await startFixture();
+    setFairRanking(fixture.server, true);
+    setPhase(fixture.server, 'open');
+    const activityRevisionBefore = getActivity(fixture.server.db)!.revision;
+
+    const settlingState = waitForStateWhere(
+      fixture.teacher,
+      (snapshot) =>
+        snapshot.role === 'teacher' && snapshot.board[0]?.settling === true,
+    );
+    expect(
+      await sendCommand(fixture.student, 'answer:submit', {
+        questionNumber: 1,
+        answers: ['答案'],
+      }),
+    ).toEqual({ ok: true });
+    const settling = await settlingState;
+
+    const settled = await waitForStateWhere(
+      fixture.teacher,
+      (snapshot) =>
+        snapshot.role === 'teacher' && snapshot.board[0]?.settling === false,
+      5_000,
+    );
+    // 前端只接受較新的 revision（useSnapshot），revision 沒前進等於沒更新。
+    expect(settled.revision).toBeGreaterThan(settling.revision);
+    // 投影快照的 revision 就是 activity.revision，不得因作答相關事件跳動（資安審計 #23）。
+    expect(getActivity(fixture.server.db)!.revision).toBe(activityRevisionBefore);
+  }, 10_000);
+});

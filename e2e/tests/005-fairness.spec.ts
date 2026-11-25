@@ -127,6 +127,14 @@ test('US1／US3：公平順位開關、投影看板不外洩作答資訊、逐�
       questionOne.getByText('本組已送出：答案 A1、答案 A2', { exact: true }),
     ).toBeVisible({ timeout: 2_000 });
 
+    // AC-005-08：3 秒批次結束後，老師看板要自己從「判定中」變成「搶答成功」，
+    // 不需要重新整理（2026-11-25 錄 Demo 時發現會一直停在判定中）。
+    const answerBoard = teacherPage.locator('section[aria-labelledby="answer-board-title"]');
+    await expect(answerBoard.getByText('搶答成功', { exact: true })).toHaveCount(1, {
+      timeout: 6_000,
+    });
+    await expect(answerBoard.getByText('判定中', { exact: true })).toHaveCount(0);
+
     // 公平順位改判：兩組在 3 秒內都答第 2 題，成功題數較少的第二組勝出，
     // 因此第 2 題是「改判」（2026-11-19 review：學生端結果頁的改判說明曾把
     // 「本組順位」擠到題號欄，下面會用座標斷言守住同一欄）。

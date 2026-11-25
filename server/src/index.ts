@@ -25,7 +25,10 @@ import { createGroupCommands } from './app/groupCommands.js';
 import { createImportService } from './app/importService.js';
 import { createSubmissionIndex } from './app/submissionIndex.js';
 import { leaveGroup } from './app/studentCommands.js';
-import { getActivity } from './infra/db/activityRepo.js';
+import {
+  getActivity,
+  incrementAnswerEventCount,
+} from './infra/db/activityRepo.js';
 import { countValidForQuestion } from './infra/db/answerRepo.js';
 import { list as listQuestions } from './infra/db/questionRepo.js';
 import { openDatabase } from './infra/db/database.js';
@@ -245,10 +248,15 @@ export async function createServer(options: CreateServerOptions = {}): Promise<S
     },
   });
   // 005（T014）：公平順位「判定完成」提醒；只廣播，不保存判定結果。
+  // 老師快照的 revision 必須前進，前端才會接受這次廣播（只接受較新的
+  // revision）；只遞增老師專用的作答事件計數，activity.revision 不動，
+  // 投影與學生的 revision 不受影響（資安審計 #23）。2026-11-25 修正
+  // AC-005-08：先前沒遞增，看板會一直停在「判定中」。
   const fairnessSettler = createFairnessSettler({
     scheduler,
     onSettled: () => {
       try {
+        incrementAnswerEventCount(database);
         broadcaster.broadcastState();
       } catch {
         console.error('Fairness settlement reminder failed.');
