@@ -57,8 +57,33 @@ function mediaBlock(css: string, condition: string): string {
   return css.slice(start, index - 1);
 }
 
+/**
+ * 取出某個選擇器的**所有**規則內容。
+ *
+ * 為什麼不能只用上面的 ruleBody：像 StudentResults 的 `.answers`、`.mine`
+ * 既是 margin 歸零群組的一員、又有自己的規則，第一個符合的規則會是
+ * margin 那條，拿不到 font-family。
+ */
+function ruleBodies(css: string, selector: string): string[] {
+  const pattern = new RegExp(`(^|[,}\\s])${selector.replace('.', '\\.')}\\s*\\{([^}]*)\\}`, 'gm');
+  const bodies: string[] = [];
+  let match = pattern.exec(css);
+  while (match !== null) {
+    bodies.push(match[2] ?? '');
+    match = pattern.exec(css);
+  }
+  return bodies;
+}
+
+/** 某個選擇器有沒有任何一條規則宣告 `font-family: <value>`。 */
+function declaresFontFamily(css: string, selector: string, value: string): boolean {
+  return ruleBodies(css, selector).some((body) => body.includes(`font-family: ${value}`));
+}
+
 const tokens = () => readCss('../src/styles/tokens.css');
 const answerArea = () => readCss('../src/features/student/AnswerArea.module.css');
+const studentResults = () => readCss('../src/features/student/StudentResults.module.css');
+const answerBoard = () => readCss('../src/features/teacher/AnswerBoard.module.css');
 const projector = () => readCss('../src/features/projector/ProjectorPage.module.css');
 
 describe('字級 token（2026-11-23）', () => {
@@ -112,5 +137,63 @@ describe('學生端作答區的字級層級', () => {
     const narrow = mediaBlock(answerArea(), 'max-width: 30rem');
 
     expect(ruleBody(narrow, '.prompt')).toContain('font-size: var(--font-size-large)');
+  });
+});
+
+/**
+ * 答案文字的字體（2026-11-26 答案字體可讀性修正）。
+ *
+ * 規則：**只有答案文字**（學生輸入、已送出的作答、結果區的答案、
+ * 投影揭曉的答案）用 --font-family-base；題幹與標題維持
+ * --font-family-display 的原設計不動。
+ *
+ * 為什麼要守：純樣式問題 CI 不會紅——字體改錯不會讓任何元件測試失敗，
+ * 只有人眼在教室裡才看得出來（這是這次修正的起因）。
+ */
+describe('答案文字的字體（2026-11-26）', () => {
+  it('作答輸入框與已送出的作答用 --font-family-base', () => {
+    const css = answerArea();
+
+    expect(declaresFontFamily(css, '.input', 'var(--font-family-base)')).toBe(true);
+    expect(declaresFontFamily(css, '.input', 'var(--font-family-display)')).toBe(false);
+    expect(declaresFontFamily(css, '.submitted', 'var(--font-family-base)')).toBe(true);
+  });
+
+  it('作答區的題幹與標題維持 --font-family-display', () => {
+    const css = answerArea();
+
+    expect(declaresFontFamily(css, '.prompt', 'var(--font-family-display)')).toBe(true);
+    expect(declaresFontFamily(css, '.title', 'var(--font-family-display)')).toBe(true);
+  });
+
+  it('結果區的答案文字用 --font-family-base', () => {
+    const css = studentResults();
+
+    expect(declaresFontFamily(css, '.answers', 'var(--font-family-base)')).toBe(true);
+    expect(declaresFontFamily(css, '.answers', 'var(--font-family-display)')).toBe(false);
+    expect(declaresFontFamily(css, '.mine', 'var(--font-family-base)')).toBe(true);
+  });
+
+  it('結果區的題幹與標題維持 --font-family-display', () => {
+    const css = studentResults();
+
+    expect(declaresFontFamily(css, '.prompt', 'var(--font-family-display)')).toBe(true);
+    expect(declaresFontFamily(css, '.title', 'var(--font-family-display)')).toBe(true);
+  });
+
+  it('老師看板儲存格裡的答案文字用 --font-family-base', () => {
+    const css = answerBoard();
+
+    expect(declaresFontFamily(css, '.cell', 'var(--font-family-base)')).toBe(true);
+  });
+
+  it('投影揭曉的答案用 --font-family-base，勝出組別名維持 display', () => {
+    const css = projector();
+
+    // 這裡原本誤用 --font-family-display（2026-11-26 修正）。
+    expect(declaresFontFamily(css, '.revealAnswers', 'var(--font-family-base)')).toBe(true);
+    expect(declaresFontFamily(css, '.revealAnswers', 'var(--font-family-display)')).toBe(false);
+    // 勝出組別名不是答案文字，維持原設計。
+    expect(declaresFontFamily(css, '.revealWinner', 'var(--font-family-display)')).toBe(true);
   });
 });

@@ -77,8 +77,8 @@ Token：`--phase-preparing`（＝`--color-ink-muted`）、`--phase-open`（＝`-
 
 | 角色            | 字體堆疊                                                                                                               | 用途                                           |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| 顯示（display） | `"Iowan Old Style", "Source Serif 4", Georgia, "Times New Roman", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei"` | 題號數字、倒數、組別名、揭曉的組別名與答案     |
-| 內文（body）    | `"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", "Helvetica Neue", Arial, system-ui`                  | 說明、表格內文、輸入的字                       |
+| 顯示（display） | `"Iowan Old Style", "Source Serif 4", Georgia, "Times New Roman", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei"` | 題號數字、倒數、組別名     |
+| 內文（body）    | `"Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Heiti TC", "Helvetica Neue", Arial, system-ui`                  | 說明、表格內文、輸入與顯示的答案                       |
 | 欄標（utility） | 同內文；**中文不拉字距**，純拉丁小標才拉 `0.16em`                                                                      | 「搶答中」「本場使用公平順位」「各組成功題數」 |
 
 - 襯線字沒有中文字 → 中文會**自動落到後面的黑體**：數字與英文有襯線的編輯感、中文是乾淨的黑體。
@@ -86,7 +86,7 @@ Token：`--phase-preparing`（＝`--color-ink-muted`）、`--phase-open`（＝`-
   會讓整個介面有「中華／中文印刷」的味道（2026-11-19 review）。
 - **不用 webfont**：教室網路不穩，缺字會直接壞掉；用系統字體堆疊（macOS 有 Iowan Old Style / PingFang TC，
   Windows 有 Georgia / Microsoft JhengHei）。
-- 數字用襯線體的大寫數字（`font-variant-numeric: lining-nums`），不要用等寬字型。
+- 數答案使用內文字體的大寫數字（`font-variant-numeric: lining-nums`），不要用等寬字型。
 - 中文標題改用黑體後，層級靠**字重**（600）與字級撐出來，不靠襯線。
 - 行長：內文不超過 70 個中文字；大標可以到 28 字。
 
@@ -111,7 +111,7 @@ Token：`--phase-preparing`（＝`--color-ink-muted`）、`--phase-open`（＝`-
     **與主要動作的高度、左右留白相同**；hover 變成墨黑底＋紙色字。
   - **停用**：降成 `--color-rule` 框＋`--color-ink-muted` 字，底色透明。
   - **例外**：學生端的組別清單每一列不是表單控制項（滿寬、只有下框線），不套用上述高度。
-- **輸入**：作答框是**底線式**（只有下框線、背景透明、字用襯線體），不是方框；一般表單（密碼、組別名稱、倒數秒數）維持方框＋1px 細線，並與同列的按鈕同高（`var(--control-height)`）。
+- **輸入**：作答框是**底線式**（只有下框線、背景透明、答案使用內文字體），不是方框；一般表單（密碼、組別名稱、倒數秒數）維持方框＋1px 細線，並與同列的按鈕同高（`var(--control-height)`）。
   - **上傳檔案的原生按鈕**（瀏覽器那個灰色「選擇檔案」）用 `::file-selector-button`
     套成次要按鈕的樣式，不要留瀏覽器預設的灰色外觀。
   - **作答輸入框的字級要比題目文字大一級**（`--font-size-input`）：視線順序是

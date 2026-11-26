@@ -107,7 +107,7 @@
   border: 0;
   border-block-end: var(--border-width-thin) solid var(--color-ink);
   border-radius: 0;
-  font-family: var(--font-family-display);
+  font-family: var(--font-family-base);
   font-size: var(--font-size-input);
 }
 
@@ -122,6 +122,7 @@
 }
 
 .submitted {
+  font-family: var(--font-family-base);
   color: var(--color-indigo);
 }
 

@@ -85,10 +85,12 @@
 }
 
 .answers {
+  font-family: var(--font-family-base);
   color: var(--color-indigo);
 }
 
 .mine {
+  font-family: var(--font-family-base);
   color: var(--color-ink-muted);
 }
 

@@ -73,6 +73,7 @@
 
 .cell {
   min-width: 8rem;
+  font-family: var(--font-family-base);
 }
 
 /* 題號欄不要被擠成直排。 */
