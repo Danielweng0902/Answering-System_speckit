@@ -1,5 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { ERROR_MESSAGES, type GroupSummary } from '@classroom/shared';
+import type { GroupSummary } from '@classroom/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GroupPicker } from '../src/features/student/GroupPicker';
 
@@ -32,7 +32,7 @@ describe('GroupPicker', () => {
     render(<GroupPicker groups={groups} sessionInvalidCode="GROUP_NOT_FOUND" />);
 
     expect(screen.getByRole('alert').textContent).toBe(
-      ERROR_MESSAGES.GROUP_NOT_FOUND,
+      '找不到這個組別，請重新選擇',
     );
   });
 
@@ -47,8 +47,19 @@ describe('GroupPicker', () => {
       '活動已重設，請重新選擇組別',
     );
     // 不是「組別不存在」的說明。
-    expect(screen.queryByText(ERROR_MESSAGES.GROUP_NOT_FOUND)).toBeNull();
+    expect(screen.queryByText('找不到這個組別，請重新選擇')).toBeNull();
     // 組別保留 → 學生點一下就能重新進場。
     expect(screen.getByRole('button', { name: '第一組' })).toBeDefined();
+  });
+
+  it('SESSION_EXPIRED 顯示「進場狀態已失效，請重新選擇組別」的說明', () => {
+    render(<GroupPicker groups={groups} sessionInvalidCode="SESSION_EXPIRED" />);
+
+    expect(screen.getByRole('alert').textContent).toBe(
+      '進場狀態已失效，請重新選擇組別',
+    );
+    // 失效原因已無法分辨，不應誤稱是活動重設或組別不存在。
+    expect(screen.queryByText('活動已重設，請重新選擇組別')).toBeNull();
+    expect(screen.queryByText('找不到這個組別，請重新選擇')).toBeNull();
   });
 });

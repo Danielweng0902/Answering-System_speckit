@@ -15,7 +15,7 @@ export const ERROR_MESSAGES_EN: Partial<Record<ErrorCode, string>> = {
   GROUP_NAME_TOO_LONG: 'Group names can be at most 30 characters',
   GROUP_NAME_DUPLICATE: 'A group with this name already exists',
   GROUP_LIMIT_REACHED: 'You can create at most 100 groups',
-  GROUP_NOT_FOUND: 'That group no longer exists, please pick another one',
+  GROUP_NOT_FOUND: 'That group no longer exists, please choose another group',
   NO_GROUPS: 'Create at least one group first',
   COUNTDOWN_OUT_OF_RANGE: 'The countdown must be between 10 seconds and 60 minutes',
   CONFIRM_REQUIRED: 'Please confirm the activity reset',

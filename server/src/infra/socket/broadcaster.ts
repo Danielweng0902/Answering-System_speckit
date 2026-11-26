@@ -314,10 +314,16 @@ export function createSocketBroadcaster(
 
   io.on('connection', (socket) => {
     let identity = resolveSocketIdentity(socket, database);
+    const hasAuthToken = tokenFromSocket(socket) !== undefined;
 
     if (identity.role === 'student' && !getGroupById(database, identity.groupId)) {
       socket.emit(SESSION_INVALID_EVENT, { code: 'GROUP_NOT_FOUND' });
       identity = { role: 'guest' };
+    } else if (identity.role === 'guest' && hasAuthToken) {
+      // 學生帶著已刪除的 session token 重連時，資料庫已無法分辨是重設或刪組；
+      // 在第一份 state 前通知前端清除舊 token，避免每次重連都再送死 token。
+      // 只看 auth.token：老師的 HttpOnly cookie 路徑不應收到學生失效通知。
+      socket.emit(SESSION_INVALID_EVENT, { code: 'SESSION_EXPIRED' });
     }
 
     socketData(socket).identity = identity;

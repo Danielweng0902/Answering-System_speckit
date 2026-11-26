@@ -105,7 +105,7 @@ export const ackSchema = z.union([
 
 /** session:invalid 事件的內容。 */
 export const sessionInvalidSchema = z.object({
-  code: z.literal('GROUP_NOT_FOUND'),
+  code: z.enum(['GROUP_NOT_FOUND', 'ACTIVITY_RESET', 'SESSION_EXPIRED']),
 });
 
 /* ------------------------------------------------------------------ */

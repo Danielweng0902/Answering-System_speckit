@@ -59,10 +59,12 @@ alt token 對應有效學生身分
     B --> U : state（guest；含最新完整狀態）
     U --> Student : 回到選組畫面並說明原因
   end
-else token 不存在或無效
+else token 不存在或無效（重設／刪組後仍帶著舊 token）
   A --> B : GuestIdentity
+  B --> U : session:invalid\n{ code: 'SESSION_EXPIRED' }
+  U -> U : clearToken()；connectSocket(null)
   B --> U : state（GuestSnapshot）
-  U --> Student : 顯示選組畫面
+  U --> Student : 回到選組畫面並說明「進場狀態已失效，請重新選擇組別」
 end
 
 == 老師重設活動（已連線的學生也要回到選組頁）==

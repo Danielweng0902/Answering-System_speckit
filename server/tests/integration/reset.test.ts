@@ -160,7 +160,8 @@ describe('activity:reset 重設活動（老師＋學生＋guest）', () => {
    * 2026-11-24（D2-1）：重設 = 新的一場 → 一併作廢學生的 session。
    *
    * 這個測項自建 socket（不用 beforeEach 的），因為要同時觀察三種身分在
-   * 重設前後的差別：學生降為 guest、老師保留、已連線的學生不受影響。
+   * 重設前後的差別：已連線的學生即時降為 guest、離線的學生重連時被通知、
+   * 老師保留。
    */
   it('重設會作廢學生的 session：舊 token 重連降為 guest，老師的 token 仍可重連（D2-1）', async () => {
     const teacherToken = issueSession(server.db, { role: 'teacher' });
@@ -199,10 +200,13 @@ describe('activity:reset 重設活動（老師＋學生＋guest）', () => {
     expect(studentAfterReset.role).toBe('guest');
     expect(studentAfterReset).not.toHaveProperty('myGroupId');
 
-    // 但他的 session 已經不存在了 → 用舊 token 重連會降為 guest。
+    // 但他的 session 已經不存在了 → 用舊 token 重連會降為 guest，並先收到
+    // SESSION_EXPIRED，讓前端清掉舊 token（等待器必須在 connect 前掛好）。
     const reconnected = server.connect({ token: studentToken, autoConnect: false });
+    const sessionExpired = waitForSessionInvalid(reconnected);
     const guestSnapshot = waitForState(reconnected);
     reconnected.connect();
+    expect(await sessionExpired).toEqual({ code: 'SESSION_EXPIRED' });
     expect((await guestSnapshot).role).toBe('guest');
 
     // 老師的 session 保留 → 用老師 token 重連仍是老師（不該被踢出）。
@@ -210,6 +214,72 @@ describe('activity:reset 重設活動（老師＋學生＋guest）', () => {
     const teacherSnapshot = waitForState(teacherReconnected);
     teacherReconnected.connect();
     expect((await teacherSnapshot).role).toBe('teacher');
+  });
+
+  /**
+   * 重設當下離線的學生收不到即時的 ACTIVITY_RESET；session 資料列刪除後，
+   * 必須在帶舊 token 重連時收到 SESSION_EXPIRED，才知道進場狀態為何失效。
+   */
+  it('重設當下離線的學生帶舊 token 重連，收到 SESSION_EXPIRED 且快照身分為 guest', async () => {
+    const offlineStudentToken = issueSession(server.db, {
+      role: 'student',
+      groupId: 'group-2',
+    });
+    const offlineStudent = server.connect({
+      token: offlineStudentToken,
+      autoConnect: false,
+    });
+
+    const studentInitial = waitForState(offlineStudent);
+    offlineStudent.connect();
+    const initialSnapshot = await studentInitial;
+    expect(initialSnapshot.role).toBe('student');
+    expect(initialSnapshot).toHaveProperty('myGroupId', 'group-2');
+
+    // 開搶答 → 結束，讓重設的前置條件成立。
+    let states = Promise.all([
+      waitForState(teacherSocket),
+      waitForState(offlineStudent),
+    ]);
+    expect(await sendCommand(teacherSocket, 'activity:open', {})).toEqual({
+      ok: true,
+    });
+    await states;
+    states = Promise.all([
+      waitForState(teacherSocket),
+      waitForState(offlineStudent),
+    ]);
+    expect(await sendCommand(teacherSocket, 'activity:close', {})).toEqual({
+      ok: true,
+    });
+    await states;
+
+    // 等老師快照確認第二組已離線，確保重設前 server 已處理 disconnect。
+    const teacherSawStudentOffline = waitForStateMatching(
+      teacherSocket,
+      (snapshot): snapshot is TeacherSnapshot =>
+        snapshot.role === 'teacher' && snapshot.presence['group-2'] === 0,
+    );
+    offlineStudent.disconnect();
+    await teacherSawStudentOffline;
+
+    expect(
+      await sendCommand(teacherSocket, 'activity:reset', { confirm: true }),
+    ).toEqual({ ok: true });
+
+    // 舊 token 對應的 session 已刪除；兩個等待器都要在 connect 前掛好。
+    const reconnected = server.connect({
+      token: offlineStudentToken,
+      autoConnect: false,
+    });
+    const sessionExpired = waitForSessionInvalid(reconnected);
+    const guestSnapshot = waitForState(reconnected);
+    reconnected.connect();
+
+    expect(await sessionExpired).toEqual({ code: 'SESSION_EXPIRED' });
+    const reconnectedSnapshot = await guestSnapshot;
+    expect(reconnectedSnapshot.role).toBe('guest');
+    expect(reconnectedSnapshot).not.toHaveProperty('myGroupId');
   });
 
   /**

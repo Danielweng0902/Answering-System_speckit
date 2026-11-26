@@ -95,7 +95,7 @@ Timer --> Sync : 經 index.ts：到期且改變時 broadcastState()
 Sync --> Store : 讀取 activity / groups；presence 改變時更新 revision
 
 Sync --> TeacherUI : state（依身分過濾的 Snapshot）
-Sync --> StudentUI : state／session:invalid\n（GROUP_NOT_FOUND：組別已刪；\nACTIVITY_RESET：活動已重設）
+Sync --> StudentUI : state／session:invalid\n（GROUP_NOT_FOUND：組別已刪；\nACTIVITY_RESET：活動已重設；\nSESSION_EXPIRED：帶舊 token 重連、進場狀態已失效）
 
 note bottom of Phase
   階段只能由伺服器改變：

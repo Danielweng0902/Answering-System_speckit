@@ -1,14 +1,16 @@
-import {
-  ERROR_MESSAGES,
-  type GroupSummary,
-  type SessionInvalidPayload,
-} from '@classroom/shared';
+import type { GroupSummary, SessionInvalidPayload } from '@classroom/shared';
 import { useState } from 'react';
 import { useI18n } from '../../lib/i18n/LanguageProvider';
 import { joinStudent } from '../../lib/api';
 import { saveToken } from '../../lib/session';
 import { connectSocket } from '../../lib/socket';
 import styles from './GroupPicker.module.css';
+
+const SESSION_INVALID_MESSAGE_KEYS = {
+  GROUP_NOT_FOUND: 'picker.groupNotFound',
+  ACTIVITY_RESET: 'picker.activityReset',
+  SESSION_EXPIRED: 'picker.sessionExpired',
+} as const;
 
 export type GroupPickerProps = {
   groups: readonly GroupSummary[];
@@ -17,6 +19,7 @@ export type GroupPickerProps = {
    *
    * - `GROUP_NOT_FOUND`：目前組別已不存在（老師刪組）。
    * - `ACTIVITY_RESET`：活動被重設，本場的進場狀態失效（D2-1）。
+   * - `SESSION_EXPIRED`：帶著已失效的 token 重新連線，原失效原因已無法分辨。
    */
   sessionInvalidCode: SessionInvalidPayload['code'] | null;
 };
@@ -54,9 +57,7 @@ export function GroupPicker({ groups, sessionInvalidCode }: GroupPickerProps) {
       </h2>
       {sessionInvalidCode !== null && (
         <p className={styles.notice} role="alert">
-          {sessionInvalidCode === 'ACTIVITY_RESET'
-            ? t('picker.activityReset')
-            : ERROR_MESSAGES.GROUP_NOT_FOUND}
+          {t(SESSION_INVALID_MESSAGE_KEYS[sessionInvalidCode])}
         </p>
       )}
       {errorMessage !== null && (
