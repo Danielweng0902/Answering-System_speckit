@@ -195,6 +195,38 @@ export function waitForState(
   });
 }
 
+/**
+ * Wait for the next state snapshot that satisfies the predicate.
+ *
+ * 2026-11-25（D2-1）：多條連線的整合測試裡，某條連線可能還沒消化上一輪
+ * 廣播的快照；這個等待器會略過不符合條件的快照，只回傳符合的那一份。
+ *
+ * 用型別守衛（type predicate）收窄，呼叫端拿到的就是具體的身分快照。
+ */
+export function waitForStateMatching<T extends Snapshot>(
+  socket: Socket,
+  predicate: (snapshot: Snapshot) => snapshot is T,
+  timeoutMilliseconds = 2_000,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      socket.off(STATE_EVENT, onState);
+      reject(new Error('Timed out waiting for a matching state snapshot'));
+    }, timeoutMilliseconds);
+
+    function onState(snapshot: Snapshot): void {
+      if (!predicate(snapshot)) {
+        return;
+      }
+      clearTimeout(timeout);
+      socket.off(STATE_EVENT, onState);
+      resolve(snapshot);
+    }
+
+    socket.on(STATE_EVENT, onState);
+  });
+}
+
 /** Emit a contract command and resolve with its acknowledgement. */
 export function sendCommand(
   socket: Socket,

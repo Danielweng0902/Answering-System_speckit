@@ -104,11 +104,19 @@ Snapshot --> GroupSummary : groups
 GroupRecord ..> GroupSummary : createSnapshot() 映射 id、name
 ActivityRecord ..> Snapshot : createSnapshot() 提供 phase / countdownEndsAt / revision
 
+note bottom of Session
+  學生的進場狀態：重設活動時一併作廢（deleteSessionsByRole 'student'），
+  已連線的學生也會被通知（session:invalid，code = 'ACTIVITY_RESET'）降為 guest；
+  老師的 session 保留（2026-11-25 D19）。
+  重設當下離線的學生帶著舊 token 重連時，也會收到
+  session:invalid（code = 'SESSION_EXPIRED'）並清除舊 token。
+end note
+
 note bottom of ActivityState
   規則（server/src/domain/activity.ts）：
   1. 階段只能依序前進
   2. 開啟前至少要有一個組別
-  3. 只有「已結束」可以重設
+  3. 只有「已結束」可以重設（重設會作廢學生的進場狀態，組別保留）
   4. 重複 open／close 回覆成功但 changed = false
 end note
 

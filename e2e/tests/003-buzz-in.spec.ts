@@ -284,12 +284,27 @@ test('US2 離場流程：送出 → 結束 → 重設 → 離開後回到選組�
     await teacherPage
       .getByRole('button', { name: '確認重設', exact: true })
       .click();
-    await expect(studentPage.getByText('目前階段：準備中')).toBeVisible();
 
-    // 同一連線降級為 guest 後，畫面必須回到選組（GroupPicker 可見）。
+    // 2026-11-25（D2-1）：重設 → 學生的進場狀態失效 → 同一連線降級為
+    // guest → 畫面回到選組（GroupPicker 可見），並說明是「活動已重設」。
+    await expect(
+      studentPage.getByRole('heading', { name: '選擇組別', exact: true }),
+    ).toBeVisible();
+    await expect(studentPage.getByRole('alert')).toContainText(
+      '活動已重設，請重新選擇組別',
+    );
+
+    // 重新進場後仍可主動離開組別（T025）：降級為 guest → 回到選組畫面。
+    await studentPage
+      .getByRole('button', { name: groupName, exact: true })
+      .click();
+    await expect(studentPage.getByText('目前階段：準備中')).toBeVisible();
     await studentPage
       .getByRole('button', { name: '更換組別', exact: true })
       .click();
+    await expect(
+      studentPage.getByRole('button', { name: '更換組別', exact: true }),
+    ).toHaveCount(0);
     await expect(
       studentPage.getByRole('heading', { name: '選擇組別', exact: true }),
     ).toBeVisible();
@@ -947,6 +962,18 @@ test('US6 草稿與作答保存：重新整理保留已送出與未送出內容�
       .click();
     await teacherPage
       .getByRole('button', { name: '確認重設', exact: true })
+      .click();
+
+    // D2-1：重設 → 學生的進場狀態失效 → 回到選組頁（組別保留，
+    // 重新點一下即可進場）。
+    await expect(
+      studentPage.getByRole('heading', { name: '選擇組別', exact: true }),
+    ).toBeVisible();
+    await expect(studentPage.getByRole('alert')).toContainText(
+      '活動已重設，請重新選擇組別',
+    );
+    await studentPage
+      .getByRole('button', { name: groupName, exact: true })
       .click();
     await expect(studentPage.getByText('目前階段：準備中')).toBeVisible();
 

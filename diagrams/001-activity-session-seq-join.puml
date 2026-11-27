@@ -1,7 +1,8 @@
 @startuml
-title 001 時序圖：學生進場與重新連線
+title 001 時序圖：學生進場、重新連線與重設後回到選組
 
 actor "學生" as Student
+actor "老師" as Teacher
 participant "學生端畫面\nStudentPage.tsx / GroupPicker.tsx" as U
 participant "身分驗證\naccess.ts / authRoutes.ts" as A
 participant "活動資料儲存\nactivityRepo.ts / groupRepo.ts / sessionRepo.ts" as S
@@ -58,9 +59,24 @@ alt token 對應有效學生身分
     B --> U : state（guest；含最新完整狀態）
     U --> Student : 回到選組畫面並說明原因
   end
-else token 不存在或無效
+else token 不存在或無效（重設／刪組後仍帶著舊 token）
   A --> B : GuestIdentity
+  B --> U : session:invalid\n{ code: 'SESSION_EXPIRED' }
+  U -> U : clearToken()；connectSocket(null)
   B --> U : state（GuestSnapshot）
-  U --> Student : 顯示選組畫面
+  U --> Student : 回到選組畫面並說明「進場狀態已失效，請重新選擇組別」
 end
+
+== 老師重設活動（已連線的學生也要回到選組頁）==
+Teacher -> B : activity:reset { confirm: true }（Socket.IO 指令）
+B -> S : 在同一 transaction 內：phase → preparing、清空作答、\nnewSessionId()、deleteSessionsByRole(database, 'student')
+S --> B : COMMIT（學生的 token 立即失效；老師的 session 保留）
+B -> B : invalidateAllStudents()：每條學生連線\nemit session:invalid { code: 'ACTIVITY_RESET' }、\n身分降為 guest、從在線人數移除
+B --> U : session:invalid { code: 'ACTIVITY_RESET' }
+U -> U : clearToken()；connectSocket(null)
+B --> U : state（guest；組別仍在）
+U --> Student : 回到選組畫面並說明「活動已重設，請重新選擇組別」
+Student -> U : 重新點一次組別（組別保留）
+U -> A : POST /api/student/join { groupId: string }
+A --> U : 200 { token, role: 'student', groupId }
 @enduml

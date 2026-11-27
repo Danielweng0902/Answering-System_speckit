@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite';
 import type { Server, Socket } from 'socket.io';
 import {
   SESSION_INVALID_EVENT,
+  type SessionInvalidPayload,
   STATE_EVENT,
   type Snapshot,
 } from '@classroom/shared';
@@ -32,6 +33,17 @@ export type StateBroadcaster = {
    * presence (contracts/socket-events.md).
    */
   invalidateGroup: (groupId: string) => void;
+  /**
+   * 2026-11-25（D2-1；OpenSpec 組同日確認並追加此要求）：活動被重設時，
+   * **所有**已連線的學生的進場狀態都失效
+   * —— 送 session:invalid（ACTIVITY_RESET）、把連線降為 guest、並從在線人數
+   * 移除，讓學生回到選組頁（組別保留，重選只要點一下）。
+   *
+   * 為什麼連「已連線的」也要通知：另一組（OpenSpec 組）那邊的學生端沒有 token，
+   * 每次送出都重新檢查，所以重設後他們那邊**一定**會全部重選；我們若不通知
+   * 已連線的學生，會變成「同一班有人留在原組、有人要重選」。兩組行為必須一致。
+   */
+  invalidateAllStudents: () => void;
   /**
    * Turn this connection into a guest after a successful student:leave and
    * remove it from the in-memory presence counts. Stateless data changes are
@@ -302,10 +314,16 @@ export function createSocketBroadcaster(
 
   io.on('connection', (socket) => {
     let identity = resolveSocketIdentity(socket, database);
+    const hasAuthToken = tokenFromSocket(socket) !== undefined;
 
     if (identity.role === 'student' && !getGroupById(database, identity.groupId)) {
       socket.emit(SESSION_INVALID_EVENT, { code: 'GROUP_NOT_FOUND' });
       identity = { role: 'guest' };
+    } else if (identity.role === 'guest' && hasAuthToken) {
+      // 學生帶著已刪除的 session token 重連時，資料庫已無法分辨是重設或刪組；
+      // 在第一份 state 前通知前端清除舊 token，避免每次重連都再送死 token。
+      // 只看 auth.token：老師的 HttpOnly cookie 路徑不應收到學生失效通知。
+      socket.emit(SESSION_INVALID_EVENT, { code: 'SESSION_EXPIRED' });
     }
 
     socketData(socket).identity = identity;
@@ -335,13 +353,32 @@ export function createSocketBroadcaster(
     });
   });
 
+  /** 把某個學生的連線降為 guest：通知他、移除在線人數。 */
+  function invalidateStudentSocket(
+    socket: Socket,
+    groupId: string,
+    code: SessionInvalidPayload['code'],
+  ): void {
+    socket.emit(SESSION_INVALID_EVENT, { code });
+    socketData(socket).identity = { role: 'guest' };
+    removeStudent(groupId);
+  }
+
   function invalidateGroup(groupId: string): void {
     for (const socket of io.sockets.sockets.values()) {
       const identity = getSocketIdentity(socket);
       if (identity.role === 'student' && identity.groupId === groupId) {
-        socket.emit(SESSION_INVALID_EVENT, { code: 'GROUP_NOT_FOUND' });
-        socketData(socket).identity = { role: 'guest' };
-        removeStudent(groupId);
+        invalidateStudentSocket(socket, groupId, 'GROUP_NOT_FOUND');
+      }
+    }
+  }
+
+  /** D2-1（2026-11-25）：活動重設 → 所有已連線的學生都回到選組頁。 */
+  function invalidateAllStudents(): void {
+    for (const socket of io.sockets.sockets.values()) {
+      const identity = getSocketIdentity(socket);
+      if (identity.role === 'student') {
+        invalidateStudentSocket(socket, identity.groupId, 'ACTIVITY_RESET');
       }
     }
   }
@@ -359,6 +396,7 @@ export function createSocketBroadcaster(
     broadcastSubmissionChanged,
     getPresence,
     invalidateGroup,
+    invalidateAllStudents,
     demoteToGuest,
     dispose: () => {
       if (teacherBoardTimer !== null) {

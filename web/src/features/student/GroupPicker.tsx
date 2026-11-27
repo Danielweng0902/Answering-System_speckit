@@ -1,4 +1,4 @@
-import { ERROR_MESSAGES, type GroupSummary } from '@classroom/shared';
+import type { GroupSummary, SessionInvalidPayload } from '@classroom/shared';
 import { useState } from 'react';
 import { useI18n } from '../../lib/i18n/LanguageProvider';
 import { joinStudent } from '../../lib/api';
@@ -6,13 +6,25 @@ import { saveToken } from '../../lib/session';
 import { connectSocket } from '../../lib/socket';
 import styles from './GroupPicker.module.css';
 
+const SESSION_INVALID_MESSAGE_KEYS = {
+  GROUP_NOT_FOUND: 'picker.groupNotFound',
+  ACTIVITY_RESET: 'picker.activityReset',
+  SESSION_EXPIRED: 'picker.sessionExpired',
+} as const;
+
 export type GroupPickerProps = {
   groups: readonly GroupSummary[];
-  /** 伺服器已通知目前組別不存在時，提示學生重新選擇。 */
-  sessionInvalid: boolean;
+  /**
+   * 伺服器已通知目前進場狀態失效時，提示學生重新選擇。
+   *
+   * - `GROUP_NOT_FOUND`：目前組別已不存在（老師刪組）。
+   * - `ACTIVITY_RESET`：活動被重設，本場的進場狀態失效（D2-1）。
+   * - `SESSION_EXPIRED`：帶著已失效的 token 重新連線，原失效原因已無法分辨。
+   */
+  sessionInvalidCode: SessionInvalidPayload['code'] | null;
 };
 
-export function GroupPicker({ groups, sessionInvalid }: GroupPickerProps) {
+export function GroupPicker({ groups, sessionInvalidCode }: GroupPickerProps) {
   const { t } = useI18n();
   const [joiningGroupId, setJoiningGroupId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -43,9 +55,9 @@ export function GroupPicker({ groups, sessionInvalid }: GroupPickerProps) {
       <h2 id="group-picker-title" className={styles.title}>
         {t('picker.title')}
       </h2>
-      {sessionInvalid && (
+      {sessionInvalidCode !== null && (
         <p className={styles.notice} role="alert">
-          {ERROR_MESSAGES.GROUP_NOT_FOUND}
+          {t(SESSION_INVALID_MESSAGE_KEYS[sessionInvalidCode])}
         </p>
       )}
       {errorMessage !== null && (
