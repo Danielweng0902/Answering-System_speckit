@@ -11,6 +11,7 @@ package "搶答系統（伺服器）" {
   component "作答受理\n(Submission Intake)" as Intake
   component "作廢受理\n(Void Intake)" as VoidIntake
   component "順位判定\n(Ranking)" as Rank
+  component "作答索引（行程內）\n(Submission Index)" as Index
   component "可見範圍過濾\n(Visibility Filter)" as Filter
   component "作答狀況彙整\n(Board Builder)" as Board
   component "結果彙整\n(Result Builder)" as Result
@@ -32,6 +33,9 @@ Intake --> Store : 同步 transaction 保存 rank 與 counter
 VoidIntake --> Store : 同步 transaction 標記作廢與 counter
 Intake --> Rank : 有效作答
 VoidIntake --> Rank : 作廢後有效作答
+Store --> Index : 作答寫入 COMMIT 後 applyInsert／applyVoid\n（answer_data_generation 代際一致才增量折入）
+Index --> Board : view()：行程內作答視圖，不逐筆重讀 SQLite
+Index --> Result : view()
 Rank --> Board : 各題 rank 與有效作答的最小 rank
 Rank --> Result : 各題搶答成功
 Board --> Filter
@@ -39,6 +43,15 @@ Result --> Filter
 Filter --> Sync : 依身分、階段與作答 revision 決定內容
 Sync --> TeacherUI : 作答事件：定向送完整看板
 Sync --> StudentUI : 作答事件：只送相關組；結束時送結果
+
+note right of Index
+  server/src/app/submissionIndex.ts
+  （2026-11-21 冷啟效能 PR #25：
+  ACK p95 4555ms→174ms）
+  行程內維護與 submissions 等價的作答視圖；
+  繞過指令層的直寫會讓代際不同，
+  索引整份重建後才提供投影
+end note
 
 note bottom of Filter
   搶答中：學生只收到自己組的資料與 revision

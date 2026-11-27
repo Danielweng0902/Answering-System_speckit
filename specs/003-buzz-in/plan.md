@@ -63,6 +63,7 @@ Phase 1 設計完成後重新檢查：結果相同，沒有違反項目。
 | 作答狀況彙整（Board Builder） | `server/src/app/answerProjections.ts` 的老師 `board` 與 `progress` |
 | 結果彙整（Result Builder） | `server/src/app/answerProjections.ts` 與 `server/src/domain/answerRanks.ts` 的 `decideWinner()` |
 | 狀態同步（001） | `server/src/infra/socket/broadcaster.ts`；新增定向 `broadcastSubmissionChanged(groupId)` |
+| 作答索引（行程內） | `server/src/app/submissionIndex.ts`（2026-11-21 冷啟效能 PR #25：廣播改讀行程內作答視圖，2026-11-27 補記） |
 | 活動階段管理（001） | `server/src/app/activityCommands.ts`；reset 清空作答並更新 `sessionId` |
 | 題目庫（002） | `server/src/app/questionBank.ts`、`questionRepo.ts`；提供題號、空格數、prefix |
 | 老師端畫面 | `web/src/features/teacher/AnswerBoard.tsx`（看板、進度、作廢確認）、`TeacherPage.tsx` |

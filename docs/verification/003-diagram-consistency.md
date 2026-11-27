@@ -52,3 +52,18 @@
 ## 結論
 
 四張圖與程式一致，無需修改 `.puml`，無需重 render；`scripts/check-diagrams.sh` PASS。005 實作公平順位與投影看板時，需回頭同步這四張圖（特別是「順位規則」的實作類別與投影看板新畫面）。
+
+---
+
+## 2026-11-27 複查：冷啟效能模組補進圖
+
+初次核對（2026-11-14）之後，2026-11-21 合併的 PR #25 新增了 `server/src/app/submissionIndex.ts`（行程內作答索引），當時未畫進圖；本次補齊：
+
+| 項目 | 圖上的呈現 | 狀態 |
+|---|---|---|
+| 組件圖 | 新增「作答索引（行程內）(Submission Index)」元件：`Store → Index`（作答寫入 COMMIT 後 `applyInsert`／`applyVoid`，代際一致才增量折入）、`Index → Board`／`Index → Result`（`view()` 供投影，不逐筆重讀 SQLite），附 note 說明 `answer_data_generation` 代際計數器與 ACK p95 4555ms→174ms | 已補 |
+| 時序圖（seq-submit） | 「狀態同步」參與者加註：廣播快照經行程內索引取得、同輪共用視圖、一致性由代際保證 | 已補 |
+
+plan.md「圖表與模組對應」新增「作答索引（行程內）」一列；tasks.md 補 Phase 13（T064–T065）。類別圖未改：索引是 infra 廣播層的結構，`SubmissionRecord` 等 domain 型別不變。
+
+PNG 已重新產生，`scripts/check-diagrams.sh` 與 `npm run check` 通過（2026-11-27）。

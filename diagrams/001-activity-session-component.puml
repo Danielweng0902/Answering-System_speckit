@@ -10,6 +10,7 @@ component "學生端畫面" as StudentUI
 
 package "搶答系統（伺服器）" as Server {
   component "身分驗證\n(Access Control)" as Auth
+  component "進場與連線防護\n(Admission Guard)" as Guard
   component "組別管理\n(Group Registry)" as Groups
   component "活動階段管理\n(Activity Phase Manager)" as Phase
   component "倒數計時\n(Countdown)" as Timer
@@ -35,6 +36,21 @@ note right of Auth
   server/src/app/access.ts
   server/src/infra/http/authRoutes.ts
   server/src/app/studentCommands.ts
+  server/src/infra/http/teacherSession.ts
+  （D18：老師登入狀態存 HttpOnly cookie，
+  登出撤銷 session 並清 cookie）
+end note
+
+note right of Guard
+  server/src/infra/http/rateLimiter.ts
+  server/src/infra/socket/connectionCap.ts
+  （2026-11-23 資安審計 PR #26）
+  老師登入：滑動視窗，只計失敗
+  （60 秒內 10 次 → 429 TOO_MANY_ATTEMPTS）
+  學生進場：令牌桶（burst 1000、每分鐘 30），
+  允許整班同時進場的瞬間高峰
+  Socket.IO 握手檢查 MAX_CONNECTIONS（預設 1000），
+  超過時新連線被拒（HTTP 403），客戶端自動退避重連
 end note
 
 note right of Groups
@@ -73,8 +89,11 @@ end note
 Teacher --> TeacherUI
 Student --> StudentUI
 
-TeacherUI --> Auth : POST /api/teacher/login
-StudentUI --> Auth : POST /api/student/join
+TeacherUI --> Guard : POST /api/teacher/login（滑動視窗，只計失敗）
+StudentUI --> Guard : POST /api/student/join（令牌桶，允許瞬間高峰）
+Guard --> Auth : 未超過門檻才受理\n（超過回 429 TOO_MANY_ATTEMPTS）
+TeacherUI --> Auth : POST /api/teacher/logout（不限流；\nteacherSession.ts：撤銷 session 並清 HttpOnly cookie）
+StudentUI --> Guard : Socket.IO 握手（連線數上限，\n超過時新連線被拒、自動退避重連）
 Auth --> Store : insertSession / findSession；\n進場前以 getGroupById 確認組別
 
 TeacherUI --> Router : sendCommand：group:*、activity:*

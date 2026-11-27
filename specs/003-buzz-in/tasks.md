@@ -297,3 +297,8 @@ description: "Task list for 003 搶答作答與結果"
 
 - [x] T062 清理三模型交叉覆核接受的前端殘留狀態：AnswerArea 在任一題送出中停用全部送出按鈕；AnswerBoard 以 cell signature 避免舊確認與舊錯誤隨新作答浮回，並只在 open 且 cell 仍可作廢時顯示相關錯誤，補回歸測試。既有 e2e 同組重送時即使 submitted 仍須保留 ALREADY_SUBMITTED 錯誤，不採用「submitted 一律隱藏錯誤」 per FR-005、FR-029、AC-003-24、AC-003-29 (partial)
 - [x] T063 將 broadcaster 的全域與定向廣播改為每個 socket 各自例外隔離，單一連線失敗不得中止其他連線，log 不含 snapshot 內容，補全域與定向回歸測試 per FR-005、FR-021、FR-030 (partial)
+
+## Phase 13: 冷啟效能追加（2026-11-21 實作，2026-11-27 補記）
+
+- [x] T064 寫 `server/src/app/submissionIndex.ts`：行程內作答索引（與 submissions 等價的 `AnswerDataView`），作答寫入只在 transaction COMMIT 後折入、以 `answer_data_generation` 代際計數器保證一致（繞過指令層的直寫會整份重建）；廣播改由索引組出快照、同輪共用視圖，不再逐筆重讀 SQLite（ACK p95 4555ms→174ms）per FR-005、FR-021（PR #25，效能審計 `docs/verification/perf-coldstart-audit-2026-11-21.md`）
+- [x] T065 把作答索引補進 `diagrams/003-buzz-in-component.puml`（作答索引元件）與 `-seq-submit.puml`（狀態同步的註記），更新 plan.md 對應表，重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`（2026-11-27，PR 見本分支）

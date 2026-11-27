@@ -72,4 +72,12 @@ I -> D : 第一組新筆 rank=3；counter 再度 +1
 I -> B : 定向送老師與第一組
 B --> T : 第一組顯示新 rank 3；其他組 rank 不變
 B --> U : 第一組再次顯示已送出（不含 rank）
+
+note over B
+  廣播的快照內容經「行程內作答索引」取得
+  （server/src/app/submissionIndex.ts，2026-11-21 PR #25）：
+  作答寫入只在 COMMIT 後折入索引，同輪廣播共用同一份視圖，
+  不再逐筆重讀 SQLite（ACK p95 4555ms→174ms）；
+  一致性由 answer_data_generation 代際計數器保證。
+end note
 @enduml
