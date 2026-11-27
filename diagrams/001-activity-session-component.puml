@@ -45,11 +45,12 @@ note right of Guard
   server/src/infra/http/rateLimiter.ts
   server/src/infra/socket/connectionCap.ts
   （2026-11-23 資安審計 PR #26）
-  進場／登入同來源滑動視窗限流，
-  超過回 429 TOO_MANY_ATTEMPTS；
-  Socket.IO 握手檢查 MAX_CONNECTIONS
-  （預設 500），超過時新連線被拒
-  （HTTP 403），客戶端自動退避重連
+  老師登入：滑動視窗，只計失敗
+  （60 秒內 10 次 → 429 TOO_MANY_ATTEMPTS）
+  學生進場：令牌桶（burst 1000、每分鐘 30），
+  允許整班同時進場的瞬間高峰
+  Socket.IO 握手檢查 MAX_CONNECTIONS（預設 1000），
+  超過時新連線被拒（HTTP 403），客戶端自動退避重連
 end note
 
 note right of Groups
@@ -88,9 +89,10 @@ end note
 Teacher --> TeacherUI
 Student --> StudentUI
 
-TeacherUI --> Guard : POST /api/teacher/login／logout\n（teacherSession.ts：HttpOnly cookie）
-StudentUI --> Guard : POST /api/student/join（同來源限流）
+TeacherUI --> Guard : POST /api/teacher/login（滑動視窗，只計失敗）
+StudentUI --> Guard : POST /api/student/join（令牌桶，允許瞬間高峰）
 Guard --> Auth : 未超過門檻才受理\n（超過回 429 TOO_MANY_ATTEMPTS）
+TeacherUI --> Auth : POST /api/teacher/logout（不限流；\nteacherSession.ts：撤銷 session 並清 HttpOnly cookie）
 StudentUI --> Guard : Socket.IO 握手（連線數上限，\n超過時新連線被拒、自動退避重連）
 Auth --> Store : insertSession / findSession；\n進場前以 getGroupById 確認組別
 

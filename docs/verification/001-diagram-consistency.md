@@ -52,4 +52,6 @@ PNG 已由監督者以 `scripts/render-diagrams.sh` 產生，`scripts/check-diag
 
 類別圖本次未改：三個模組都是 infra 層（cookie 處理、限流、連線計數），不是 domain 型別；`Session` 上「老師登入狀態另以 HttpOnly cookie 存放」的註記原本就存在。plan.md「圖表與模組對應」新增「進場與連線防護」一列並把 `teacherSession.ts` 併入身分驗證；tasks.md 補 Phase 10（T080–T083）。屬於 003 的 `submissionIndex.ts`（PR #25）見 `003-diagram-consistency.md`。
 
+2026-11-27 review（philip110531）再修正四處：限流機制分開寫（老師登入＝滑動視窗只計失敗、學生進場＝令牌桶 burst 1000／每分鐘 30）；`MAX_CONNECTIONS` 預設值更正為 1000（`server/src/index.ts` 的過時註解一併更正）；連線被拒時畫面顯示「重新連線中…」（不是「連線中…」）；`/api/teacher/logout` 不限流，改為直接連到身分驗證、不經過防護元件。
+
 PNG 已重新產生，`scripts/check-diagrams.sh` 與 `npm run check` 通過（2026-11-27）。

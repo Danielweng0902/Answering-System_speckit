@@ -83,14 +83,17 @@ A --> U : 200 { token, role: 'student', groupId }
 
 == 進場與連線的防護（2026-11-23 資安審計 PR #26）==
 
-alt 同一來源進場／登入超過速率門檻（滑動視窗）
+alt 學生進場超過令牌桶門檻\n（burst 1000、每分鐘 30；允許整班同時進場的瞬間高峰）
   U -> A : POST /api/student/join
   A --> U : 429（TOO_MANY_ATTEMPTS）
   U --> Student : 顯示「稍後再試」，不建立 session
-else Socket.IO 連線數超過 MAX_CONNECTIONS（預設 500）
+else 老師登入失敗超過滑動視窗門檻\n（60 秒內 10 次失敗；成功登入不計入）
+  T -> A : POST /api/teacher/login
+  A --> T : 429（TOO_MANY_ATTEMPTS），\n之後的請求一律 429 直到視窗過期
+else Socket.IO 連線數超過 MAX_CONNECTIONS（預設 1000）
   U -> B : Socket.IO connect
   B --> U : 握手被拒（HTTP 403 connect_error）
-  U -> U : 畫面停在「連線中…」並自動退避重連；\n名額空出來後即可進場
+  U -> U : 畫面顯示「重新連線中…」並自動退避重連；\n名額空出來後即可進場
 end
 
 == 老師登入與登出（D18：HttpOnly cookie，PR #28）==

@@ -62,7 +62,7 @@ export type CreateServerOptions = {
   sheetWriter?: SheetWriter | null;
   /**
    * 同時在線的 Socket.IO 連線數上限；未指定時用環境變數的設定
-   * （MAX_CONNECTIONS，預設 500；0 = 不限制）。測試用小值驗證上限。
+   * （MAX_CONNECTIONS，預設 1000；0 = 不限制）。測試用小值驗證上限。
    */
   maxConnections?: number;
   /**

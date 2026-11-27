@@ -236,8 +236,8 @@ Web application，npm workspaces：`shared/`、`server/`、`web/`、`e2e/`（見
 **Purpose**: Phase 1–9 之後才發生的修改（D18 老師 cookie 登入、資安審計的速率限制與連線上限），程式與規格當時已同步，在此補記對應的 task 與圖表。
 
 - [x] T080 寫 `server/src/infra/http/teacherSession.ts`：老師登入狀態改存 HttpOnly cookie（`HttpOnly; SameSite=Strict; Path=/`，不設 Max-Age、不設 Secure），登出撤銷 session 並以 `Max-Age=0` 清 cookie；伺服器重啟後須重新登入 per FR-002a、AC-001-30（PR #28）
-- [x] T081 寫 `server/src/infra/http/rateLimiter.ts`：同一來源進場／登入的滑動視窗速率限制，超過門檻回 429 `TOO_MANY_ATTEMPTS` per 資安審計 `docs/verification/security-audit-glm-boundary-2026-11-21.md`（PR #26）
-- [x] T082 寫 `server/src/infra/socket/connectionCap.ts`：同時在線連線數上限（`MAX_CONNECTIONS`，預設 500），超過時新的連線在握手階段被拒（HTTP 403），客戶端自動退避重連 per 資安審計（PR #26）
+- [x] T081 寫 `server/src/infra/http/rateLimiter.ts`：兩種機制——老師登入為滑動視窗（只計失敗，60 秒內 10 次後回 429 `TOO_MANY_ATTEMPTS`，成功登入不計入）；學生進場為令牌桶（burst 1000、每分鐘 30，允許整班同時進場的瞬間高峰）per 資安審計 `docs/verification/security-audit-glm-boundary-2026-11-21.md`（PR #26）
+- [x] T082 寫 `server/src/infra/socket/connectionCap.ts`：同時在線連線數上限（`MAX_CONNECTIONS`，預設 1000；PR #28 已由 500 調高），超過時新的連線在握手階段被拒（HTTP 403），客戶端自動退避重連 per 資安審計（PR #26）
 - [x] T083 把上述模組補進 `diagrams/001-activity-session-component.puml`（進場與連線防護元件）與 `-seq-join.puml`（速率限制、連線上限、老師登入／登出三條路徑），更新 plan.md 對應表，重跑 `scripts/render-diagrams.sh` 與 `scripts/check-diagrams.sh`（2026-11-27，PR 見本分支）
 
 ---
