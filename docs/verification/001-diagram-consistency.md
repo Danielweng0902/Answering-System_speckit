@@ -46,7 +46,7 @@ PNG 已由監督者以 `scripts/render-diagrams.sh` 產生，`scripts/check-diag
 
 | 模組 | 圖上的呈現 | 狀態 |
 |---|---|---|
-| `server/src/infra/http/teacherSession.ts`（D18 老師 HttpOnly cookie，PR #28） | component 圖：身分驗證 note 補上檔案，`POST /api/teacher/login／logout` 改畫成經防護元件進入驗證；seq-join 新增「老師登入與登出」一節（Set-Cookie 屬性、重啟後須重新登入、登出撤銷 session 並清 cookie） | 已補 |
+| `server/src/infra/http/teacherSession.ts`（D18 老師 HttpOnly cookie，PR #28） | component 圖：身分驗證 note 補上檔案；`POST /api/teacher/login` 經防護元件（滑動視窗限流）進入驗證，`POST /api/teacher/logout` 直接連身分驗證（不限流）；seq-join 新增「老師登入與登出」一節（Set-Cookie 屬性、重啟後須重新登入、登出撤銷 session 並清 cookie） | 已補 |
 | `server/src/infra/http/rateLimiter.ts`（PR #26） | component 圖新增「進場與連線防護 (Admission Guard)」元件與 429 `TOO_MANY_ATTEMPTS` 流程；seq-join 新增速率限制的 alt | 已補 |
 | `server/src/infra/socket/connectionCap.ts`（PR #26） | 同一個防護元件的 note（`MAX_CONNECTIONS` 握手上限、HTTP 403、客戶端退避重連）；seq-join 新增連線被拒的 alt | 已補 |
 
