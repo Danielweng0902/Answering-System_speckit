@@ -1,9 +1,10 @@
 @startuml
-title 001 時序圖：學生進場、重新連線與重設後回到選組
+title 001 時序圖：學生進場、重新連線、重設、連線防護與老師登出入
 
 actor "學生" as Student
 actor "老師" as Teacher
 participant "學生端畫面\nStudentPage.tsx / GroupPicker.tsx" as U
+participant "老師端畫面\nTeacherPage.tsx / TeacherLogin.tsx" as T
 participant "身分驗證\naccess.ts / authRoutes.ts" as A
 participant "活動資料儲存\nactivityRepo.ts / groupRepo.ts / sessionRepo.ts" as S
 participant "狀態同步\nbroadcaster.ts / snapshot.ts / presence.ts" as B
@@ -79,4 +80,31 @@ U --> Student : 回到選組畫面並說明「活動已重設，請重新選擇�
 Student -> U : 重新點一次組別（組別保留）
 U -> A : POST /api/student/join { groupId: string }
 A --> U : 200 { token, role: 'student', groupId }
+
+== 進場與連線的防護（2026-11-23 資安審計 PR #26）==
+
+alt 同一來源進場／登入超過速率門檻（滑動視窗）
+  U -> A : POST /api/student/join
+  A --> U : 429（TOO_MANY_ATTEMPTS）
+  U --> Student : 顯示「稍後再試」，不建立 session
+else Socket.IO 連線數超過 MAX_CONNECTIONS（預設 500）
+  U -> B : Socket.IO connect
+  B --> U : 握手被拒（HTTP 403 connect_error）
+  U -> U : 畫面停在「連線中…」並自動退避重連；\n名額空出來後即可進場
+end
+
+== 老師登入與登出（D18：HttpOnly cookie，PR #28）==
+
+Teacher -> T : 輸入密碼登入
+T -> A : POST /api/teacher/login
+A -> S : issueSession({ role: 'teacher' })／insertSession
+A --> T : 200（Set-Cookie：HttpOnly; SameSite=Strict; Path=/，\n工作階段 cookie，頁面 JavaScript 讀不到）
+T -> B : Socket.IO connect（握手不帶 token；cookie 隨同源連線自動帶上）
+B -> A : resolveIdentity → readTeacherCookieToken
+A --> B : TeacherIdentity（伺服器重啟後 teacher session 已清 → guest，須重新登入）
+Teacher -> T : 按登出
+T -> A : POST /api/teacher/logout
+A -> A : revokeSession（teacher）＋ clearTeacherSessionCookie（Max-Age=0）
+A --> T : 200
+T -> T : reconnectSocket() → 以 guest 重新握手，回到登入畫面
 @enduml

@@ -56,7 +56,8 @@ specify 階段的圖是概念層；本計畫把每個概念元件對應到實際
 
 | 圖中的元件（`diagrams/001-*-component.puml`） | 模組 |
 |---|---|
-| 身分驗證 (Access Control) | `server/src/app/access.ts`、`server/src/infra/http/authRoutes.ts` |
+| 身分驗證 (Access Control) | `server/src/app/access.ts`、`server/src/infra/http/authRoutes.ts`、`server/src/infra/http/teacherSession.ts`（D18 老師 HttpOnly cookie 登入／登出，PR #28，2026-11-27 補記） |
+| 進場與連線防護 (Admission Guard) | `server/src/infra/http/rateLimiter.ts`、`server/src/infra/socket/connectionCap.ts`（資安審計 PR #26，2026-11-27 補記） |
 | 組別管理 (Group Registry) | `server/src/domain/groupRegistry.ts`、`server/src/app/groupCommands.ts` |
 | 活動階段管理 (Activity Phase Manager) | `server/src/domain/activity.ts`、`server/src/app/activityCommands.ts` |
 | 倒數計時 (Countdown) | `server/src/app/countdown.ts` |

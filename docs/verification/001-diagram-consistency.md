@@ -37,3 +37,19 @@
 ---
 
 PNG 已由監督者以 `scripts/render-diagrams.sh` 產生，`scripts/check-diagrams.sh` 通過。元件圖與類別圖標題由「概念層／領域物件」改為「技術層」。
+
+---
+
+## 2026-11-27 複查：Phase 10 追加模組補進圖
+
+初次核對（2026-11-12）之後，11-22～11-23 合併的 PR #26、#28 新增了三個伺服器模組，當時未畫進任何圖；本次補齊（spec 與行為當時已同步，只是圖與 plan 對應表沒跟上）：
+
+| 模組 | 圖上的呈現 | 狀態 |
+|---|---|---|
+| `server/src/infra/http/teacherSession.ts`（D18 老師 HttpOnly cookie，PR #28） | component 圖：身分驗證 note 補上檔案，`POST /api/teacher/login／logout` 改畫成經防護元件進入驗證；seq-join 新增「老師登入與登出」一節（Set-Cookie 屬性、重啟後須重新登入、登出撤銷 session 並清 cookie） | 已補 |
+| `server/src/infra/http/rateLimiter.ts`（PR #26） | component 圖新增「進場與連線防護 (Admission Guard)」元件與 429 `TOO_MANY_ATTEMPTS` 流程；seq-join 新增速率限制的 alt | 已補 |
+| `server/src/infra/socket/connectionCap.ts`（PR #26） | 同一個防護元件的 note（`MAX_CONNECTIONS` 握手上限、HTTP 403、客戶端退避重連）；seq-join 新增連線被拒的 alt | 已補 |
+
+類別圖本次未改：三個模組都是 infra 層（cookie 處理、限流、連線計數），不是 domain 型別；`Session` 上「老師登入狀態另以 HttpOnly cookie 存放」的註記原本就存在。plan.md「圖表與模組對應」新增「進場與連線防護」一列並把 `teacherSession.ts` 併入身分驗證；tasks.md 補 Phase 10（T080–T083）。屬於 003 的 `submissionIndex.ts`（PR #25）見 `003-diagram-consistency.md`。
+
+PNG 已重新產生，`scripts/check-diagrams.sh` 與 `npm run check` 通過（2026-11-27）。
